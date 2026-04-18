@@ -18,6 +18,21 @@ npm install
 npm run dev
 ```
 
+From the main menu you can open **Cube demo (template)** (React Three Fiber) or **Island Run** (the separate Three.js island board game).
+
+### Island Run (`/island-board/`)
+
+Island Run is built from the **IslandBoardWeb** Vite app and copied into `public/island-board/`. The host app embeds it full-screen in an iframe (`src/games/IslandRun/IslandRunShell.tsx`) so it does not share the R3F `<Canvas>` with the template cube.
+
+After changing IslandBoardWeb, refresh the static files:
+
+```bash
+# from this repo; expects ../IslandBoardWeb
+npm run sync:island
+```
+
+Commit `public/island-board/` so GitHub Pages / previews work without running the sync step.
+
 Other scripts:
 
 - `npm run build` — typecheck + production build

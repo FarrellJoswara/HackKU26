@@ -16,9 +16,8 @@ export type LazyGame = LazyExoticComponent<GameComponent>;
 
 export const GAME_IDS = {
   template: moduleId('template'),
-  // TODO: add your game IDs here
-  // catRun:   moduleId('catRun'),
-  // spaceShooter: moduleId('spaceShooter'),
+  /** Island Run — static build in `public/island-board/`, mounted via `IslandRunShell`. */
+  islandRun: moduleId('islandRun'),
 } as const;
 
 export const GAME_MODULES: Record<ModuleId, LazyGame> = {

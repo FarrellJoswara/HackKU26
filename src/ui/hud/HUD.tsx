@@ -11,8 +11,30 @@
 import { Heart, Pause, Volume2 } from 'lucide-react';
 import { eventBus } from '@/core/events';
 import { audio } from '@/audio/AudioManager';
+import { useAppStore } from '@/core/store';
+import { GAME_IDS } from '@/games/registry';
 
 export function HUD() {
+  const activeModule = useAppStore((s) => s.activeModule);
+
+  if (activeModule === GAME_IDS.islandRun) {
+    return (
+      <div className="pointer-events-none absolute inset-0 flex flex-col items-end justify-start p-4 text-white">
+        <div className="pointer-events-auto flex items-center gap-2">
+          <button
+            className="rounded-lg bg-black/50 px-3 py-2 text-sm font-medium backdrop-blur hover:bg-black/70"
+            type="button"
+            onClick={() =>
+              eventBus.emit('navigate:request', { to: 'menu', module: null })
+            }
+          >
+            Back to menu
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="pointer-events-none absolute inset-0 flex flex-col justify-between p-6 text-white">
       <div className="flex items-center justify-between">
