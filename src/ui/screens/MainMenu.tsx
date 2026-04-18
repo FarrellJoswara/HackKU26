@@ -45,8 +45,9 @@ export default function MainMenu(_props: UIProps<unknown>) {
       </div>
 
       <p className="mt-8 max-w-sm text-center text-xs text-white/45">
-        Cube uses React Three Fiber in this window. Island Run loads the full
-        board game from <code className="rounded bg-white/10 px-1">/island-board/</code>.
+        Cube uses React Three Fiber. Island Run is a self-contained imperative
+        Three.js module in{' '}
+        <code className="rounded bg-white/10 px-1">src/games/IslandRun/</code>.
       </p>
     </div>
   );

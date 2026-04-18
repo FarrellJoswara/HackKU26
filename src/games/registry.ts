@@ -16,7 +16,7 @@ export type LazyGame = LazyExoticComponent<GameComponent>;
 
 export const GAME_IDS = {
   template: moduleId('template'),
-  /** Island Run — static build in `public/island-board/`, mounted via `IslandRunShell`. */
+  /** Island Run — fully self-contained imperative Three.js game inside `src/games/IslandRun/`. Rendered outside the host `<Canvas>` by `App.tsx`, not via `GameRegistry`. */
   islandRun: moduleId('islandRun'),
 } as const;
 

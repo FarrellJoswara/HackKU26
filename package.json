@@ -8,8 +8,7 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "typecheck": "tsc -b --noEmit",
-    "lint": "eslint . --ext .ts,.tsx",
-    "sync:island": "node scripts/sync-island.mjs"
+    "lint": "eslint . --ext .ts,.tsx"
   },
   "dependencies": {
     "@react-three/drei": "^9.114.0",
