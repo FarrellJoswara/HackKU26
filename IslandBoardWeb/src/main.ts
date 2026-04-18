@@ -23,6 +23,14 @@ const LANDING_AFTER_BANANA_MS = 480;
 /** HUD dice tumble before showing result (ms). */
 const DICE_TUMBLE_MS = 520;
 const DICE_SNAP_SEC = 0.38;
+/** World die on sand: toss from banana toward the lagoon, then snap to the roll. */
+const WORLD_DICE_TUMBLE_SEC = 1.02;
+const WORLD_DICE_SNAP_SEC = 0.48;
+const WORLD_DICE_DWELL_SEC = 0.42;
+/** Slightly extend throw vs base aim (1.15–1.25 feels like “a bit farther”). */
+const WORLD_DICE_THROW_DIST_MUL = 1.2;
+/** Maps world die mesh to Y-up; tune if top face ≠ HUD. */
+const WORLD_DICE_OFFSET = new THREE.Euler(Math.PI / 2, 0, 0, 'XYZ');
 
 /**
  * Euler (XYZ) so each die value faces the mini-camera; tweak if this GLB’s pips don’t match.
@@ -37,10 +45,11 @@ const DICE_VALUE_EULER: Record<number, [number, number, number]> = {
   6: [Math.PI, 0, 0],
 };
 
+/** Resolve static files from this page’s folder (embed works under any host `base`, unlike baked `import.meta.env.BASE_URL`). */
 const asset = (path: string) => {
-  const b = import.meta.env.BASE_URL;
   const p = path.startsWith('/') ? path.slice(1) : path;
-  return b.endsWith('/') ? b + p : `${b}/${p}`;
+  const base = new URL('./', window.location.href).href;
+  return new URL(p, base).href;
 };
 
 /** Fine grain for sand bump only (no photo albedo). */
@@ -74,6 +83,16 @@ function enableShadows(root: THREE.Object3D, cast: boolean, receive: boolean) {
       m.castShadow = cast;
       m.receiveShadow = receive;
     }
+  });
+}
+
+/** `clone(true)` can still share materials; clone so HUD and world dice never alias. */
+function cloneMeshMaterialsUnique(root: THREE.Object3D) {
+  root.traverse((o) => {
+    const mesh = o as THREE.Mesh;
+    if (!mesh.isMesh || !mesh.material) return;
+    const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+    mesh.material = mats.map((mat) => mat.clone()) as typeof mesh.material;
   });
 }
 
@@ -167,6 +186,10 @@ function easeOutCubic(t: number): number {
   return 1 - (1 - t) ** 3;
 }
 
+function easeInOutCubic(t: number): number {
+  return t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2;
+}
+
 function main() {
   const rootEl = document.getElementById('canvas-root');
   const errEl = document.getElementById('webgl-error');
@@ -225,6 +248,37 @@ function main() {
   const diceQB = new THREE.Quaternion();
   const diceEu = new THREE.Euler(0, 0, 0, 'XYZ');
 
+  const worldDiceGroup = new THREE.Group();
+  worldDiceGroup.renderOrder = 5;
+  scene.add(worldDiceGroup);
+  let worldDiceModel: THREE.Group | null = null;
+  let useWorldDice = false;
+  let worldDiceReady = false;
+  let worldDiceLandY = 0.12;
+  let worldDiceStartX = 0;
+  let worldDiceStartZ = 0;
+  let worldDiceStartY = 0.35;
+  let worldDiceEndX = 0;
+  let worldDiceEndZ = 0;
+  let worldDiceArcH = 0.55;
+  type WorldDiceMode = 'idle' | 'tumble' | 'snap' | 'dwell';
+  let worldDiceMode: WorldDiceMode = 'idle';
+  let worldDiceRollValue = 1;
+  let worldDiceTumbleT0 = 0;
+  let worldDiceSnapT0 = 0;
+  let worldDiceDwellT0 = 0;
+  const wDiceEu = new THREE.Euler(0, 0, 0, 'XYZ');
+  const worldDiceQA = new THREE.Quaternion();
+  const worldDiceQB = new THREE.Quaternion();
+  const worldDiceOffsetQuat = new THREE.Quaternion().setFromEuler(WORLD_DICE_OFFSET);
+
+  function worldTargetQuatForRoll(roll: number): THREE.Quaternion {
+    const trip = DICE_VALUE_EULER[roll] ?? DICE_VALUE_EULER[1]!;
+    wDiceEu.set(trip[0], trip[1], trip[2]);
+    const qFace = new THREE.Quaternion().setFromEuler(wDiceEu);
+    return worldDiceOffsetQuat.clone().multiply(qFace);
+  }
+
   function applyDiceFaceInstant(value: number) {
     if (!diceModel) return;
     const trip = DICE_VALUE_EULER[value] ?? DICE_VALUE_EULER[1]!;
@@ -280,6 +334,25 @@ function main() {
         dicePendingFace = null;
         diceMode = 'idle';
       }
+
+      const w = g.clone(true);
+      cloneMeshMaterialsUnique(w);
+      enableShadows(w, true, true);
+      w.scale.copy(g.scale);
+      w.position.copy(g.position);
+      w.quaternion.identity();
+      worldDiceModel = w;
+      worldDiceGroup.add(w);
+      worldDiceGroup.scale.setScalar(1.45);
+      const wb = new THREE.Box3().setFromObject(w);
+      const wsz = new THREE.Vector3();
+      wb.getSize(wsz);
+      const scaledH = wsz.y * worldDiceGroup.scale.y;
+      worldDiceLandY = 0.04 + scaledH * 0.5 + 0.03;
+      worldDiceGroup.position.set(0, worldDiceLandY, 0);
+      worldDiceGroup.visible = false;
+      useWorldDice = true;
+      worldDiceReady = true;
     } catch (e) {
       console.warn('[Island] dice model failed', e);
     }
@@ -387,7 +460,7 @@ function main() {
   });
   lagoonWater.rotation.x = -Math.PI / 2;
   lagoonWater.position.y = 0.07;
-  lagoonWater.receiveShadow = true;
+  lagoonWater.receiveShadow = false;
   lagoonWater.renderOrder = 3;
   lagoonWater.material.depthWrite = false;
   lagoonWater.material.transparent = true;
@@ -409,7 +482,7 @@ function main() {
   );
   lagoonFoam.rotation.x = -Math.PI / 2;
   lagoonFoam.position.y = 0.078;
-  lagoonFoam.receiveShadow = true;
+  lagoonFoam.receiveShadow = false;
   lagoonFoam.renderOrder = 4;
   scene.add(lagoonFoam);
 
@@ -629,6 +702,125 @@ function main() {
   }
   highlightSquare();
 
+  function worldDiceBeginRoll(roll: number) {
+    if (!worldDiceModel || !worldDiceReady) return;
+    worldDiceRollValue = roll;
+
+    const lagoonR = BOARD_R - 0.35;
+    let sx: number;
+    let sz: number;
+    if (bananaGroup.children.length > 0) {
+      sx = bananaGroup.position.x;
+      sz = bananaGroup.position.z;
+      worldDiceStartY = Math.max(TILE_Y + 0.38, bananaGroup.position.y + 0.32);
+    } else {
+      const a = angleForSquare(playerIndex);
+      sx = Math.cos(a) * BOARD_R;
+      sz = Math.sin(a) * BOARD_R;
+      worldDiceStartY = TILE_Y + 0.42;
+    }
+
+    const bx = sx;
+    const bz = sz;
+    const toward = 0.78 + Math.random() * 0.16;
+    let ex = sx * (1 - toward);
+    let ez = sz * (1 - toward);
+    const jAng = Math.random() * Math.PI * 2;
+    const jR = 0.1 + Math.random() * 0.22;
+    ex += Math.cos(jAng) * jR;
+    ez += Math.sin(jAng) * jR;
+
+    const len = Math.hypot(ex, ez);
+    const innerR = lagoonR + 0.1;
+    const outerR = BOARD_R - 0.48;
+    if (len < innerR) {
+      const s = innerR / Math.max(len, 1e-5);
+      ex *= s;
+      ez *= s;
+    } else if (len > outerR) {
+      const s = outerR / len;
+      ex *= s;
+      ez *= s;
+    }
+
+    const tdx = ex - bx;
+    const tdz = ez - bz;
+    const tdLen = Math.hypot(tdx, tdz);
+    const windBack = 0.48 + Math.random() * 0.22;
+    if (tdLen > 1e-4) {
+      sx = bx - (tdx / tdLen) * windBack;
+      sz = bz - (tdz / tdLen) * windBack;
+    }
+
+    const dx0 = ex - sx;
+    const dz0 = ez - sz;
+    let ex2 = sx + dx0 * WORLD_DICE_THROW_DIST_MUL;
+    let ez2 = sz + dz0 * WORLD_DICE_THROW_DIST_MUL;
+    const r2 = Math.hypot(ex2, ez2);
+    if (r2 > 1e-5) {
+      if (r2 < innerR) {
+        const s = innerR / r2;
+        ex2 *= s;
+        ez2 *= s;
+      } else if (r2 > outerR) {
+        const s = outerR / r2;
+        ex2 *= s;
+        ez2 *= s;
+      }
+    }
+
+    worldDiceStartX = sx;
+    worldDiceStartZ = sz;
+    worldDiceEndX = ex2;
+    worldDiceEndZ = ez2;
+    const dist = Math.hypot(ex2 - sx, ez2 - sz);
+    worldDiceArcH = 0.48 + dist * 0.18;
+
+    worldDiceModel.rotation.set(0, 0, 0);
+    worldDiceModel.quaternion.identity();
+    worldDiceGroup.position.set(sx, worldDiceStartY, sz);
+    worldDiceTumbleT0 = clock.elapsedTime;
+    worldDiceMode = 'tumble';
+    worldDiceGroup.visible = true;
+  }
+
+  function worldDiceUpdate(dt: number, elapsed: number) {
+    if (!worldDiceModel || worldDiceMode === 'idle') return;
+    const m = worldDiceModel;
+    if (worldDiceMode === 'tumble') {
+      const u = Math.min(1, (elapsed - worldDiceTumbleT0) / WORLD_DICE_TUMBLE_SEC);
+      const k = easeInOutCubic(u);
+      worldDiceGroup.position.x = THREE.MathUtils.lerp(worldDiceStartX, worldDiceEndX, k);
+      worldDiceGroup.position.z = THREE.MathUtils.lerp(worldDiceStartZ, worldDiceEndZ, k);
+      const yBase = THREE.MathUtils.lerp(worldDiceStartY, worldDiceLandY, k);
+      worldDiceGroup.position.y = yBase + worldDiceArcH * 4 * k * (1 - k);
+      const spinDamp = (1 - u * 0.32) * 0.78;
+      m.rotation.x += dt * (10 + Math.sin(elapsed * 31) * 4) * spinDamp;
+      m.rotation.y += dt * (14 + Math.sin(elapsed * 17) * 2.5) * spinDamp;
+      m.rotation.z += dt * (8 + Math.cos(elapsed * 19) * 3) * spinDamp;
+      if (u >= 1) {
+        worldDiceGroup.position.set(worldDiceEndX, worldDiceLandY, worldDiceEndZ);
+        worldDiceMode = 'snap';
+        worldDiceQA.copy(m.quaternion);
+        worldDiceQB.copy(worldTargetQuatForRoll(worldDiceRollValue));
+        worldDiceSnapT0 = elapsed;
+      }
+    } else if (worldDiceMode === 'snap') {
+      const u = Math.min(1, (elapsed - worldDiceSnapT0) / WORLD_DICE_SNAP_SEC);
+      const k = easeOutCubic(u);
+      m.quaternion.copy(worldDiceQA).slerp(worldDiceQB, k);
+      if (u >= 1) {
+        worldDiceMode = 'dwell';
+        worldDiceDwellT0 = elapsed;
+      }
+    } else if (worldDiceMode === 'dwell') {
+      if (elapsed - worldDiceDwellT0 >= WORLD_DICE_DWELL_SEC) {
+        worldDiceMode = 'idle';
+        worldDiceGroup.visible = false;
+      }
+    }
+  }
+
   void (async () => {
     try {
       const { scene: bananaSrc, animations: bananaAnims } = await loadGltfWithAnimations(
@@ -703,37 +895,61 @@ function main() {
   landingDismiss?.addEventListener('click', closeLanding);
 
   let rolling = false;
+  function finishRollAfterAnimation(roll: number) {
+    diceWrap?.classList.remove('dice-rolling');
+    diceWrap?.classList.add('dice-roll-pop');
+    window.setTimeout(() => diceWrap?.classList.remove('dice-roll-pop'), 320);
+    const prevIndex = playerIndex;
+    playerIndex = (playerIndex + roll) % NUM_SQUARES;
+    if (prevIndex !== playerIndex) {
+      bananaTravel = { startI: prevIndex, roll, hopIndex: 0, t: 0 };
+    }
+    statusEl!.textContent = `You rolled ${roll}. Landed on ${SQUARE_LABELS[playerIndex]}.`;
+    statusEl?.classList.remove('is-rolling');
+    updateHud();
+    const moveDelayMs =
+      prevIndex !== playerIndex ? roll * BANANA_HOP_SEC * 1000 + LANDING_AFTER_BANANA_MS : 220;
+    window.setTimeout(() => {
+      openLanding(playerIndex);
+      rolling = false;
+      if (rollBtn) rollBtn.disabled = false;
+    }, moveDelayMs);
+  }
+
   rollBtn?.addEventListener('click', () => {
     if (rolling) return;
+    if (!worldDiceReady) {
+      statusEl!.textContent = 'Loading 3D dice... try again in a moment.';
+      return;
+    }
     rolling = true;
     rollBtn.disabled = true;
     statusEl?.classList.add('is-rolling');
     diceWrap?.classList.add('dice-rolling');
-    diceBeginTumble();
-    window.setTimeout(() => {
-      const roll = 1 + Math.floor(Math.random() * 6);
-      diceFace!.textContent = String(roll);
-      diceReadout!.textContent = `Last roll: ${roll}`;
-      diceSettleToFace(roll);
-      diceWrap?.classList.remove('dice-rolling');
-      diceWrap?.classList.add('dice-roll-pop');
-      window.setTimeout(() => diceWrap?.classList.remove('dice-roll-pop'), 320);
-      const prevIndex = playerIndex;
-      playerIndex = (playerIndex + roll) % NUM_SQUARES;
-      if (prevIndex !== playerIndex) {
-        bananaTravel = { startI: prevIndex, roll, hopIndex: 0, t: 0 };
-      }
-      statusEl!.textContent = `You rolled ${roll}. Landed on ${SQUARE_LABELS[playerIndex]}.`;
-      statusEl?.classList.remove('is-rolling');
-      updateHud();
-      const moveDelayMs =
-        prevIndex !== playerIndex ? roll * BANANA_HOP_SEC * 1000 + LANDING_AFTER_BANANA_MS : 220;
+    const roll = 1 + Math.floor(Math.random() * 6);
+
+    if (useWorldDice && worldDiceReady) {
+      diceBeginTumble();
+      worldDiceBeginRoll(roll);
       window.setTimeout(() => {
-        openLanding(playerIndex);
-        rolling = false;
-        rollBtn.disabled = false;
-      }, moveDelayMs);
-    }, DICE_TUMBLE_MS);
+        diceFace!.textContent = String(roll);
+        diceReadout!.textContent = `Last roll: ${roll}`;
+        diceSettleToFace(roll);
+      }, WORLD_DICE_TUMBLE_SEC * 1000);
+      const totalMs =
+        (WORLD_DICE_TUMBLE_SEC + WORLD_DICE_SNAP_SEC + WORLD_DICE_DWELL_SEC) * 1000;
+      window.setTimeout(() => {
+        finishRollAfterAnimation(roll);
+      }, totalMs);
+    } else {
+      diceBeginTumble();
+      window.setTimeout(() => {
+        diceFace!.textContent = String(roll);
+        diceReadout!.textContent = `Last roll: ${roll}`;
+        diceSettleToFace(roll);
+        finishRollAfterAnimation(roll);
+      }, DICE_TUMBLE_MS);
+    }
   });
 
   const qToggle = document.getElementById('quality-toggle') as HTMLInputElement | null;
@@ -768,6 +984,7 @@ function main() {
     lagoonWater.material.uniforms['time']!.value = t * 0.82;
     shoreFoamMat.opacity = 0.32 + Math.sin(t * 1.15) * 0.07;
     diceUpdate(dt, t);
+    worldDiceUpdate(dt, t);
     bananaMixer?.update(dt);
     if (bananaGroup.children.length > 0) {
       if (bananaTravel) {
