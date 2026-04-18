@@ -16,14 +16,14 @@ export type LazyGame = LazyExoticComponent<GameComponent>;
 
 export const GAME_IDS = {
   template: moduleId('template'),
+  debtRunner: moduleId('debtRunner'),
   /** Island Run — static build in `public/island-board/`, mounted via `IslandRunShell`. */
   islandRun: moduleId('islandRun'),
 } as const;
 
 export const GAME_MODULES: Record<ModuleId, LazyGame> = {
   [GAME_IDS.template]: lazy(() => import('./TemplateGame')),
-  // TODO: add your lazy imports here
-  // [GAME_IDS.catRun]: lazy(() => import('./CatRun')),
+  [GAME_IDS.debtRunner]: lazy(() => import('./DebtRunner')),
 };
 
 export function getGame(id: ModuleId | null | undefined): LazyGame | null {

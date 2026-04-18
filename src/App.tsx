@@ -19,6 +19,7 @@ import { UIRegistry } from './ui/UIRegistry';
 import { useAppStore } from './core/store';
 import { GAME_IDS } from './games/registry';
 import { IslandRunShell } from './games/IslandRun/IslandRunShell';
+import { RunnerResultRouter } from './core/runner/RunnerResultRouter';
 
 export default function App() {
   const appState = useAppStore((s) => s.appState);
@@ -28,6 +29,7 @@ export default function App() {
 
   return (
     <TransitionManager>
+      <RunnerResultRouter />
       <div className="absolute inset-0">
         {islandRun ? (
           <IslandRunShell />

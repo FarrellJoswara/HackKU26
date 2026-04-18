@@ -15,7 +15,15 @@
 /*  App lifecycle                                                             */
 /* -------------------------------------------------------------------------- */
 
-export type AppState = 'boot' | 'menu' | 'game' | 'transition';
+export type AppState =
+  | 'boot'
+  | 'menu'
+  | 'briefing'
+  | 'game'
+  | 'transition'
+  | 'win'
+  | 'loss'
+  | 'summary';
 
 /**
  * Branded string used as a registry key. Modules (games & UI screens)
@@ -99,6 +107,12 @@ export interface EventMap {
 
   /** Audio control. Listen in `AudioManager` if you wire audio reactions. */
   'audio:play': { id: string; channel: 'bgm' | 'sfx' };
+
+  /**
+   * Endless-runner style game finished. Emitted by the game module, consumed by UI.
+   * Stores a snapshot into `playerData` and navigates to win/loss screens.
+   */
+  'runner:finished': import('./runner/runnerTypes').RunnerFinishedPayload;
 }
 
 export type EventKey = keyof EventMap;

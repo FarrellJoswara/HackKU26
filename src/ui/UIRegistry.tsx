@@ -27,6 +27,10 @@ type ScreenComp = LazyExoticComponent<ComponentType<UIProps<any>>>;
 const SCREENS: Partial<Record<AppState, ScreenComp>> = {
   boot: lazy(() => import('./screens/BootScreen')),
   menu: lazy(() => import('./screens/MainMenu')),
+  briefing: lazy(() => import('./screens/BudgetBriefingScreen')),
+  win: lazy(() => import('./screens/WinScreen')),
+  loss: lazy(() => import('./screens/LossScreen')),
+  summary: lazy(() => import('./screens/PostRunSummaryScreen')),
 };
 
 /**
