@@ -96,6 +96,29 @@ function setCloudMaterialsDoubleSided(root: THREE.Object3D) {
   });
 }
 
+/** Warm emissive on authored sun mesh so grade/bloom reads a clear disc. */
+function boostSunDiscMaterials(root: THREE.Object3D) {
+  const warm = new THREE.Color(0xfff2cc);
+  const halo = new THREE.Color(0xffd080);
+  root.traverse((o) => {
+    const m = o as THREE.Mesh;
+    if (!m.isMesh || !m.material) return;
+    const mats = Array.isArray(m.material) ? m.material : [m.material];
+    for (const mat of mats) {
+      if ((mat as THREE.MeshBasicMaterial).isMeshBasicMaterial) {
+        const b = mat as THREE.MeshBasicMaterial;
+        b.color.copy(warm).lerp(halo, 0.25);
+        b.toneMapped = true;
+        continue;
+      }
+      const std = mat as THREE.MeshStandardMaterial;
+      if (std.emissive) std.emissive.copy(warm).lerp(halo, 0.35);
+      std.emissiveIntensity = Math.max(std.emissiveIntensity ?? 0, 0.85);
+      std.toneMapped = true;
+    }
+  });
+}
+
 /** Softer, brighter clouds for tropical sky mood. */
 function lightenCloudMaterials(root: THREE.Object3D) {
   const white = new THREE.Color(0xffffff);
@@ -483,6 +506,14 @@ function main() {
   cloudGroup.position.set(0, 32, 0);
   scene.add(cloudGroup);
 
+  const sunDiscGroup = new THREE.Group();
+  scene.add(sunDiscGroup);
+  let sunDiscRoot: THREE.Group | null = null;
+  /** World distance for sun billboard; direction blends toward horizon so the disc sits lower. */
+  const SUN_DISC_DISTANCE = 208;
+  const sunDiscDirScratch = new THREE.Vector3();
+  const sunDiscHorizScratch = new THREE.Vector3();
+
   void (async () => {
     try {
       const queen = await loadGltf(asset('models/queen-palm.glb'));
@@ -531,19 +562,44 @@ function main() {
       cb.getSize(csz);
       const cn = 28 / Math.max(csz.x, csz.y, csz.z, 0.001);
       cloudSrc.scale.setScalar(cn);
-      const nClouds = 10;
+      const nClouds = 24;
       for (let c = 0; c < nClouds; c++) {
         const g = cloudSrc.clone();
-        const ang = (c / nClouds) * tau + c * 0.7;
-        const rad = 35 + (c % 3) * 12;
-        g.position.set(Math.cos(ang) * rad, (c % 4) * 4 - 6, Math.sin(ang) * rad);
-        g.rotation.y = ang + 1.2;
-        g.scale.multiplyScalar(0.75 + (c % 3) * 0.15);
+        const layer = c % 6;
+        const ang = (c / nClouds) * tau + c * 0.55;
+        const rad = 26 + layer * 7.5 + (c % 3) * 5;
+        const y = layer * 2.8 - 9 + (c % 4) * 2.2;
+        g.position.set(Math.cos(ang) * rad, y, Math.sin(ang) * rad);
+        g.rotation.y = ang + 1.05 + (c % 5) * 0.35;
+        g.rotation.z = (c % 3) * 0.08;
+        g.scale.multiplyScalar(0.62 + (c % 4) * 0.14 + (layer % 2) * 0.1);
         cloudGroup.add(g);
       }
 
     } catch (e) {
       console.warn('[Island] optional models failed', e);
+    }
+  })();
+
+  void (async () => {
+    try {
+      const sunSrc = await loadGltf(asset('models/sun.glb'));
+      enableShadows(sunSrc, false, false);
+      boostSunDiscMaterials(sunSrc);
+      const sb = new THREE.Box3().setFromObject(sunSrc);
+      const ssz = new THREE.Vector3();
+      sb.getSize(ssz);
+      const target = 32;
+      const sn = target / Math.max(ssz.x, ssz.y, ssz.z, 0.001);
+      sunSrc.scale.setScalar(sn);
+      const sb2 = new THREE.Box3().setFromObject(sunSrc);
+      const ctr = new THREE.Vector3();
+      sb2.getCenter(ctr);
+      sunSrc.position.sub(ctr);
+      sunDiscRoot = sunSrc;
+      sunDiscGroup.add(sunSrc);
+    } catch (se) {
+      console.warn('[Island] sun disc model failed', se);
     }
   })();
 
@@ -744,6 +800,21 @@ function main() {
       }
     }
     cloudGroup.rotation.y += dt * 0.012;
+    if (sunDiscRoot) {
+      const towardHorizon = 0.64;
+      sunDiscHorizScratch.set(sunDir.x, 0, sunDir.z);
+      if (sunDiscHorizScratch.lengthSq() < 1e-8) sunDiscHorizScratch.set(1, 0, 0);
+      else sunDiscHorizScratch.normalize();
+      sunDiscDirScratch
+        .copy(sunDir)
+        .multiplyScalar(1 - towardHorizon)
+        .addScaledVector(sunDiscHorizScratch, towardHorizon)
+        .normalize()
+        .multiplyScalar(SUN_DISC_DISTANCE);
+      sunDiscGroup.position.copy(sunDiscDirScratch);
+      sunDiscGroup.up.set(0, 1, 0);
+      sunDiscGroup.lookAt(camera.position);
+    }
     controls.update();
     composer.render();
   }
