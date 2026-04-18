@@ -1,4 +1,25 @@
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Outfit:wght@400;500;600&display=swap");
 @import "tailwindcss";
+@import "./ui/island-ui.css";
+
+:root {
+  --island-color-ink: #2a2418;
+  --island-color-ink-muted: #5c5346;
+  --island-color-title: #1a4d5c;
+  --island-color-sand-paper: rgba(255, 252, 245, 0.94);
+  --island-color-sand-paper-end: rgba(245, 235, 215, 0.92);
+  --island-color-frame-dark: #5c4410;
+  --island-color-frame-mid: #8b6914;
+  --island-color-frame-light: #c4a574;
+  --island-radius-hud: 18px;
+  --island-radius-inner: 15px;
+  --island-shadow-hud: 0 8px 24px rgba(40, 25, 8, 0.45);
+  --island-shadow-inner-glow: inset 0 2px 12px rgba(255, 255, 255, 0.5);
+  --island-font-display: "Fraunces", Georgia, serif;
+  --island-font-body: "Outfit", "DM Sans", system-ui, sans-serif;
+  --island-font-ui: "DM Sans", "Outfit", system-ui, sans-serif;
+  --island-focus-ring: 0 0 0 3px rgba(26, 77, 92, 0.45);
+}
 
 html,
 body,
@@ -7,8 +28,7 @@ body,
   margin: 0;
   background: #000;
   color: #fff;
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
-    "Helvetica Neue", Arial, sans-serif;
+  font-family: var(--island-font-body);
   overflow: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;

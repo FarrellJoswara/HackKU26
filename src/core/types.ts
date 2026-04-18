@@ -11,11 +11,19 @@
  *      Add an entry here and the whole codebase becomes type-safe for it.
  */
 
+import type { BoxBudgetSubmitPayload } from './budgetTypes';
+
 /* -------------------------------------------------------------------------- */
 /*  App lifecycle                                                             */
 /* -------------------------------------------------------------------------- */
 
-export type AppState = 'boot' | 'menu' | 'game' | 'transition';
+export type AppState =
+  | 'boot'
+  | 'menu'
+  /** Financial Freedom — "The Box" zero-based budgeting UI (GDD). */
+  | 'budget'
+  | 'game'
+  | 'transition';
 
 /**
  * Branded string used as a registry key. Modules (games & UI screens)
@@ -83,6 +91,7 @@ export interface UIEvent<TPayload = unknown> {
  * TODO: developers — add domain-specific events here (e.g. 'player:hit',
  *       'inventory:add', 'audio:duck') so emitters/listeners stay typed.
  */
+
 export interface EventMap {
   /** Fired by `TransitionManager` when a navigation request begins. */
   'navigate:request': { to: AppState; module?: ModuleId | null };
@@ -99,6 +108,12 @@ export interface EventMap {
 
   /** Audio control. Listen in `AudioManager` if you wire audio reactions. */
   'audio:play': { id: string; channel: 'bgm' | 'sfx' };
+
+  /**
+   * The Box — player confirmed a zero-based budget for the year.
+   * Logic listens here; UI may also `mergePlayerData` for optimistic UX.
+   */
+  'box:budget:submit': BoxBudgetSubmitPayload;
 }
 
 export type EventKey = keyof EventMap;

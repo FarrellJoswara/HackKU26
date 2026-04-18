@@ -19,6 +19,7 @@ import {
 } from 'react';
 import { useAppStore } from '@/core/store';
 import type { AppState, ModuleId, UIProps } from '@/core/types';
+import { GAME_IDS } from '@/games/registry';
 import { HUD } from './hud/HUD';
 
 type ScreenComp = LazyExoticComponent<ComponentType<UIProps<any>>>;
@@ -27,6 +28,8 @@ type ScreenComp = LazyExoticComponent<ComponentType<UIProps<any>>>;
 const SCREENS: Partial<Record<AppState, ScreenComp>> = {
   boot: lazy(() => import('./screens/BootScreen')),
   menu: lazy(() => import('./screens/MainMenu')),
+  /** Financial Freedom — zero-based budgeting (GAME_DESIGN.md). */
+  budget: lazy(() => import('./screens/TheBoxScreen')),
 };
 
 /**
@@ -37,7 +40,13 @@ const SCREENS: Partial<Record<AppState, ScreenComp>> = {
  * TODO: register per-game UI here, e.g.
  *   [GAME_IDS.catRun]: lazy(() => import('./screens/CatRunHUD')),
  */
-const MODULE_SCREENS: Partial<Record<ModuleId, ScreenComp>> = {};
+const MODULE_SCREENS: Partial<Record<ModuleId, ScreenComp>> = {
+  /**
+   * Island Run is an iframe game — the host UI can overlay \"The Box\"
+   * on top of it without importing any game implementation.
+   */
+  [GAME_IDS.islandRun]: lazy(() => import('./screens/TheBoxOverlay')),
+};
 
 export function UIRegistry() {
   const appState = useAppStore((s) => s.appState);

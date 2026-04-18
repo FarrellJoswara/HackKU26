@@ -15,7 +15,11 @@
     "noUncheckedIndexedAccess": true,
     "resolveJsonModule": true,
     "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "baseUrl": ".",
+    "paths": {
+      "@hackku/scenarios": ["../src/core/scenarios/index.ts"]
+    }
   },
-  "include": ["src"]
+  "include": ["src", "../src/core/scenarios/**/*.ts", "../src/core/budgetTypes.ts"]
 }

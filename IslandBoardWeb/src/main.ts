@@ -8,7 +8,8 @@ import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { ParadiseGradeShader } from './post/ParadiseGradeShader';
 import { ParadiseSkydome } from './skydome/ParadiseSkydome';
 import { ParadiseWater } from './water/ParadiseWater';
-import { SQUARE_LABELS, SQUARE_TIPS } from './tips';
+import { getBoardLandingScenarioBody } from './boardScenarioLanding';
+import { SQUARE_LABELS } from './tips';
 
 const NUM_SQUARES = 12;
 const BOARD_R = 6.8;
@@ -885,7 +886,7 @@ function main() {
   function openLanding(square: number) {
     if (landingText && landingSub) {
       landingSub.textContent = SQUARE_LABELS[square] ?? 'Finance tip';
-      landingText.textContent = SQUARE_TIPS[square] ?? '';
+      landingText.textContent = getBoardLandingScenarioBody(square);
     }
     landing?.classList.add('is-open');
     landing?.setAttribute('aria-hidden', 'false');

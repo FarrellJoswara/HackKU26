@@ -5,49 +5,83 @@
  * TODO: design the real menu. Add settings, leaderboard, credits, etc.
  */
 
-import { Box, Palmtree } from 'lucide-react';
-import { Button } from '../components/Button';
+import { Box, LayoutGrid, Layers, Palmtree } from 'lucide-react';
 import { eventBus } from '@/core/events';
 import { GAME_IDS } from '@/games/registry';
+import { useAppStore } from '@/core/store';
 import type { UIProps } from '@/core/types';
 
 export default function MainMenu(_props: UIProps<unknown>) {
+  const mergePlayerData = useAppStore((s) => s.mergePlayerData);
+
   return (
-    <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-slate-950 via-indigo-950 to-black text-white">
-      <h1 className="text-5xl font-bold tracking-tight">HackKU26</h1>
-      <p className="mt-2 text-sm tracking-widest uppercase opacity-60">
-        modular webgl game scaffold
-      </p>
+    <div className="island-pageBg absolute inset-0 flex flex-col items-center justify-center px-4 text-[var(--island-color-ink)]">
+      <div className="island-hudBottle w-full max-w-xl">
+        <div className="island-hudInner px-6 py-7 text-center">
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--island-color-title)]/80">
+            HackKU26
+          </p>
+          <h1 className="island-title mt-2 text-5xl">Financial Freedom</h1>
+          <p className="island-statusText mx-auto mt-4 max-w-md">
+            Choose a prototype lane: budget first, view the budget over Island Run, or jump
+            directly into a playable scene.
+          </p>
 
-      <div className="mt-10 flex flex-col gap-3">
-        <Button
-          leadingIcon={<Box className="size-4" />}
-          onClick={() =>
-            eventBus.emit('navigate:request', {
-              to: 'game',
-              module: GAME_IDS.template,
-            })
-          }
-        >
-          Cube demo (template)
-        </Button>
-        <Button
-          leadingIcon={<Palmtree className="size-4" />}
-          onClick={() =>
-            eventBus.emit('navigate:request', {
-              to: 'game',
-              module: GAME_IDS.islandRun,
-            })
-          }
-        >
-          Island Run
-        </Button>
+          <div className="mt-8 flex flex-col gap-3">
+            <button
+              className="island-btnShell"
+              onClick={() => eventBus.emit('navigate:request', { to: 'budget', module: null })}
+            >
+              <LayoutGrid className="size-4" />
+              The Box (budget)
+            </button>
+            <button
+              className="island-btnShell"
+              onClick={() => {
+                mergePlayerData({ 'ui:boxOverlay': true });
+                eventBus.emit('navigate:request', { to: 'game', module: GAME_IDS.islandRun });
+              }}
+            >
+              <Layers className="size-4" />
+              The Box over Island Run
+            </button>
+            <button
+              className="island-btnShell"
+              onClick={() =>
+                eventBus.emit('navigate:request', {
+                  to: 'game',
+                  module: GAME_IDS.template,
+                })
+              }
+            >
+              <Box className="size-4" />
+              Cube demo (template)
+            </button>
+            <button
+              className="island-btnShell"
+              onClick={() =>
+                {
+                  mergePlayerData({ 'ui:boxOverlay': false });
+                  eventBus.emit('navigate:request', {
+                    to: 'game',
+                    module: GAME_IDS.islandRun,
+                  });
+                }
+              }
+            >
+              <Palmtree className="size-4" />
+              Island Run
+            </button>
+          </div>
+
+          <div className="mt-7 border-t border-[rgba(120,90,50,0.25)] pt-4">
+            <p className="island-hintText">
+              Cube runs in React Three Fiber. Island Run loads from{' '}
+              <code className="rounded bg-black/10 px-1">/island-board/</code> inside an iframe.
+            </p>
+          </div>
+        </div>
       </div>
-
-      <p className="mt-8 max-w-sm text-center text-xs text-white/45">
-        Cube uses React Three Fiber in this window. Island Run loads the full
-        board game from <code className="rounded bg-white/10 px-1">/island-board/</code>.
-      </p>
     </div>
   );
 }
