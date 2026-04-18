@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Island Run — 12 Squares</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Outfit:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#canvas-root">Skip to board</a>
+
+    <div id="webgl-error" class="webgl-error hidden" role="alert" aria-live="assertive">
+      <p>WebGL could not start. Try another browser or update your graphics drivers.</p>
+    </div>
+
+    <main id="canvas-root" class="canvas-root" tabindex="-1" aria-label="3D island board view"></main>
+
+    <div id="hud" class="hud-bottle">
+      <div class="hud-inner">
+        <h1 class="hud-title">Island Run</h1>
+        <button id="roll-btn" type="button" class="btn-shell">
+          <svg class="btn-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <rect x="3" y="3" width="8" height="8" rx="1" />
+            <rect x="13" y="3" width="8" height="8" rx="1" />
+            <rect x="13" y="13" width="8" height="8" rx="1" />
+            <rect x="3" y="13" width="8" height="8" rx="1" />
+          </svg>
+          Roll dice
+        </button>
+        <p id="status" class="status-story" aria-live="polite" aria-atomic="true">
+          Roll to ride the tide around the board.
+        </p>
+        <div class="dice-chip-wrap" id="dice-chip-wrap">
+          <span id="dice-face" class="dice-face" aria-hidden="true">—</span>
+          <p id="dice-readout" class="readout-dice">Last roll: —</p>
+        </div>
+        <p id="position-readout" class="readout-secondary">Square: —</p>
+
+        <div class="progress-strip" role="list" aria-label="Progress around the board">
+          <span class="progress-seg" role="listitem" data-i="0"></span>
+          <span class="progress-seg" role="listitem" data-i="1"></span>
+          <span class="progress-seg" role="listitem" data-i="2"></span>
+          <span class="progress-seg" role="listitem" data-i="3"></span>
+          <span class="progress-seg" role="listitem" data-i="4"></span>
+          <span class="progress-seg" role="listitem" data-i="5"></span>
+          <span class="progress-seg" role="listitem" data-i="6"></span>
+          <span class="progress-seg" role="listitem" data-i="7"></span>
+          <span class="progress-seg" role="listitem" data-i="8"></span>
+          <span class="progress-seg" role="listitem" data-i="9"></span>
+          <span class="progress-seg" role="listitem" data-i="10"></span>
+          <span class="progress-seg" role="listitem" data-i="11"></span>
+        </div>
+
+        <p class="hud-hint">
+          <svg class="hint-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <circle cx="12" cy="12" r="10" />
+            <path d="M12 16v-4M12 8h.01" />
+          </svg>
+          Drag to orbit · Scroll to zoom
+        </p>
+
+        <div class="hud-settings">
+          <label class="hud-setting">
+            <input type="checkbox" id="sound-toggle" />
+            Sound
+          </label>
+          <label class="hud-setting">
+            <input type="checkbox" id="quality-toggle" checked />
+            High quality
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div id="landing-overlay" class="landing-overlay" aria-hidden="true">
+      <div
+        class="landing-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="landing-title"
+        aria-describedby="landing-subtitle landing-text"
+      >
+        <button type="button" id="landing-dismiss" class="landing-dismiss" aria-label="Close dialog">×</button>
+        <div class="landing-wave" aria-hidden="true"></div>
+        <h2 id="landing-title">You landed here</h2>
+        <p id="landing-subtitle" class="landing-subtitle">Finance tip</p>
+        <p id="landing-text"></p>
+        <button id="landing-close" type="button" class="btn-continue">Continue</button>
+      </div>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

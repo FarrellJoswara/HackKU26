@@ -1,9 +1,7 @@
 /**
  * Rebuilds IslandBoardWeb and copies Vite output into `public/island-board/`.
  *
- * Expects this repo and IslandBoardWeb to live as siblings:
- *   HackKU26/          (this project — run script from here)
- *   IslandBoardWeb/
+ * Uses `IslandBoardWeb/` inside this repo (or falls back to sibling `../IslandBoardWeb`).
  *
  * Usage: node scripts/sync-island.mjs
  */
@@ -15,14 +13,20 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(__dirname, '..');
-const islandProject = path.join(root, '..', 'IslandBoardWeb');
+const embedded = path.join(root, 'IslandBoardWeb');
+const sibling = path.join(root, '..', 'IslandBoardWeb');
+const islandProject = existsSync(path.join(embedded, 'package.json'))
+  ? embedded
+  : sibling;
 const dist = path.join(islandProject, 'dist');
 const out = path.join(root, 'public', 'island-board');
 
 if (!existsSync(path.join(islandProject, 'package.json'))) {
   console.error(
-    '[sync-island] IslandBoardWeb not found next to this repo:',
-    islandProject,
+    '[sync-island] IslandBoardWeb not found. Expected:',
+    embedded,
+    'or',
+    sibling,
   );
   process.exit(1);
 }
@@ -40,7 +44,11 @@ function patchForSubfolderEmbed() {
   const indexPath = path.join(out, 'index.html');
   if (existsSync(indexPath)) {
     let html = readFileSync(indexPath, 'utf8');
-    html = html.replaceAll('src="/assets/', 'src="assets/').replaceAll('href="/assets/', 'href="assets/');
+    html = html
+      .replaceAll('src="/assets/', 'src="assets/')
+      .replaceAll('href="/assets/', 'href="assets/')
+      .replaceAll('src="/island-board/assets/', 'src="assets/')
+      .replaceAll('href="/island-board/assets/', 'href="assets/');
     writeFileSync(indexPath, html);
     console.log('[sync-island] patched index.html (relative /assets paths)');
   }

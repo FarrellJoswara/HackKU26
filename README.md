@@ -27,7 +27,7 @@ Island Run is built from the **IslandBoardWeb** Vite app and copied into `public
 After changing IslandBoardWeb, refresh the static files:
 
 ```bash
-# from this repo; expects ../IslandBoardWeb
+# from this repo; uses ./IslandBoardWeb (or ../IslandBoardWeb if present)
 npm run sync:island
 ```
 
