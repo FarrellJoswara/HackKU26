@@ -1,103 +1,137 @@
-# HackKU26 — Modular WebGL Game
+# 🏝️ Island Adventure
 
-A hackathon-friendly Vite + React + TypeScript scaffold built for **parallel development**. Four developers (UI, 3D Games, Audio, Logic) can ship in their own folders without merge conflicts.
+> **Financial freedom should be a journey you can actually survive, not a lesson you tune out.**
 
-## Stack
+Island Adventure is a stylized 3D financial literacy game that turns life after graduation into an interactive survival journey. Instead of learning through lectures, spreadsheets, or static calculators, players learn through consequences: budgeting decisions, debt, savings, risk, and long-term planning all shape the path ahead.
 
-- **Vite 5** + **React 18** + **TypeScript** (strict)
-- **Tailwind CSS v4** via `@tailwindcss/vite`
-- **Zustand** (with `persist`) for global state
-- **React Three Fiber** + **drei** for 3D scenes
-- **Howler.js** for audio
-- **lucide-react** for icons
+Built for **HackKU**, the project combines a tropical party-game-inspired world with decision-driven gameplay to make financial planning feel memorable, approachable, and actually fun.
 
-## Getting started
+---
+
+## ✨ Inspiration
+
+We wanted to make financial literacy feel like a **real game** instead of a lecture or spreadsheet tutorial.
+
+A lot of people graduate into a world full of confusing money decisions such as rent, debt, insurance, emergencies, lifestyle choices, and long-term savings, but most tools that try to teach this are boring or overwhelming. We were inspired by chaotic survival and journey-based games, where every decision matters and short-term comfort can hurt you later.
+
+That led us to the idea of turning financial freedom into an adventure: a stylized island journey where players survive adulthood by making smart choices, adapting to unexpected events, and learning through consequences.
+
+---
+
+## 🎮 What It Does
+
+Island Adventure transforms life after graduation into an interactive survival experience.
+
+Players move through a playful island world while making decisions around:
+
+- budgeting
+- debt
+- savings
+- risk
+- long-term planning
+
+A player might choose between spending more now for comfort or saving for future emergencies and the game later tests those decisions through random events and challenges.
+
+Our goal was to make financial planning feel:
+
+- engaging
+- memorable
+- approachable
+- game-first, while still teaching real concepts like emergency funds, spending discipline, and resilience
+
+---
+
+## 🧱 How We Built It
+
+We built Island Adventure as a stylized 3D game experience with a **beachy, party-game-inspired world** to match the theme of HackKU.
+
+The project is split into two major layers:
+
+### 1. Background / World Layer
+This handles the tropical island environment:
+- sand
+- water
+- rocks
+- docks
+- palm trees
+- decorative props and buildings
+
+### 2. Gameplay Layer
+This handles the actual interactive systems:
+- walkable spaces
+- player movement
+- events
+- progression
+- game flow
+
+This separation gave us a strong foundation to build something that looks polished while staying flexible for future expansion.
+
+---
+
+## 🛠️ Tech Stack
+
+We built Island Adventure with:
+
+- **React**
+- **TypeScript**
+- **Vite**
+- **Tailwind CSS**
+- **Zustand**
+- **Three.js**
+- **React Three Fiber**
+- **@react-three/drei**
+- **Howler.js**
+- **Gemini API**
+
+We chose this stack because we needed something that could support both:
+- **game-like 3D interaction**
+- **clean web-based UI**
+
+while still being fast enough to build and iterate on during a hackathon.
+
+
+## 📚 What We Learned (New Skills!)
+
+### Nischay
+I learned how to use React Three Fiber and Three.js to build the island-based 3D world and create the game’s visual atmosphere. This was challenging because I had to go beyond just getting objects on the screen and really learn how to structure a 3D scene, place assets intentionally, and make the environment feel polished and immersive for actual 3D gameplay.
+
+### Emma
+I learned how to structure shared game state and progression systems so player decisions, resources, and outcomes could flow cleanly across the experience. This made me think much more carefully about how everything in the game connects, since even small choices had to carry through events, minigames, and later consequences without breaking the overall experience.
+
+### Farrell
+I learned how to think about blockchain integration in a much more practical way because even a simple idea like posting the game results to Solana allows you to have proof of ownership of your progress in building your financial literacy. I also got to learn how a blockchain ecosystem like Solana could support progression, persistence, or ownership without feeling forced. It was also a learning experience because I got to figure out where Web3 ideas actually add value to a game instead of just being added on.
+
+### Sneha
+I learned how to handle 3D asset integration and scene composition, from bringing in models and textures to arranging props in a way that made the world feel cohesive and readable. This was challenging because it was not just about dropping assets into the scene, it was also about learning how composition, spacing, and visual balance affect the environment and if the in game physics actually make sense for something that looks as simple as angry birds.
+
+## 🚀 Setup
+
+## 🚀 Setup Instructions
+
+Follow these steps to run **Island Adventure** locally.
 
 ```bash
-npm install
+1. Clone the repository
+git clone <your-repo-url>
+
+2. Move into the project folder
+cd <your-project-folder>
+
+3. Open the project in your code editor
+For example, in VS Code:
+code .
+
+4. Install dependencies using the project lockfile
+This project includes a package-lock.json, so install dependencies with:
+
+npm ci
+
+Using npm ci ensures the exact dependency versions defined in our lockfile are installed, which makes setup more consistent across machines.
+
+5. Start the development server
 npm run dev
-```
 
-From the main menu you can open **Cube demo (template)** (React Three Fiber) or **Island Run** (a Three.js island board game).
+6. Open the app in your browser
 
-### Island Run
-
-Island Run lives entirely inside [`src/games/IslandRun/`](src/games/IslandRun/):
-
-```
-src/games/IslandRun/
-  index.tsx                 # React shell: mounts HUD DOM, injects scoped CSS/fonts, calls bootstrap()
-  main.ts                   # imperative Three.js bootstrap() — owns its own WebGLRenderer
-  tips.ts                   # square labels + finance tips
-  post/ParadiseGradeShader.ts
-  skydome/ParadiseSkydome.ts
-  water/ParadiseWater.ts
-  style.css                 # scoped game CSS (imported via `?inline`)
-  assets/                   # every .glb / .jpg the game needs (Vite `?url` imports)
-```
-
-Because `main.ts` creates its own `WebGLRenderer`, the game is mounted OUTSIDE the host R3F `<Canvas>` (see [`src/App.tsx`](src/App.tsx)) — it is a sibling to `UIRegistry`, not a child of `GameRegistry`. Everything the game needs (source, shaders, models, textures, CSS) is self-contained in this one folder: no iframe, no separate Vite project, no `public/` output, no build sync step.
-
-Scripts:
-
-- `npm run build` — typecheck + production build
-- `npm run preview` — preview the production build
-- `npm run typecheck` — TS only
-- `npm run lint` — ESLint
-
-## Folder structure
-
-```
-src/
-  core/          # Zustand store, Event Bus, generic types — the shared contract
-  ui/            # 2D React/Tailwind components (HUD, menus). NEVER imports /games
-  games/         # Isolated R3F mini-game modules. NEVER imports /ui
-  transitions/   # Pluggable screen transitions (fade, wipe, camera swoop, ...)
-  audio/         # Howler.js singleton — call from anywhere
-  assets/        # /models, /textures, /sounds
-```
-
-## Communication contract
-
-```
-UI  ──emit──▶  Event Bus  ◀──emit──  Games
- │                                      │
- └────── read/write ── Zustand ── read/write ──┘
-                          │
-                   subscribe
-                          ▼
-                TransitionManager
-```
-
-- UI **never** imports from `/games`. Games **never** import from `/ui`.
-- Cross-module communication goes through `@/core/events` (typed pub/sub) or `@/core/store` (Zustand).
-- Audio is a singleton: `import { audio } from '@/audio/AudioManager'` then `audio.playSFX('click')`.
-- `TransitionManager` owns visual hand-offs between `appState` changes; swap effects in `@/transitions/registry.ts`.
-
-## Adding things
-
-**Add a new 3D mini-game**
-
-1. Create `src/games/MyGame/index.tsx` typed as `GameProps<MyInput, MyOutput>`.
-2. Register it in `src/games/registry.ts` with a `ModuleId`.
-3. Set `useAppStore.getState().setActiveModule('myGame')` to load it.
-
-**Add a new UI screen**
-
-1. Create `src/ui/screens/MyScreen.tsx` typed as `UIProps<MyData>`.
-2. Register it in `src/ui/UIRegistry.tsx`.
-
-**Add a new transition**
-
-1. Implement `Transition` in `src/transitions/effects/MyEffect.tsx`.
-2. Add it to `src/transitions/registry.ts` and call `setActiveTransition('myEffect')`.
-
-**Add a sound**
-
-1. Drop the file in `src/assets/sounds/`.
-2. Register the ID in `src/audio/tracks.ts`.
-3. Trigger anywhere with `audio.playSFX('id')` or `audio.playBGM('id')`.
-
-## Path alias
-
-`@/*` maps to `src/*`. Example: `import { useAppStore } from '@/core/store';`
+After the dev server starts, open the local URL shown in your terminal, usually:
+http://localhost:5173
