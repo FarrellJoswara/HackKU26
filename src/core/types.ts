@@ -12,6 +12,7 @@
  */
 
 import type { BoxBudgetSubmitPayload } from './budgetTypes';
+import type { IslandScenarioChoicePayload } from './scenarios/islandChoiceApply';
 
 /* -------------------------------------------------------------------------- */
 /*  App lifecycle                                                             */
@@ -20,6 +21,10 @@ import type { BoxBudgetSubmitPayload } from './budgetTypes';
 export type AppState =
   | 'boot'
   | 'menu'
+  /** Settings hub — audio, controls, etc. */
+  | 'settings'
+  /** Difficulty picker shown when starting a new game. */
+  | 'newGameDifficulty'
   /** Financial Freedom — "The Box" zero-based budgeting UI (GDD). */
   | 'budget'
   /** DebtRunner — pre-run consequence briefing screen. */
@@ -120,6 +125,13 @@ export interface EventMap {
    * Logic listens here; UI may also `mergePlayerData` for optimistic UX.
    */
   'box:budget:submit': BoxBudgetSubmitPayload;
+
+  /**
+   * Island Run — player picked option A/B on an interactive landing.
+   * The IslandRun React shell resolves the payload through
+   * `applyIslandScenarioChoice` and merges into `playerData`.
+   */
+  'island:scenarioChoice': IslandScenarioChoicePayload;
 
   /**
    * Endless-runner style game finished. Emitted by the game module,

@@ -12,6 +12,18 @@
 import { useEffect, useRef } from 'react';
 import { bootstrap } from './main';
 import styleText from './style.css?inline';
+import { eventBus } from '@/core/events';
+import { useAppStore } from '@/core/store';
+import {
+  BOX_PLAYER_DATA_KEYS,
+  emptyAllocations,
+  readAllocations,
+  readNumber,
+} from '@/core/budgetTypes';
+import {
+  applyIslandScenarioChoice,
+  isIslandScenarioChoicePayload,
+} from '@/core/scenarios';
 
 const FONTS_HREF =
   'https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Outfit:wght@400;500;600&display=swap';
@@ -52,6 +64,27 @@ export default function IslandRun() {
       fontLink.remove();
       started.current = false;
     };
+  }, []);
+
+  useEffect(() => {
+    return eventBus.on('island:scenarioChoice', (payload) => {
+      if (!isIslandScenarioChoicePayload(payload)) return;
+      const { playerData, mergePlayerData } = useAppStore.getState();
+      const allocations = readAllocations(playerData) ?? emptyAllocations();
+      const annualSalary = readNumber(playerData, BOX_PLAYER_DATA_KEYS.annualSalary, 0);
+      const debtBalance = readNumber(
+        playerData,
+        BOX_PLAYER_DATA_KEYS.highInterestDebtBalance,
+        0,
+      );
+      const { allocations: next } = applyIslandScenarioChoice({
+        allocations,
+        annualSalary: annualSalary > 0 ? annualSalary : undefined,
+        debtBalance,
+        payload,
+      });
+      mergePlayerData({ [BOX_PLAYER_DATA_KEYS.boxAllocations]: next });
+    });
   }, []);
 
   return (
@@ -188,6 +221,31 @@ export default function IslandRun() {
             Finance tip
           </p>
           <p id="landing-text" />
+          <div
+            id="landing-choices"
+            className="landing-choices"
+            role="group"
+            aria-label="Choose how to handle this"
+          >
+            <button
+              type="button"
+              id="landing-choice-a"
+              className="btn-choice"
+              data-choice="a"
+            >
+              <span className="btn-choice-label" data-role="label" />
+              <span className="btn-choice-outcome" data-role="outcome" />
+            </button>
+            <button
+              type="button"
+              id="landing-choice-b"
+              className="btn-choice"
+              data-choice="b"
+            >
+              <span className="btn-choice-label" data-role="label" />
+              <span className="btn-choice-outcome" data-role="outcome" />
+            </button>
+          </div>
           <button
             id="landing-close"
             type="button"

@@ -1,12 +1,14 @@
 /**
- * "The Box" as an overlay panel on top of Island Run (iframe).
+ * "The Box" as an overlay panel on top of Island Run.
  *
  * This keeps the AGENTS.md contract:
  * - UI stays in `src/ui/` and does not import game implementations.
  * - The overlay is enabled by a `playerData` flag set by the menu.
  *
- * TODO: if Island Run needs to react to budget submission, bridge via
- *       postMessage in `IslandRunShell` + a `window.message` listener here.
+ * Island Run lives in `src/games/IslandRun/` (no iframe). When the game
+ * needs to mutate budget allocations, it emits `island:scenarioChoice`
+ * on the typed `eventBus`; the IslandRun React shell applies it to
+ * `playerData`, and this overlay re-syncs from `data` automatically.
  */
 
 import { useCallback, useEffect, useMemo, useState, type ComponentType } from 'react';

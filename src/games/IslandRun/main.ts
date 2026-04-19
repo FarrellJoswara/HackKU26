@@ -8,8 +8,14 @@ import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { ParadiseGradeShader } from './post/ParadiseGradeShader';
 import { ParadiseSkydome } from './skydome/ParadiseSkydome';
 import { ParadiseWater } from './water/ParadiseWater';
-import { getBoardLandingScenarioBody } from './boardScenarioLanding';
+import { getLandingPayload } from './landingPayload';
 import { SQUARE_LABELS } from './tips';
+import { eventBus } from '@/core/events';
+import type {
+  IslandScenarioBeat,
+  IslandScenarioChoiceId,
+  IslandScenarioBeatId,
+} from '@/core/scenarios';
 
 import diceUrl from './assets/models/dice.glb?url';
 import bananaUrl from './assets/models/banana-guy.glb?url';
@@ -49,16 +55,17 @@ const WORLD_DICE_THROW_DIST_MUL = 1.05;
 const WORLD_DICE_OFFSET = new THREE.Euler(Math.PI / 2, 0, 0, 'XYZ');
 
 /**
- * Euler (XYZ) so each die value faces the mini-camera; tweak if this GLB's pips don't match.
- * Camera looks toward origin from (+x,+y,+z).
+ * Euler (XYZ) that brings each die value's pip face to the camera.
+ * Calibrated against this specific dice GLB on 2026-04-19; if the GLB asset
+ * is swapped, re-verify by snapping each face and inspecting visible pips.
  */
 const DICE_VALUE_EULER: Record<number, [number, number, number]> = {
-  1: [0, 0, 0],
-  2: [Math.PI / 2, 0, 0],
-  3: [0, Math.PI / 2, 0],
-  4: [0, -Math.PI / 2, 0],
-  5: [-Math.PI / 2, 0, 0],
-  6: [Math.PI, 0, 0],
+  1: [Math.PI, 0, 0],
+  2: [-Math.PI / 2, 0, 0],
+  3: [0, -Math.PI / 2, 0],
+  4: [0, Math.PI / 2, 0],
+  5: [Math.PI / 2, 0, 0],
+  6: [0, 0, 0],
 };
 
 /** Fine grain for sand bump only (no photo albedo). */
@@ -226,6 +233,8 @@ export function bootstrap(): () => void {
 
   const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 500000);
   camera.position.set(0, 12.5, 15.2);
+  /** So `camera.add(diceViewRoot)` is traversed by the scene graph (HUD die + EffectComposer). */
+  scene.add(camera);
 
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
   renderer.setSize(window.innerWidth, window.innerHeight);
@@ -958,6 +967,9 @@ export function bootstrap(): () => void {
   const landingSub = document.getElementById('landing-subtitle');
   const landingClose = document.getElementById('landing-close');
   const landingDismiss = document.getElementById('landing-dismiss');
+  const landingChoices = document.getElementById('landing-choices');
+  const choiceBtnA = document.getElementById('landing-choice-a') as HTMLButtonElement | null;
+  const choiceBtnB = document.getElementById('landing-choice-b') as HTMLButtonElement | null;
   const segs = Array.from(document.querySelectorAll<HTMLSpanElement>('.progress-seg'));
 
   function updateHud() {
@@ -975,21 +987,60 @@ export function bootstrap(): () => void {
   updateHud();
 
   function closeLanding() {
-    landing?.classList.remove('is-open');
+    landing?.classList.remove('is-open', 'is-choice');
     landing?.setAttribute('aria-hidden', 'true');
+    landingChoices?.classList.remove('is-visible');
+    activeBeat = null;
   }
 
+  function paintChoiceButton(
+    btn: HTMLButtonElement | null,
+    choice: IslandScenarioBeat['optionA'] | IslandScenarioBeat['optionB'],
+  ) {
+    if (!btn) return;
+    const labelEl = btn.querySelector<HTMLElement>('[data-role="label"]');
+    const outcomeEl = btn.querySelector<HTMLElement>('[data-role="outcome"]');
+    if (labelEl) labelEl.textContent = choice.label;
+    if (outcomeEl) outcomeEl.textContent = choice.outcome;
+    btn.dataset['choiceId'] = choice.id;
+  }
+
+  let activeBeat: IslandScenarioBeat | null = null;
+
   function openLanding(square: number) {
-    if (landingText && landingSub) {
-      landingSub.textContent = SQUARE_LABELS[square] ?? 'Finance tip';
-      landingText.textContent = getBoardLandingScenarioBody(square);
+    const payload = getLandingPayload(square);
+    if (landingSub) landingSub.textContent = SQUARE_LABELS[square] ?? 'Finance tip';
+    if (payload.kind === 'choice') {
+      activeBeat = payload.beat;
+      if (landingText) landingText.textContent = payload.beat.setup;
+      paintChoiceButton(choiceBtnA, payload.beat.optionA);
+      paintChoiceButton(choiceBtnB, payload.beat.optionB);
+      landingChoices?.classList.add('is-visible');
+      landing?.classList.add('is-choice');
+    } else {
+      activeBeat = null;
+      if (landingText) landingText.textContent = payload.body;
+      landingChoices?.classList.remove('is-visible');
+      landing?.classList.remove('is-choice');
     }
     landing?.classList.add('is-open');
     landing?.setAttribute('aria-hidden', 'false');
   }
 
+  function onChoiceClick(ev: Event) {
+    if (!activeBeat) return;
+    const btn = ev.currentTarget as HTMLButtonElement;
+    const choiceId = btn.dataset['choiceId'] as IslandScenarioChoiceId | undefined;
+    if (!choiceId) return;
+    const beatId: IslandScenarioBeatId = activeBeat.id;
+    eventBus.emit('island:scenarioChoice', { v: 1, beatId, choiceId });
+    closeLanding();
+  }
+
   landingClose?.addEventListener('click', closeLanding);
   landingDismiss?.addEventListener('click', closeLanding);
+  choiceBtnA?.addEventListener('click', onChoiceClick);
+  choiceBtnB?.addEventListener('click', onChoiceClick);
 
   let rolling = false;
   function finishRollAfterAnimation(roll: number) {
@@ -1161,6 +1212,8 @@ export function bootstrap(): () => void {
     qToggle?.removeEventListener('change', onQualityChange);
     landingClose?.removeEventListener('click', closeLanding);
     landingDismiss?.removeEventListener('click', closeLanding);
+    choiceBtnA?.removeEventListener('click', onChoiceClick);
+    choiceBtnB?.removeEventListener('click', onChoiceClick);
     controls.dispose();
     renderer.dispose();
     renderer.forceContextLoss();

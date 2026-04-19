@@ -20,11 +20,14 @@ export const GAME_IDS = {
   debtRunner: moduleId('debtRunner'),
   /** Island Run — fully self-contained imperative Three.js game inside `src/games/IslandRun/`. Rendered outside the host `<Canvas>` by `App.tsx`, not via `GameRegistry`. */
   islandRun: moduleId('islandRun'),
+  /** Angry-Birds–style towers with portfolio allocation (R3F, self-contained). */
+  investingBirds: moduleId('investingBirds'),
 } as const;
 
 export const GAME_MODULES: Record<ModuleId, LazyGame> = {
   [GAME_IDS.template]: lazy(() => import('./TemplateGame')),
   [GAME_IDS.debtRunner]: lazy(() => import('./DebtRunner')),
+  [GAME_IDS.investingBirds]: lazy(() => import('./InvestingBirds')),
   // Island Run has no R3F module — it mounts directly from App.tsx (see src/games/IslandRun/main.ts).
 };
 
