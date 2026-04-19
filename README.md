@@ -12,7 +12,7 @@ Built for **HackKU**, the project combines a tropical party-game-inspired world 
 
 We wanted to make financial literacy feel like a **real game** instead of a lecture or spreadsheet tutorial.
 
-A lot of people graduate into a world full of confusing money decisions — rent, debt, insurance, emergencies, lifestyle choices, and long-term savings — but most tools that try to teach this are boring or overwhelming. We were inspired by chaotic survival and journey-based games, where every decision matters and short-term comfort can hurt you later.
+A lot of people graduate into a world full of confusing money decisions such as rent, debt, insurance, emergencies, lifestyle choices, and long-term savings, but most tools that try to teach this are boring or overwhelming. We were inspired by chaotic survival and journey-based games, where every decision matters and short-term comfort can hurt you later.
 
 That led us to the idea of turning financial freedom into an adventure: a stylized island journey where players survive adulthood by making smart choices, adapting to unexpected events, and learning through consequences.
 
@@ -30,7 +30,7 @@ Players move through a playful island world while making decisions around:
 - risk
 - long-term planning
 
-A player might choose between spending more now for comfort or saving for future emergencies — and the game later tests those decisions through random events and challenges.
+A player might choose between spending more now for comfort or saving for future emergencies and the game later tests those decisions through random events and challenges.
 
 Our goal was to make financial planning feel:
 
