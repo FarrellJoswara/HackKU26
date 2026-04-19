@@ -93,16 +93,32 @@ while still being fast enough to build and iterate on during a hackathon.
 
 ## 🚀 Setup
 
-### Prerequisites
+## 🚀 Setup Instructions
 
-Make sure you have:
+Follow these steps to run **Island Adventure** locally.
 
-- **Node.js 18+**
-- **npm 9+**
-
-### Install dependencies
-
-This project includes a lockfile, so the cleanest way to install using the project’s dependency definitions is:
-
+### 1. Clone the repository
 ```bash
+git clone <your-repo-url>
+
+2. Move into the project folder
+cd <your-project-folder>
+
+3. Open the project in your code editor
+For example, in VS Code:
+code .
+
+4. Install dependencies using the project lockfile
+This project includes a package-lock.json, so install dependencies with:
+
 npm ci
+
+Using npm ci ensures the exact dependency versions defined in our lockfile are installed, which makes setup more consistent across machines.
+
+5. Start the development server
+npm run dev
+
+6. Open the app in your browser
+
+After the dev server starts, open the local URL shown in your terminal, usually:
+http://localhost:5173
