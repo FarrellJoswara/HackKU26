@@ -19,6 +19,7 @@ import { GameRegistry } from './games/GameRegistry';
 import { UIRegistry } from './ui/UIRegistry';
 import { useAppStore } from './core/store';
 import { GAME_IDS } from './games/registry';
+import { RunnerResultRouter } from './core/runner/RunnerResultRouter';
 
 const IslandRun = lazy(() => import('./games/IslandRun'));
 
@@ -30,6 +31,7 @@ export default function App() {
 
   return (
     <TransitionManager>
+      <RunnerResultRouter />
       <div className="absolute inset-0">
         {islandRun ? (
           <Suspense fallback={null}>

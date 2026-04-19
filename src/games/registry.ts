@@ -16,14 +16,16 @@ export type LazyGame = LazyExoticComponent<GameComponent>;
 
 export const GAME_IDS = {
   template: moduleId('template'),
+  /** Endless-runner consequence game, driven by a budget profile. */
+  debtRunner: moduleId('debtRunner'),
   /** Island Run — fully self-contained imperative Three.js game inside `src/games/IslandRun/`. Rendered outside the host `<Canvas>` by `App.tsx`, not via `GameRegistry`. */
   islandRun: moduleId('islandRun'),
 } as const;
 
 export const GAME_MODULES: Record<ModuleId, LazyGame> = {
   [GAME_IDS.template]: lazy(() => import('./TemplateGame')),
-  // TODO: add your lazy imports here
-  // [GAME_IDS.catRun]: lazy(() => import('./CatRun')),
+  [GAME_IDS.debtRunner]: lazy(() => import('./DebtRunner')),
+  // Island Run has no R3F module — it mounts directly from App.tsx (see src/games/IslandRun/main.ts).
 };
 
 export function getGame(id: ModuleId | null | undefined): LazyGame | null {
