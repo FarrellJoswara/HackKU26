@@ -15,20 +15,28 @@ import {
 export interface DifficultySelectProps {
   value: DifficultyId;
   onChange: (next: DifficultyId) => void;
+  /** `parchment` = recessed beige cards for the New Game difficulty screen. */
+  layout?: 'default' | 'parchment';
 }
 
-export function DifficultySelect({ value, onChange }: DifficultySelectProps) {
+export function DifficultySelect({
+  value,
+  onChange,
+  layout = 'default',
+}: DifficultySelectProps) {
+  const isParchment = layout === 'parchment';
   return (
     <div
       role="radiogroup"
       aria-label="Difficulty"
-      className="grid gap-3 sm:grid-cols-3"
+      className={isParchment ? 'ngd-diffGrid' : 'grid gap-3 sm:grid-cols-3'}
     >
       {DIFFICULTIES.map((opt) => (
         <DifficultyCard
           key={opt.id}
           option={opt}
           selected={opt.id === value}
+          layout={layout}
           onSelect={() => onChange(opt.id)}
         />
       ))}
@@ -39,10 +47,36 @@ export function DifficultySelect({ value, onChange }: DifficultySelectProps) {
 interface DifficultyCardProps {
   option: DifficultyOption;
   selected: boolean;
+  layout: 'default' | 'parchment';
   onSelect: () => void;
 }
 
-function DifficultyCard({ option, selected, onSelect }: DifficultyCardProps) {
+function DifficultyCard({ option, selected, layout, onSelect }: DifficultyCardProps) {
+  if (layout === 'parchment') {
+    return (
+      <button
+        type="button"
+        role="radio"
+        aria-checked={selected}
+        onClick={onSelect}
+        className={[
+          'ngd-diffCard',
+          selected ? 'ngd-diffCard--selected' : '',
+        ]
+          .filter(Boolean)
+          .join(' ')}
+      >
+        {selected ? (
+          <span className="ngd-diffCard__check" aria-hidden>
+            <Check className="size-3.5" strokeWidth={2.5} />
+          </span>
+        ) : null}
+        <p className="ngd-diffCard__label">{option.label}</p>
+        <p className="ngd-diffCard__desc">{option.description}</p>
+      </button>
+    );
+  }
+
   return (
     <button
       type="button"

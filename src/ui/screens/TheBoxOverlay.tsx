@@ -59,6 +59,8 @@ import {
 import { useAppStore } from '@/core/store';
 import type { UIProps } from '@/core/types';
 
+import '@/ui/screens/titleHub.css';
+
 const fmt = new Intl.NumberFormat('en-US', {
   style: 'currency',
   currency: 'USD',
@@ -247,45 +249,66 @@ export default function TheBoxOverlay({ data }: UIProps<Record<string, unknown>>
   const visibleRows = BOX_CATEGORIES.filter((c) => c.tab === activeTab);
 
   return (
-    <div className="pointer-events-none absolute inset-0 z-30">
+    <div className="pointer-events-none absolute inset-0 z-30 text-[var(--island-color-ink)]">
       {!enabled ? (
-        <div className="island-hudBottle pointer-events-auto absolute left-3 top-1/2 -translate-y-1/2">
-          <button className="island-boxLauncher" onClick={open} aria-label="Open The Box">
-            <PanelLeftOpen className="size-4" />
-            The Box
-          </button>
-        </div>
+        <button
+          type="button"
+          className="th-btnSettings pointer-events-auto absolute left-3 top-1/2 -translate-y-1/2"
+          onClick={open}
+          aria-label="Open The Box"
+        >
+          <PanelLeftOpen className="size-4 shrink-0" aria-hidden />
+          The Box
+        </button>
       ) : null}
 
       {enabled ? <div className="island-overlayScrim" /> : null}
 
       {enabled ? (
-        <aside className="pointer-events-auto absolute right-4 top-4 h-[calc(100%-2rem)] w-[min(560px,calc(100%-2rem))] overflow-hidden island-hudBottle">
-          <div className="island-hudInner flex h-full flex-col">
-            <div className="border-b border-[rgba(120,90,50,0.2)] p-5">
+        <aside
+          className="th-hubShell island-hudBottle pointer-events-auto absolute right-4 top-4 h-[calc(100%-2rem)] w-[min(560px,calc(100%-2rem))] overflow-hidden"
+          aria-labelledby="thBoxOverlayTitle"
+        >
+          <div className="island-hudInner island-hudInner--titleHero flex h-full min-h-0 flex-col">
+            <div className="border-b border-[rgba(26,77,92,0.12)] p-5">
               <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--island-color-title)]/80">
-                    Financial Freedom · Year {currentYear}
+                <div className="min-w-0">
+                  <p className="th-eyebrow th-menuEyebrow text-left">
+                    Financial freedom · Year {currentYear}
                   </p>
-                  <h2 className="island-title mt-1 text-2xl">The Box</h2>
-                  <p className="island-statusText mt-2 text-sm">
+                  <h2
+                    id="thBoxOverlayTitle"
+                    className="island-title th-titleGradient mt-1 text-left text-2xl"
+                  >
+                    The Box
+                  </h2>
+                  <p className="island-statusText th-subtitle mt-2 max-w-md text-left text-sm">
                     Every dollar of salary lands somewhere. Confirm to emit{' '}
-                    <code className="rounded bg-black/10 px-1">box:budget:submit</code>.
+                    <code className="rounded bg-[rgba(26,77,92,0.08)] px-1 font-mono text-[0.85em]">
+                      box:budget:submit
+                    </code>
+                    .
                   </p>
                 </div>
-                <button className="island-btnShell" onClick={close} aria-label="Close The Box overlay">
-                  <PanelRightClose className="size-4" />
+                <button
+                  type="button"
+                  className="th-btnSettings shrink-0"
+                  onClick={close}
+                  aria-label="Close The Box overlay"
+                >
+                  <PanelRightClose className="size-4 shrink-0" aria-hidden />
                   Close
                 </button>
               </div>
 
-              <div className="mt-4 grid gap-3 sm:grid-cols-3">
+              <div className="th-titleDivider th-menuDivider my-4" role="presentation" />
+
+              <div className="grid gap-3 sm:grid-cols-3">
                 <div className="island-paperCard rounded-2xl p-3">
                   <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--island-color-ink-muted)]">
                     Salary
                   </p>
-                  <p className="mt-1 font-mono text-lg font-semibold text-[var(--island-color-title)]">
+                  <p className="mt-1 font-mono text-lg font-semibold text-[#0a6fa3]">
                     {fmt.format(annualSalary)}
                   </p>
                   {pendingCash > EPS ? (
@@ -298,7 +321,7 @@ export default function TheBoxOverlay({ data }: UIProps<Record<string, unknown>>
                   <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--island-color-ink-muted)]">
                     Debt
                   </p>
-                  <p className="mt-1 font-mono text-lg font-semibold text-[#c44b36]">
+                  <p className="mt-1 font-mono text-lg font-semibold text-[#b91c1c]">
                     {fmt.format(debtBalance)}
                   </p>
                 </div>
@@ -328,7 +351,7 @@ export default function TheBoxOverlay({ data }: UIProps<Record<string, unknown>>
                         t.locked ? 'cursor-not-allowed opacity-50' : '',
                       ].join(' ')}
                     >
-                      {t.locked ? <Lock className="size-4" /> : null}
+                      {t.locked ? <Lock className="size-4" aria-hidden /> : null}
                       {t.label}
                     </button>
                   );
@@ -353,11 +376,11 @@ export default function TheBoxOverlay({ data }: UIProps<Record<string, unknown>>
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-5">
+            <div className="min-h-0 flex-1 overflow-y-auto p-5">
               {activeTab === 'investments' && !investmentsUnlocked ? (
                 <div className="island-paperCard mb-3 rounded-2xl p-4">
                   <div className="flex items-start gap-3">
-                    <Lock className="mt-0.5 size-5 text-[#8b6914]" />
+                    <Lock className="mt-0.5 size-5 text-[#8b6914]" aria-hidden />
                     <div>
                       <p className="font-medium text-[var(--island-color-ink)]">Investments locked</p>
                       <p className="mt-1 text-xs text-[var(--island-color-ink-muted)]">
@@ -372,7 +395,7 @@ export default function TheBoxOverlay({ data }: UIProps<Record<string, unknown>>
               {activeTab === 'essentials' ? (
                 <div className="island-paperCard mb-3 rounded-2xl p-4">
                   <div className="flex items-start gap-3">
-                    <Briefcase className="mt-0.5 size-5 text-[var(--island-color-title)]" />
+                    <Briefcase className="mt-0.5 size-5 text-[var(--island-color-title)]" aria-hidden />
                     <div className="min-w-0 flex-1">
                       <div className="flex items-baseline justify-between gap-3">
                         <p className="font-medium text-[var(--island-color-ink)]">
@@ -410,7 +433,7 @@ export default function TheBoxOverlay({ data }: UIProps<Record<string, unknown>>
                                 : 'bg-[rgba(26,77,92,0.12)] text-[var(--island-color-title)]',
                             ].join(' ')}
                           >
-                            {locked ? <Lock className="size-5" /> : <Icon className="size-5" />}
+                            {locked ? <Lock className="size-5" aria-hidden /> : <Icon className="size-5" aria-hidden />}
                           </div>
                           <div className="min-w-0">
                             <p className="font-medium leading-tight text-[var(--island-color-ink)]">{cat.label}</p>
@@ -459,14 +482,14 @@ export default function TheBoxOverlay({ data }: UIProps<Record<string, unknown>>
               ) : null}
             </div>
 
-            <div className="border-t border-[rgba(120,90,50,0.2)] p-5">
+            <div className="border-t border-[rgba(26,77,92,0.12)] p-5">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="text-xs uppercase tracking-[0.14em] text-[var(--island-color-ink-muted)]">
                     Allocated
                   </p>
                   <p className="font-mono text-lg text-[var(--island-color-ink)]">
-                    <span className={isZeroBased ? 'text-[var(--island-color-title)]' : ''}>
+                    <span className={isZeroBased ? 'font-semibold text-[var(--island-color-title)]' : ''}>
                       {fmt.format(total)}
                     </span>
                     <span className="opacity-35"> / </span>
@@ -492,8 +515,13 @@ export default function TheBoxOverlay({ data }: UIProps<Record<string, unknown>>
                     )}
                   </p>
                 </div>
-                <button className="island-btnShell" disabled={!canSubmit} onClick={handleSubmit}>
-                  <Check className="size-4" />
+                <button
+                  type="button"
+                  className="th-btnPlay w-full shrink-0 sm:w-auto"
+                  disabled={!canSubmit}
+                  onClick={handleSubmit}
+                >
+                  <Check className="size-4 shrink-0" aria-hidden />
                   Confirm
                 </button>
               </div>

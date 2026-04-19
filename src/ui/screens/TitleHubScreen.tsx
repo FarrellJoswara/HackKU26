@@ -31,9 +31,7 @@ import {
   PLAYER_KEYS,
   selectHasIslandRunSave,
 } from '../menu/gameFlow';
-import paradiseBgUrl from '@/assets/ui/title-hub-paradise-bg.png?url';
-
-import './titleHub.css';
+import { TitleHubDecor } from '../components/TitleHubDecor';
 
 export default function TitleHubScreen(_props: UIProps<unknown>) {
   const playerData = useAppStore((s) => s.playerData);
@@ -60,45 +58,7 @@ export default function TitleHubScreen(_props: UIProps<unknown>) {
 
   return (
     <div className="th-titleHub text-[var(--island-color-ink)]">
-      <div className="th-decor" aria-hidden>
-        <div
-          className="th-photoBg"
-          style={{ backgroundImage: `url(${paradiseBgUrl})` }}
-        />
-        <div className="th-sky" />
-        <div className="th-godRays" />
-        <div className="th-sunBloom" />
-        <div className="th-sun" />
-        <div className="th-cloudLayer">
-          <div className="th-cloudBlob th-cloudBlob--a" />
-          <div className="th-cloudBlob th-cloudBlob--b" />
-          <div className="th-cloudBlob th-cloudBlob--c" />
-        </div>
-        <div className="th-horizonHaze" />
-        <div className="th-seaDeep" />
-        <div className="th-seaShallow" />
-        <div className="th-waveArc th-waveArc--1" />
-        <div className="th-waveArc th-waveArc--2" />
-        <div className="th-caustic" />
-        <div className="th-foam" />
-        <div className="th-sand" />
-        <div className="th-sandGrain" />
-        <div className="th-island" />
-        <div className="th-birds">
-          <div className="th-bird th-bird--0" />
-          <div className="th-bird th-bird--1" />
-          <div className="th-bird th-bird--2" />
-          <div className="th-bird th-bird--3" />
-          <div className="th-bird th-bird--4" />
-        </div>
-        <div className="th-sparkles">
-          {Array.from({ length: 14 }, (_, i) => (
-            <span key={i} className="th-spark" />
-          ))}
-        </div>
-        <div className="th-vignette" />
-        <div className="th-ambient" />
-      </div>
+      <TitleHubDecor />
 
       <div className="th-content">
         <div className="th-heroCard">

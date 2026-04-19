@@ -582,12 +582,14 @@
   right: 0.75rem;
 }
 
-/* Hero card glass variant */
-.th-titleHub .island-hudBottle {
+/* Hero card glass variant (title hub + any `.th-hubShell` panel, e.g. The Box drawer) */
+.th-titleHub .island-hudBottle,
+.th-hubShell .island-hudBottle {
   border-radius: calc(var(--island-radius-hud) + 4px);
 }
 
-.th-titleHub .island-hudInner.island-hudInner--titleHero {
+.th-titleHub .island-hudInner.island-hudInner--titleHero,
+.th-hubShell .island-hudInner.island-hudInner--titleHero {
   border-radius: calc(var(--island-radius-inner) + 4px);
   background:
     radial-gradient(ellipse 120% 85% at 50% -5%, rgba(255, 255, 255, 0.38) 0%, transparent 55%),
@@ -600,7 +602,8 @@
 }
 
 @supports ((-webkit-backdrop-filter: blur(8px)) or (backdrop-filter: blur(8px))) {
-  .th-titleHub .island-hudInner.island-hudInner--titleHero {
+  .th-titleHub .island-hudInner.island-hudInner--titleHero,
+  .th-hubShell .island-hudInner.island-hudInner--titleHero {
     -webkit-backdrop-filter: blur(18px) saturate(1.22);
     backdrop-filter: blur(18px) saturate(1.22);
     background:
@@ -610,7 +613,8 @@
 }
 
 /* Title typography */
-.th-titleHub h1.island-title {
+.th-titleHub h1.island-title,
+.th-hubShell :is(h1, h2).island-title {
   letter-spacing: -0.02em;
   text-shadow:
     0 1px 0 rgba(255, 255, 255, 0.98),
@@ -618,7 +622,8 @@
     0 0 28px rgba(255, 230, 180, 0.28);
 }
 
-.th-titleHub h1.island-title::after {
+.th-titleHub h1.island-title::after,
+.th-hubShell :is(h1, h2).island-title::after {
   background: linear-gradient(90deg, transparent, #4ec4c8, #ffd08a, #4ec4c8, transparent);
   background-size: 200% 100%;
   opacity: 0.55;
@@ -665,6 +670,69 @@
   text-shadow:
     0 0 12px rgba(255, 252, 245, 0.95),
     0 1px 0 rgba(255, 255, 255, 0.88);
+}
+
+/* Shared menu shells (New Game difficulty, Settings, …) on the title-hub backdrop */
+.th-menuScreen .th-heroCard {
+  max-width: min(42rem, 100%);
+}
+
+.th-menuScreen .th-menuEyebrow,
+.th-hubShell .th-menuEyebrow {
+  margin-top: 0;
+  margin-left: 0;
+  margin-right: auto;
+}
+
+.th-menuScreen .th-menuDivider,
+.th-hubShell .th-menuDivider {
+  margin-top: 0.75rem;
+  margin-left: 0;
+  margin-right: auto;
+  width: min(16rem, 100%);
+}
+
+.th-menuScreen .th-sectionKicker {
+  margin: 0 0 0.45rem;
+  font-family: var(--island-font-ui);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--island-color-ink-muted) 88%, var(--island-color-title));
+}
+
+.th-menuScreen .th-menuActions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 2rem;
+}
+
+.th-menuScreen .th-menuActions .th-btnPlay,
+.th-menuScreen .th-menuActions .th-btnSettings {
+  width: 100%;
+}
+
+/* The Box full route — wider glass card than settings */
+.th-menuScreen.th-boxRoute .th-heroCard {
+  max-width: min(56rem, 100%);
+}
+
+@media (min-width: 480px) {
+  .th-menuScreen .th-menuActions {
+    flex-direction: row;
+    justify-content: flex-end;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .th-menuScreen .th-menuActions .th-btnPlay,
+  .th-menuScreen .th-menuActions .th-btnSettings {
+    width: auto;
+    min-width: min(11.5rem, 46vw);
+    flex: 0 0 auto;
+  }
 }
 
 /* Primary / secondary buttons (logic unchanged in TSX) */
@@ -1044,7 +1112,8 @@
   .th-bird--4,
   .th-spark,
   .th-ambient,
-  .th-titleHub h1.island-title::after {
+  .th-titleHub h1.island-title::after,
+  .th-hubShell :is(h1, h2).island-title::after {
     animation: none !important;
     opacity: 0.38;
   }

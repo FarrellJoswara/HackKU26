@@ -58,6 +58,7 @@ import {
 } from '@/core/budgetTypes';
 import { useAppStore } from '@/core/store';
 import type { UIProps } from '@/core/types';
+import { TitleHubDecor } from '@/ui/components/TitleHubDecor';
 
 const fmt = new Intl.NumberFormat('en-US', {
   style: 'currency',
@@ -235,270 +236,284 @@ export default function TheBoxScreen({ data }: UIProps<Record<string, unknown>>)
   const visibleRows = BOX_CATEGORIES.filter((c) => c.tab === activeTab);
 
   return (
-    <div className="island-pageBg absolute inset-0 overflow-y-auto">
-      <div className="mx-auto flex min-h-full max-w-3xl flex-col px-4 py-8 pb-28">
-        <div className="island-hudBottle mb-6">
-          <div className="island-hudInner p-5">
-            <header className="flex flex-col gap-4 border-b border-[rgba(120,90,50,0.2)] pb-6">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--island-color-title)]/80">
-                    Financial Freedom · Year {currentYear}
-                  </p>
-                  <h1 className="island-title mt-1 text-3xl">The Box</h1>
-                  <p className="island-statusText mt-3 max-w-md text-sm">
-                    Allocate <strong>every dollar</strong> of salary across your categories.
-                    Investments stay locked until high-interest debt is paid off.
-                  </p>
+    <div className="th-titleHub th-menuScreen th-boxRoute absolute inset-0 overflow-y-auto text-[var(--island-color-ink)]">
+      <TitleHubDecor />
+
+      <div className="th-content pb-28">
+        <div className="th-heroCard">
+          <div className="island-hudBottle w-full">
+            <div
+              className="island-hudInner island-hudInner--titleHero px-6 py-8 text-left sm:px-8"
+              role="region"
+              aria-labelledby="thBoxTitle"
+            >
+              <header className="flex flex-col gap-4 border-b border-[rgba(26,77,92,0.12)] pb-6">
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div className="min-w-0 flex-1">
+                    <p className="th-eyebrow th-menuEyebrow">
+                      Financial freedom · Year {currentYear}
+                    </p>
+                    <h1
+                      id="thBoxTitle"
+                      className="island-title th-titleGradient mt-1 text-3xl md:text-[2rem]"
+                    >
+                      The Box
+                    </h1>
+                  </div>
+                  <button
+                    type="button"
+                    className="th-btnSettings shrink-0"
+                    onClick={() => eventBus.emit('navigate:request', { to: 'menu', module: null })}
+                  >
+                    <ArrowLeft className="size-4 shrink-0" aria-hidden />
+                    Menu
+                  </button>
                 </div>
-                <button
-                  className="island-btnShell shrink-0"
-                  onClick={() => eventBus.emit('navigate:request', { to: 'menu', module: null })}
-                >
-                  <ArrowLeft className="size-4" />
-                  Menu
-                </button>
+
+                <div className="th-titleDivider th-menuDivider" role="presentation" />
+
+                <p className="island-statusText th-subtitle max-w-xl">
+                  Allocate <strong>every dollar</strong> of salary across your categories.
+                  Investments stay locked until high-interest debt is paid off.
+                </p>
+
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div className="island-paperCard rounded-2xl p-4">
+                    <p className="text-xs uppercase tracking-[0.14em] text-[var(--island-color-ink-muted)]">
+                      Annual salary
+                    </p>
+                    <p className="mt-1 font-mono text-2xl font-semibold text-[#0a6fa3]">
+                      {fmt.format(annualSalary)}
+                    </p>
+                    <p className="mt-1 text-xs text-[var(--island-color-ink-muted)]">
+                      {pendingCash > EPS ? (
+                        <>
+                          +{' '}
+                          <span className="font-mono text-[#8b6914]">
+                            {fmt.format(pendingCash)}
+                          </span>{' '}
+                          pending cash
+                        </>
+                      ) : (
+                        <>[VAR_STARTING_INCOME]</>
+                      )}
+                    </p>
+                  </div>
+                  <div className="island-paperCard rounded-2xl p-4">
+                    <p className="text-xs uppercase tracking-[0.14em] text-[var(--island-color-ink-muted)]">
+                      High-interest debt
+                    </p>
+                    <p className="mt-1 font-mono text-2xl font-semibold text-[#b91c1c]">
+                      {fmt.format(debtBalance)}
+                    </p>
+                    <p className="mt-1 text-xs text-[var(--island-color-ink-muted)]">
+                      Unlock Investments at $0
+                    </p>
+                  </div>
+                  <div className="island-paperCard rounded-2xl p-4">
+                    <p className="text-xs uppercase tracking-[0.14em] text-[var(--island-color-ink-muted)]">
+                      Inflation (this year)
+                    </p>
+                    <p className="mt-1 font-mono text-2xl font-semibold text-[#8b6914]">
+                      {pct.format(inflationRate)}
+                    </p>
+                    <p className="mt-1 text-xs text-[var(--island-color-ink-muted)]">
+                      Costs scale by (1 + inflation)
+                    </p>
+                  </div>
+                </div>
+              </header>
+
+              <nav className="mt-5 flex flex-wrap gap-2" aria-label="Box sections">
+                {tabs.map((t) => {
+                  const isActive = activeTab === t.id;
+                  return (
+                    <button
+                      key={t.id}
+                      type="button"
+                      disabled={t.locked}
+                      aria-pressed={isActive}
+                      onClick={() => !t.locked && setActiveTab(t.id)}
+                      className={[
+                        'island-btnShell',
+                        isActive ? 'ring-2 ring-[var(--island-color-title)]' : 'opacity-80',
+                        t.locked ? 'cursor-not-allowed opacity-50' : '',
+                      ].join(' ')}
+                    >
+                      {t.locked ? <Lock className="size-4" aria-hidden /> : null}
+                      {t.label}
+                    </button>
+                  );
+                })}
+              </nav>
+
+              <div className="island-paperCard mt-4 rounded-xl p-3">
+                <p className="mb-2 text-[11px] uppercase tracking-[0.16em] text-[var(--island-color-ink-muted)]">
+                  Funding progress
+                </p>
+                <div className="island-progressStrip">
+                  {BOX_CATEGORIES.filter((c) => c.id !== 'investments').map((cat) => (
+                    <span
+                      key={cat.id}
+                      className={['island-progressSeg', (allocations[cat.id] ?? 0) > EPS ? 'is-active' : ''].join(' ')}
+                    />
+                  ))}
+                </div>
+                <p className="island-hintText mt-2">
+                  Funded categories: {fundedCount} / {fundableCount}
+                </p>
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-3">
-                <div className="island-paperCard rounded-2xl p-4">
+              {activeTab === 'investments' && !investmentsUnlocked ? (
+                <div className="island-paperCard mt-5 rounded-2xl p-4">
+                  <div className="flex items-start gap-3">
+                    <Lock className="mt-0.5 size-5 shrink-0 text-[#8b6914]" aria-hidden />
+                    <div>
+                      <p className="font-medium text-[var(--island-color-ink)]">Investments locked</p>
+                      <p className="mt-1 text-sm text-[var(--island-color-ink-muted)]">
+                        Pay your high-interest debt down to $0 to unlock Index Funds, Individual
+                        Stocks, Bonds, CDs, and Crypto. (Employer Match contributions still happen
+                        on the Essentials tab — match dollars are held until you unlock here.)
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+
+              {activeTab === 'essentials' ? (
+                <div className="island-paperCard mt-3 rounded-2xl p-4">
+                  <div className="flex items-start gap-3">
+                    <Briefcase className="mt-0.5 size-5 shrink-0 text-[var(--island-color-title)]" aria-hidden />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-baseline justify-between gap-3">
+                        <p className="font-medium text-[var(--island-color-ink)]">
+                          Employer Match — projected bonus
+                        </p>
+                        <p className="font-mono text-sm text-[var(--island-color-title)]">
+                          +{fmt.format(employerMatchProjected)} / yr
+                        </p>
+                      </div>
+                      <p className="mt-1 text-xs text-[var(--island-color-ink-muted)]">
+                        Your contribution in the <strong>Employer Match</strong> row deducts from salary
+                        (counts in zero-based). Later in the year you also get{' '}
+                        <strong>{pct.format(matchRate)}</strong> match on top, capped at{' '}
+                        {pct.format(matchCapPct)} of salary ({fmt.format(matchCapPct * annualSalary)}).
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+
+              <section className="mt-6 flex flex-col gap-3" aria-label={`Budget rows — ${activeTab}`}>
+                {visibleRows.map((cat) => {
+                  const Icon = categoryIcon[cat.id];
+                  const locked = cat.lockedUntilDebtFree && !investmentsUnlocked;
+                  const value = locked ? 0 : allocations[cat.id];
+
+                  return (
+                    <div key={cat.id} className="island-paperCard rounded-2xl p-4">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="flex min-w-0 flex-1 items-start gap-3">
+                          <div
+                            className={[
+                              'mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-lg',
+                              locked
+                                ? 'bg-[rgba(196,75,54,0.12)] text-[#8b6914]'
+                                : 'bg-[rgba(26,77,92,0.12)] text-[var(--island-color-title)]',
+                            ].join(' ')}
+                          >
+                            {locked ? <Lock className="size-5" aria-hidden /> : <Icon className="size-5" aria-hidden />}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="font-medium leading-tight text-[var(--island-color-ink)]">{cat.label}</p>
+                            <p className="mt-0.5 text-xs text-[var(--island-color-ink-muted)]">{cat.short}</p>
+                            {locked ? (
+                              <p className="mt-2 text-xs text-[#8b6914]">
+                                Locked until high-interest debt hits $0.
+                              </p>
+                            ) : null}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 sm:w-44">
+                          <span className="text-sm text-[var(--island-color-ink-muted)]">$</span>
+                          <input
+                            type="number"
+                            min={0}
+                            step={100}
+                            disabled={locked}
+                            value={Number.isFinite(value) ? value : 0}
+                            onChange={(e) => setCategory(cat.id, e.target.value)}
+                            className={['island-field w-full rounded-xl px-3 py-2 font-mono text-sm outline-none transition', locked ? 'cursor-not-allowed opacity-60' : ''].join(' ')}
+                            aria-label={`Dollars for ${cat.label}`}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </section>
+
+              {activeTab === 'investments' && investmentsUnlocked ? (
+                <p className="mt-3 text-right text-xs text-[var(--island-color-ink-muted)]">
+                  Investing this year: <span className="font-mono">{fmt.format(investingTotal)}</span>
+                  {employerMatchProjected > 0 ? (
+                    <>
+                      {' '}+{' '}
+                      <span className="font-mono text-[var(--island-color-title)]">
+                        {fmt.format(employerMatchProjected)}
+                      </span>{' '}
+                      match
+                    </>
+                  ) : null}
+                </p>
+              ) : null}
+
+              <div className="mt-8 flex flex-col gap-4 border-t border-[rgba(26,77,92,0.12)] pt-6 sm:flex-row sm:items-center sm:justify-between">
+                <div>
                   <p className="text-xs uppercase tracking-[0.14em] text-[var(--island-color-ink-muted)]">
-                    Annual salary
+                    Allocated
                   </p>
-                  <p className="mt-1 font-mono text-2xl font-semibold text-[var(--island-color-title)]">
-                    {fmt.format(annualSalary)}
+                  <p className="font-mono text-lg text-[var(--island-color-ink)]">
+                    <span className={isZeroBased ? 'font-semibold text-[var(--island-color-title)]' : ''}>
+                      {fmt.format(total)}
+                    </span>
+                    <span className="opacity-35"> / </span>
+                    <span>{fmt.format(cashToAllocate)}</span>
                   </p>
-                  <p className="mt-1 text-xs text-[var(--island-color-ink-muted)]">
-                    {pendingCash > EPS ? (
+                  <p className="island-statusText mt-1 text-sm">
+                    {isZeroBased ? (
+                      <span className="text-[#1a7a8c]">
+                        Zero-based — every dollar assigned
+                        {pendingCash > EPS ? ' (incl. pending cash)' : ''}.
+                      </span>
+                    ) : remainder > 0 ? (
                       <>
-                        +{' '}
-                        <span className="font-mono text-[#8b6914]">
-                          {fmt.format(pendingCash)}
-                        </span>{' '}
-                        pending cash
+                        <span className="text-[#8b6914]">{fmt.format(remainder)}</span> left to assign
+                        {pendingCash > EPS ? (
+                          <> · includes {fmt.format(pendingCash)} pending</>
+                        ) : null}
                       </>
                     ) : (
-                      <>[VAR_STARTING_INCOME]</>
+                      <>
+                        <span className="text-[#c44b36]">{fmt.format(-remainder)}</span> over budget
+                      </>
                     )}
                   </p>
                 </div>
-                <div className="island-paperCard rounded-2xl p-4">
-                  <p className="text-xs uppercase tracking-[0.14em] text-[var(--island-color-ink-muted)]">
-                    High-interest debt
-                  </p>
-                  <p className="mt-1 font-mono text-2xl font-semibold text-[#c44b36]">
-                    {fmt.format(debtBalance)}
-                  </p>
-                  <p className="mt-1 text-xs text-[var(--island-color-ink-muted)]">
-                    Unlock Investments at $0
-                  </p>
-                </div>
-                <div className="island-paperCard rounded-2xl p-4">
-                  <p className="text-xs uppercase tracking-[0.14em] text-[var(--island-color-ink-muted)]">
-                    Inflation (this year)
-                  </p>
-                  <p className="mt-1 font-mono text-2xl font-semibold text-[#8b6914]">
-                    {pct.format(inflationRate)}
-                  </p>
-                  <p className="mt-1 text-xs text-[var(--island-color-ink-muted)]">
-                    Costs scale by (1 + inflation)
-                  </p>
-                </div>
+                <button
+                  type="button"
+                  className="th-btnPlay w-full shrink-0 sm:w-auto sm:self-end"
+                  disabled={!canSubmit}
+                  onClick={handleSubmit}
+                >
+                  <Check className="size-4 shrink-0" aria-hidden />
+                  Confirm budget
+                </button>
               </div>
-            </header>
-
-            {/* Browser-style tabs */}
-            <nav className="mt-5 flex flex-wrap gap-2" aria-label="Box sections">
-              {tabs.map((t) => {
-                const isActive = activeTab === t.id;
-                return (
-                  <button
-                    key={t.id}
-                    type="button"
-                    disabled={t.locked}
-                    aria-pressed={isActive}
-                    onClick={() => !t.locked && setActiveTab(t.id)}
-                    className={[
-                      'island-btnShell',
-                      isActive ? 'ring-2 ring-[var(--island-color-title)]' : 'opacity-80',
-                      t.locked ? 'cursor-not-allowed opacity-50' : '',
-                    ].join(' ')}
-                  >
-                    {t.locked ? <Lock className="size-4" /> : null}
-                    {t.label}
-                  </button>
-                );
-              })}
-            </nav>
-
-            <div className="island-paperCard mt-4 rounded-xl p-3">
-              <p className="mb-2 text-[11px] uppercase tracking-[0.16em] text-[var(--island-color-ink-muted)]">
-                Funding progress
-              </p>
-              <div className="island-progressStrip">
-                {BOX_CATEGORIES.filter((c) => c.id !== 'investments').map((cat) => (
-                  <span
-                    key={cat.id}
-                    className={['island-progressSeg', (allocations[cat.id] ?? 0) > EPS ? 'is-active' : ''].join(' ')}
-                  />
-                ))}
-              </div>
-              <p className="island-hintText mt-2">
-                Funded categories: {fundedCount} / {fundableCount}
-              </p>
             </div>
           </div>
         </div>
-
-        {/* Investments tab — locked notice */}
-        {activeTab === 'investments' && !investmentsUnlocked ? (
-          <div className="island-hudBottle mb-3">
-            <div className="island-hudInner p-5">
-              <div className="flex items-start gap-3">
-                <Lock className="mt-0.5 size-5 text-[#8b6914]" />
-                <div>
-                  <p className="font-medium text-[var(--island-color-ink)]">Investments locked</p>
-                  <p className="mt-1 text-sm text-[var(--island-color-ink-muted)]">
-                    Pay your high-interest debt down to $0 to unlock Index Funds, Individual
-                    Stocks, Bonds, CDs, and Crypto. (Employer Match contributions still happen
-                    on the Essentials tab — match dollars are held until you unlock here.)
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        ) : null}
-
-        {/* Essentials tab — employer match projection card (always available) */}
-        {activeTab === 'essentials' ? (
-          <div className="island-hudBottle mb-3">
-            <div className="island-hudInner flex items-start gap-3 p-4">
-              <Briefcase className="mt-0.5 size-5 text-[var(--island-color-title)]" />
-              <div className="min-w-0 flex-1">
-                <div className="flex items-baseline justify-between gap-3">
-                  <p className="font-medium text-[var(--island-color-ink)]">
-                    Employer Match — projected bonus
-                  </p>
-                  <p className="font-mono text-sm text-[var(--island-color-title)]">
-                    +{fmt.format(employerMatchProjected)} / yr
-                  </p>
-                </div>
-                <p className="mt-1 text-xs text-[var(--island-color-ink-muted)]">
-                  Your contribution in the <strong>Employer Match</strong> row deducts from salary
-                  (counts in zero-based). Later in the year you also get{' '}
-                  <strong>{pct.format(matchRate)}</strong> match on top, capped at{' '}
-                  {pct.format(matchCapPct)} of salary ({fmt.format(matchCapPct * annualSalary)}).
-                </p>
-              </div>
-            </div>
-          </div>
-        ) : null}
-
-        <section className="flex flex-col gap-3" aria-label={`Budget rows — ${activeTab}`}>
-          {visibleRows.map((cat) => {
-            const Icon = categoryIcon[cat.id];
-            const locked = cat.lockedUntilDebtFree && !investmentsUnlocked;
-            const value = locked ? 0 : allocations[cat.id];
-
-            return (
-              <div key={cat.id} className="island-hudBottle">
-                <div className="island-hudInner flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="flex min-w-0 flex-1 items-start gap-3">
-                    <div
-                      className={[
-                        'mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-lg',
-                        locked
-                          ? 'bg-[rgba(196,75,54,0.12)] text-[#8b6914]'
-                          : 'bg-[rgba(26,77,92,0.12)] text-[var(--island-color-title)]',
-                      ].join(' ')}
-                    >
-                      {locked ? <Lock className="size-5" /> : <Icon className="size-5" />}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="font-medium leading-tight text-[var(--island-color-ink)]">{cat.label}</p>
-                      <p className="mt-0.5 text-xs text-[var(--island-color-ink-muted)]">{cat.short}</p>
-                      {locked ? (
-                        <p className="mt-2 text-xs text-[#8b6914]">
-                          Locked until high-interest debt hits $0.
-                        </p>
-                      ) : null}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 sm:w-44">
-                    <span className="text-sm text-[var(--island-color-ink-muted)]">$</span>
-                    <input
-                      type="number"
-                      min={0}
-                      step={100}
-                      disabled={locked}
-                      value={Number.isFinite(value) ? value : 0}
-                      onChange={(e) => setCategory(cat.id, e.target.value)}
-                      className={['island-field w-full rounded-xl px-3 py-2 font-mono text-sm outline-none transition', locked ? 'cursor-not-allowed opacity-60' : ''].join(' ')}
-                      aria-label={`Dollars for ${cat.label}`}
-                    />
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </section>
-
-        {/* Investing total readout */}
-        {activeTab === 'investments' && investmentsUnlocked ? (
-          <p className="mt-3 text-right text-xs text-[var(--island-color-ink-muted)]">
-            Investing this year: <span className="font-mono">{fmt.format(investingTotal)}</span>
-            {employerMatchProjected > 0 ? (
-              <>
-                {' '}+{' '}
-                <span className="font-mono text-[var(--island-color-title)]">
-                  {fmt.format(employerMatchProjected)}
-                </span>{' '}
-                match
-              </>
-            ) : null}
-          </p>
-        ) : null}
-
-        <footer className="island-hudBottle sticky bottom-0 z-10 mt-8">
-          <div className="island-hudInner flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-xs uppercase tracking-[0.14em] text-[var(--island-color-ink-muted)]">
-                Allocated
-              </p>
-              <p className="font-mono text-lg text-[var(--island-color-ink)]">
-                <span className={isZeroBased ? 'text-[var(--island-color-title)]' : ''}>
-                  {fmt.format(total)}
-                </span>
-                <span className="opacity-35"> / </span>
-                <span>{fmt.format(cashToAllocate)}</span>
-              </p>
-              <p className="island-statusText mt-1 text-sm">
-                {isZeroBased ? (
-                  <span className="text-[#1a7a8c]">
-                    Zero-based — every dollar assigned
-                    {pendingCash > EPS ? ' (incl. pending cash)' : ''}.
-                  </span>
-                ) : remainder > 0 ? (
-                  <>
-                    <span className="text-[#8b6914]">{fmt.format(remainder)}</span> left to assign
-                    {pendingCash > EPS ? (
-                      <> · includes {fmt.format(pendingCash)} pending</>
-                    ) : null}
-                  </>
-                ) : (
-                  <>
-                    <span className="text-[#c44b36]">{fmt.format(-remainder)}</span> over budget
-                  </>
-                )}
-              </p>
-            </div>
-            <button className="island-btnShell sm:self-end" disabled={!canSubmit} onClick={handleSubmit}>
-              <Check className="size-4" />
-              Confirm budget
-            </button>
-          </div>
-        </footer>
       </div>
     </div>
   );

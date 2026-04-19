@@ -2,6 +2,8 @@
  * Difficulty picker shown after the user chooses "New Game" from the
  * title hub's Play modal. Stores the choice in `playerData` and
  * navigates into the game.
+ *
+ * Visual shell matches the title hub (photo + layers + glass card).
  */
 
 import { useState } from 'react';
@@ -10,6 +12,7 @@ import { eventBus } from '@/core/events';
 import { useAppStore } from '@/core/store';
 import type { UIProps } from '@/core/types';
 import { GAME_IDS } from '@/games/registry';
+import { TitleHubDecor } from '../components/TitleHubDecor';
 import { DifficultySelect } from '../components/DifficultySelect';
 import {
   PLAYER_KEYS,
@@ -42,52 +45,55 @@ export default function NewGameDifficultyScreen(
   };
 
   return (
-    <div className="island-pageBg absolute inset-0 overflow-y-auto">
-      <div className="mx-auto flex min-h-full max-w-3xl flex-col px-4 py-10">
-        <div className="island-hudBottle">
-          <div className="island-hudInner px-6 py-7">
-            <header className="flex flex-col gap-3 border-b border-[rgba(120,90,50,0.2)] pb-5 sm:flex-row sm:items-start sm:justify-between">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--island-color-title)]/80">
-                  New Game
-                </p>
-                <h1 className="island-title mt-1 text-3xl">Choose a difficulty</h1>
-                <p className="island-statusText mt-3 max-w-md text-sm">
-                  Difficulty controls pacing and resources for this run.
-                  You can change it later by starting a new game.
-                </p>
+    <div className="th-titleHub th-menuScreen absolute inset-0 overflow-y-auto text-[var(--island-color-ink)]">
+      <TitleHubDecor />
+
+      <div className="th-content">
+        <div className="th-heroCard">
+          <div className="island-hudBottle w-full">
+            <div
+              className="island-hudInner island-hudInner--titleHero px-6 py-8 text-left sm:px-8"
+              role="region"
+              aria-labelledby="thDiffTitle"
+              aria-describedby="thDiffDesc"
+            >
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <p className="th-eyebrow th-menuEyebrow">New game</p>
+                  <h1
+                    id="thDiffTitle"
+                    className="island-title th-titleGradient mt-1 text-3xl md:text-[2rem]"
+                  >
+                    Choose a difficulty
+                  </h1>
+                </div>
+                <button type="button" className="th-btnSettings shrink-0" onClick={handleBack}>
+                  <ArrowLeft className="size-4 shrink-0" aria-hidden />
+                  Back
+                </button>
               </div>
-              <button
-                type="button"
-                className="island-btnShell shrink-0"
-                onClick={handleBack}
-              >
-                <ArrowLeft className="size-4" />
-                Back
-              </button>
-            </header>
 
-            <div className="mt-6">
-              <DifficultySelect value={selected} onChange={setSelected} />
+              <div className="th-titleDivider th-menuDivider" role="presentation" />
+
+              <p id="thDiffDesc" className="island-statusText th-subtitle mt-3 max-w-xl">
+                Difficulty controls pacing and resources for this run. You can change it later by
+                starting a new game.
+              </p>
+
+              <div className="mt-6">
+                <DifficultySelect value={selected} onChange={setSelected} />
+              </div>
+
+              <div className="th-menuActions">
+                <button type="button" className="th-btnSettings" onClick={handleBack}>
+                  Cancel
+                </button>
+                <button type="button" className="th-btnPlay" onClick={handleCreate}>
+                  <Sparkles className="size-4 shrink-0" aria-hidden />
+                  Create
+                </button>
+              </div>
             </div>
-
-            <footer className="mt-8 flex flex-col items-stretch gap-3 sm:flex-row sm:justify-end">
-              <button
-                type="button"
-                className="island-btnShell"
-                onClick={handleBack}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                className="island-btnShell"
-                onClick={handleCreate}
-              >
-                <Sparkles className="size-4" />
-                Create
-              </button>
-            </footer>
           </div>
         </div>
       </div>
