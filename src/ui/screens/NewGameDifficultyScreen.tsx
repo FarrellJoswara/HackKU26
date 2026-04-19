@@ -42,6 +42,7 @@ export default function NewGameDifficultyScreen(
       [PLAYER_KEYS.islandRunHasSave]: false,
       [BOX_PLAYER_DATA_KEYS.annualSalary]: DIFFICULTY_INCOME_USD[selected],
       [BOX_PLAYER_DATA_KEYS.highInterestDebtBalance]: DIFFICULTY_DEBT_USD[selected],
+      [CAMPAIGN_KEYS.initialHighInterestDebt]: DIFFICULTY_DEBT_USD[selected],
       [BOX_PLAYER_DATA_KEYS.currentYear]: 1,
       // Reset campaign progress for the new save.
       [CAMPAIGN_KEYS.year]: 1,

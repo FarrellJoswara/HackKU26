@@ -24,12 +24,13 @@ describe('advanceCampaignYear', () => {
     eventBus.clear();
   });
 
-  it('default path navigates to Island, bumps year, applies 20% debt cut on win, keeps box gate satisfied', () => {
+  it('default path navigates to Island, bumps year, applies quarter-of-initial debt cut on win, keeps box gate satisfied', () => {
     freshStore({
       [BOX_PLAYER_DATA_KEYS.currentYear]: 2,
       [BOX_PLAYER_DATA_KEYS.highInterestDebtBalance]: 6000,
       [BOX_PLAYER_DATA_KEYS.boxAllocations]: { highInterestDebt: 1500 },
       [CAMPAIGN_KEYS.boxReadyForYear]: 2,
+      [CAMPAIGN_KEYS.initialHighInterestDebt]: 12_000,
     });
     const navs: Array<{ to: string; module: unknown }> = [];
     eventBus.on('navigate:request', (p) => navs.push({ to: p.to, module: p.module }));
@@ -43,8 +44,8 @@ describe('advanceCampaignYear', () => {
     expect(store.playerData[CAMPAIGN_KEYS.boxReadyForYear]).toBe(3);
     expect(summary.fromYear).toBe(2);
     expect(summary.toYear).toBe(3);
-    expect(summary.debtReductionFromWinUsd).toBe(1200);
-    expect(summary.debtAfterUsd).toBe(4800);
+    expect(summary.debtReductionFromWinUsd).toBe(3000);
+    expect(summary.debtAfterUsd).toBe(3000);
     expect(summary.interestPenaltyUsd).toBe(0);
   });
 
@@ -75,6 +76,17 @@ describe('advanceCampaignYear', () => {
     expect(summary.debtReductionFromWinUsd).toBe(0);
     expect(summary.interestPenaltyUsd).toBe(0);
     expect(summary.debtAfterUsd).toBe(10_000);
+  });
+
+  it('caps win reduction at remaining balance when less than a quarter of initial', () => {
+    freshStore({
+      [BOX_PLAYER_DATA_KEYS.highInterestDebtBalance]: 1800,
+      [CAMPAIGN_KEYS.initialHighInterestDebt]: 10_000,
+      [BOX_PLAYER_DATA_KEYS.currentYear]: 1,
+    });
+    const summary = advanceCampaignYear('win');
+    expect(summary.debtReductionFromWinUsd).toBe(1800);
+    expect(summary.debtAfterUsd).toBe(0);
   });
 
   it('does not change debt when balance is already zero on loss', () => {

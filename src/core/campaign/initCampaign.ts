@@ -51,12 +51,21 @@ function onBoxSubmit(payload: BoxBudgetSubmitPayload): void {
     allocations: payload.allocations,
     annualSalary: payload.annualSalary,
   });
-  const { appState, mergePlayerData } = useAppStore.getState();
+  const { appState, mergePlayerData, playerData } = useAppStore.getState();
+  const initialDebtSnap = playerData[CAMPAIGN_KEYS.initialHighInterestDebt];
   mergePlayerData({
     'runner.profile': profile,
     [CAMPAIGN_KEYS.boxReadyForYear]: payload.year,
     [CAMPAIGN_KEYS.boxSubmittedAtMs]: Date.now(),
     [BOX_PLAYER_DATA_KEYS.pendingCashToAllocate]: 0,
+    ...(initialDebtSnap === undefined || initialDebtSnap === null
+      ? {
+          [CAMPAIGN_KEYS.initialHighInterestDebt]: Math.max(
+            0,
+            payload.highInterestDebtBalanceAtSubmit,
+          ),
+        }
+      : {}),
   });
   if (appState === 'budget') {
     eventBus.emit('navigate:request', {
