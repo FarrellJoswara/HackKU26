@@ -1,0 +1,183 @@
+.island-pageBg {
+  background: linear-gradient(180deg, #7ec8ff 0%, #4aa8d8 35%, #2d8a9e 100%);
+}
+
+.island-pageBgDark {
+  background:
+    radial-gradient(ellipse at top, rgba(255, 255, 255, 0.22), transparent 50%),
+    linear-gradient(180deg, #79c4ea 0%, #4f9fcb 45%, #285f80 100%);
+}
+
+.island-hudBottle {
+  padding: 3px;
+  border-radius: var(--island-radius-hud);
+  background: linear-gradient(
+    145deg,
+    var(--island-color-frame-light) 0%,
+    var(--island-color-frame-mid) 45%,
+    var(--island-color-frame-dark) 100%
+  );
+  box-shadow: var(--island-shadow-hud), inset 0 1px rgba(255, 255, 255, 0.25);
+}
+
+.island-hudInner {
+  position: relative;
+  border-radius: var(--island-radius-inner);
+  background:
+    radial-gradient(ellipse 120% 80% at 50% 0%, rgba(255, 255, 255, 0.35) 0%, transparent 55%),
+    linear-gradient(180deg, var(--island-color-sand-paper) 0%, var(--island-color-sand-paper-end) 100%);
+  border: 1px solid rgba(120, 90, 50, 0.35);
+  box-shadow: var(--island-shadow-inner-glow);
+  color: var(--island-color-ink);
+}
+
+.island-title {
+  margin: 0;
+  font-family: var(--island-font-display);
+  font-weight: 700;
+  color: var(--island-color-title);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
+  letter-spacing: 0.02em;
+}
+
+.island-title::after {
+  content: "";
+  display: block;
+  height: 2px;
+  margin-top: 8px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, transparent, #c4a574, #1a7a8c, transparent);
+  opacity: 0.85;
+}
+
+.island-statusText {
+  font-family: var(--island-font-body);
+  font-size: 0.96rem;
+  font-weight: 500;
+  line-height: 1.5;
+  color: #3d3428;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+.island-hintText {
+  font-family: var(--island-font-ui);
+  font-size: 0.78rem;
+  color: var(--island-color-ink-muted);
+  opacity: 0.92;
+}
+
+.island-btnShell {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 11px 20px;
+  border-radius: 999px;
+  border: 2px solid #b8860b;
+  cursor: pointer;
+  background: linear-gradient(180deg, #f4d58d, #e6a23c 45%, #c17a1a);
+  color: #2a1f0a;
+  font-family: var(--island-font-body);
+  font-size: 1rem;
+  font-weight: 600;
+  box-shadow: 0 4px #8b5a12, 0 6px 16px rgba(120, 70, 10, 0.35);
+  transition: transform 0.08s ease, filter 0.15s ease, opacity 0.15s ease;
+}
+
+.island-btnShell:hover {
+  filter: brightness(1.05);
+}
+
+.island-btnShell:active {
+  transform: translateY(2px);
+  box-shadow: 0 2px #8b5a12, 0 4px 12px rgba(120, 70, 10, 0.35);
+}
+
+.island-btnShell:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.island-btnShell:focus-visible,
+.island-field:focus-visible {
+  outline: none;
+  box-shadow: var(--island-focus-ring);
+}
+
+.island-boxLauncher {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 8px 12px;
+  border: none;
+  border-radius: calc(var(--island-radius-inner) - 2px);
+  background: linear-gradient(180deg, rgba(255, 252, 245, 0.95), rgba(245, 235, 215, 0.92));
+  color: var(--island-color-title);
+  font-family: var(--island-font-ui);
+  font-size: 0.86rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+}
+
+.island-boxLauncher:focus-visible {
+  outline: none;
+  box-shadow: var(--island-focus-ring);
+}
+
+.island-progressStrip {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.island-progressSeg {
+  width: 18px;
+  height: 8px;
+  border-radius: 4px;
+  background: rgba(90, 80, 65, 0.2);
+  border: 1px solid rgba(90, 80, 65, 0.25);
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.island-progressSeg.is-done {
+  background: linear-gradient(180deg, #8fd9a8, #4bbf7a);
+  border-color: #2a8f5c;
+  opacity: 0.75;
+}
+
+.island-progressSeg.is-active {
+  background: linear-gradient(180deg, #5ecf8f, #2ecc71);
+  border-color: #1fa855;
+  transform: scaleY(1.2);
+}
+
+.island-overlayScrim {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, rgba(10, 40, 55, 0.2), rgba(5, 15, 28, 0.46));
+  backdrop-filter: blur(6px);
+}
+
+@media (max-width: 640px) {
+  .island-boxLauncher {
+    min-height: 36px;
+    padding: 7px 10px;
+    font-size: 0.8rem;
+  }
+}
+
+.island-paperCard {
+  border: 1px solid rgba(120, 90, 50, 0.22);
+  background: rgba(255, 255, 255, 0.28);
+  box-shadow: inset 0 1px rgba(255, 255, 255, 0.4);
+}
+
+.island-field {
+  border: 1px solid rgba(120, 90, 50, 0.25);
+  background: rgba(255, 255, 255, 0.55);
+  color: var(--island-color-ink);
+}

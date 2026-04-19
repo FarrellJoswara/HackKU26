@@ -8,7 +8,8 @@ import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { ParadiseGradeShader } from './post/ParadiseGradeShader';
 import { ParadiseSkydome } from './skydome/ParadiseSkydome';
 import { ParadiseWater } from './water/ParadiseWater';
-import { SQUARE_LABELS, SQUARE_TIPS } from './tips';
+import { getBoardLandingScenarioBody } from './boardScenarioLanding';
+import { SQUARE_LABELS } from './tips';
 
 import diceUrl from './assets/models/dice.glb?url';
 import bananaUrl from './assets/models/banana-guy.glb?url';
@@ -30,15 +31,20 @@ const TILE_Y = 0.1;
 const BANANA_HOP_SEC = 0.42;
 /** Extra pause after the last hop before the tip dialog opens (ms). */
 const LANDING_AFTER_BANANA_MS = 480;
-/** HUD dice tumble before showing result (ms). */
-const DICE_TUMBLE_MS = 520;
 const DICE_SNAP_SEC = 0.38;
-/** World die on sand: toss from banana toward the lagoon, then snap to the roll. */
-const WORLD_DICE_TUMBLE_SEC = 1.02;
-const WORLD_DICE_SNAP_SEC = 0.48;
-const WORLD_DICE_DWELL_SEC = 0.42;
-/** Slightly extend throw vs base aim (1.15–1.25 feels like "a bit farther"). */
-const WORLD_DICE_THROW_DIST_MUL = 1.2;
+/** HUD center dice block: pop in during the throw, pop out after the world die settles. */
+const DICE_POP_IN_SEC = 0.28;
+const DICE_POP_OUT_SEC = 0.32;
+/** Camera-space placement + size of the center dice block. */
+const DICE_CENTER_POS = new THREE.Vector3(0, -0.35, -7.5);
+const DICE_CENTER_SCALE = 1.35;
+// Real-board-game toss: slower flight so the spin reads, snappy settle so the
+// face is unambiguous, dwell so the player has time to actually *see* the value.
+const WORLD_DICE_TUMBLE_SEC = 1.25;
+const WORLD_DICE_SNAP_SEC = 0.32;
+const WORLD_DICE_DWELL_SEC = 0.75;
+/** Extends throw past the intended land point for a bit of overshoot/skid feel. */
+const WORLD_DICE_THROW_DIST_MUL = 1.05;
 /** Maps world die mesh to Y-up; tune if top face ≠ HUD. */
 const WORLD_DICE_OFFSET = new THREE.Euler(Math.PI / 2, 0, 0, 'XYZ');
 
@@ -255,8 +261,9 @@ export function bootstrap(): () => void {
 
   const diceViewRoot = new THREE.Group();
   camera.add(diceViewRoot);
-  diceViewRoot.position.set(5.5, -3.7, -14.2);
-  diceViewRoot.scale.setScalar(0.42);
+  diceViewRoot.position.copy(DICE_CENTER_POS);
+  diceViewRoot.scale.setScalar(0);
+  diceViewRoot.visible = false;
   let diceModel: THREE.Group | null = null;
   let dicePendingFace: number | null = null;
   let diceMode: 'idle' | 'tumble' | 'snap' = 'idle';
@@ -264,12 +271,14 @@ export function bootstrap(): () => void {
   const diceQA = new THREE.Quaternion();
   const diceQB = new THREE.Quaternion();
   const diceEu = new THREE.Euler(0, 0, 0, 'XYZ');
+  /** 0 = hidden, 1 = fully popped in. Drives scale/visibility of the center dice. */
+  let dicePopT = 0;
+  let dicePopTarget = 0;
 
   const worldDiceGroup = new THREE.Group();
   worldDiceGroup.renderOrder = 5;
   scene.add(worldDiceGroup);
   let worldDiceModel: THREE.Group | null = null;
-  let useWorldDice = false;
   let worldDiceReady = false;
   let worldDiceLandY = 0.12;
   let worldDiceStartX = 0;
@@ -284,6 +293,11 @@ export function bootstrap(): () => void {
   let worldDiceTumbleT0 = 0;
   let worldDiceSnapT0 = 0;
   let worldDiceDwellT0 = 0;
+  // Per-roll randomized spin velocity (rad/s) — set in worldDiceBeginRoll so
+  // each throw has its own unique tumble instead of a procedural sine wobble.
+  let worldSpinVX = 10;
+  let worldSpinVY = 14;
+  let worldSpinVZ = 8;
   const wDiceEu = new THREE.Euler(0, 0, 0, 'XYZ');
   const worldDiceQA = new THREE.Quaternion();
   const worldDiceQB = new THREE.Quaternion();
@@ -318,17 +332,30 @@ export function bootstrap(): () => void {
     diceSnapT0 = clock.elapsedTime;
   }
   function diceUpdate(dt: number, elapsed: number) {
-    if (!diceModel) return;
-    if (diceMode === 'tumble') {
-      diceModel.rotation.x += dt * (10 + Math.sin(elapsed * 31) * 4);
-      diceModel.rotation.y += dt * 14;
-      diceModel.rotation.z += dt * (8 + Math.cos(elapsed * 19) * 3);
-    } else if (diceMode === 'snap') {
-      const u = Math.min(1, (elapsed - diceSnapT0) / DICE_SNAP_SEC);
-      const k = easeOutCubic(u);
-      diceModel.quaternion.copy(diceQA).slerp(diceQB, k);
-      if (u >= 1) diceMode = 'idle';
+    if (diceModel) {
+      if (diceMode === 'tumble') {
+        diceModel.rotation.x += dt * (10 + Math.sin(elapsed * 31) * 4);
+        diceModel.rotation.y += dt * 14;
+        diceModel.rotation.z += dt * (8 + Math.cos(elapsed * 19) * 3);
+      } else if (diceMode === 'snap') {
+        const u = Math.min(1, (elapsed - diceSnapT0) / DICE_SNAP_SEC);
+        const k = easeOutCubic(u);
+        diceModel.quaternion.copy(diceQA).slerp(diceQB, k);
+        if (u >= 1) diceMode = 'idle';
+      }
     }
+    // Mario-Party center pop: tween dicePopT toward target, derive scale + bob.
+    const popDur = dicePopTarget > dicePopT ? DICE_POP_IN_SEC : DICE_POP_OUT_SEC;
+    const step = dt / Math.max(0.0001, popDur);
+    if (dicePopTarget > dicePopT) dicePopT = Math.min(dicePopTarget, dicePopT + step);
+    else if (dicePopTarget < dicePopT) dicePopT = Math.max(dicePopTarget, dicePopT - step);
+    const k = easeOutCubic(dicePopT);
+    diceViewRoot.scale.setScalar(DICE_CENTER_SCALE * k);
+    diceViewRoot.visible = k > 0.001;
+    // Subtle hover + slow spin around Y while visible — feels like a floating block.
+    diceViewRoot.position.x = DICE_CENTER_POS.x;
+    diceViewRoot.position.y = DICE_CENTER_POS.y + Math.sin(elapsed * 2.4) * 0.06 * k;
+    diceViewRoot.position.z = DICE_CENTER_POS.z;
   }
 
   void (async () => {
@@ -362,15 +389,26 @@ export function bootstrap(): () => void {
       worldDiceModel = w;
       worldDiceGroup.add(w);
       worldDiceGroup.scale.setScalar(1.45);
+      // setFromObject applies the world transform, so wsz is already scaled by
+      // the parent group — do NOT multiply by group.scale again (prior bug made
+      // the die hover ~2x its actual height above the sand).
       const wb = new THREE.Box3().setFromObject(w);
       const wsz = new THREE.Vector3();
       wb.getSize(wsz);
-      const scaledH = wsz.y * worldDiceGroup.scale.y;
-      worldDiceLandY = 0.04 + scaledH * 0.5 + 0.03;
+      worldDiceLandY = 0.04 + wsz.y * 0.5 + 0.03;
       worldDiceGroup.position.set(0, worldDiceLandY, 0);
       worldDiceGroup.visible = false;
-      useWorldDice = true;
+      // Guarantee the group renders even if a parent bounds check tries to cull it.
+      worldDiceGroup.traverse((o) => {
+        const mesh = o as THREE.Mesh;
+        if (mesh.isMesh) mesh.frustumCulled = false;
+      });
       worldDiceReady = true;
+      console.log('[IslandDice] ready', {
+        worldDiceReady,
+        landY: worldDiceLandY,
+        height: wsz.y,
+      });
     } catch (e) {
       console.warn('[Island] dice model failed', e);
     }
@@ -733,41 +771,52 @@ export function bootstrap(): () => void {
     if (bananaGroup.children.length > 0) {
       sx = bananaGroup.position.x;
       sz = bananaGroup.position.z;
-      worldDiceStartY = Math.max(TILE_Y + 0.38, bananaGroup.position.y + 0.32);
+      // Start at banana's "hand" height — well above his body so the toss is
+      // clearly coming FROM him, not spawning on top of him.
+      worldDiceStartY = Math.max(TILE_Y + 0.95, bananaGroup.position.y + 0.85);
     } else {
       const a = angleForSquare(playerIndex);
       sx = Math.cos(a) * BOARD_R;
       sz = Math.sin(a) * BOARD_R;
-      worldDiceStartY = TILE_Y + 0.42;
+      worldDiceStartY = TILE_Y + 1.0;
     }
 
     const bx = sx;
     const bz = sz;
-    const toward = 0.78 + Math.random() * 0.16;
-    let ex = sx * (1 - toward);
-    let ez = sz * (1 - toward);
+
+    // Aim into the lagoon, offset from dead-center so consecutive rolls don't
+    // stack in the exact same spot. toward∈[0.55,0.8] maps to ~20–45% of the way
+    // from banana to origin.
+    const toward = 0.55 + Math.random() * 0.25;
+    let ex = bx * (1 - toward);
+    let ez = bz * (1 - toward);
     const jAng = Math.random() * Math.PI * 2;
-    const jR = 0.1 + Math.random() * 0.22;
+    const jR = 0.4 + Math.random() * 0.6;
     ex += Math.cos(jAng) * jR;
     ez += Math.sin(jAng) * jR;
 
+    // Correct clamp: the die must land INSIDE the lagoon (radius < lagoonR − margin)
+    // and not in dead center. Previous code had minR > maxR which silently snapped
+    // every throw to a 0.25-unit radius band right next to the banana's feet.
+    const minR = 0.5;
+    const maxR = lagoonR - 0.55;
     const len = Math.hypot(ex, ez);
-    const innerR = lagoonR + 0.1;
-    const outerR = BOARD_R - 0.48;
-    if (len < innerR) {
-      const s = innerR / Math.max(len, 1e-5);
-      ex *= s;
-      ez *= s;
-    } else if (len > outerR) {
-      const s = outerR / len;
-      ex *= s;
-      ez *= s;
+    if (len > 1e-5) {
+      if (len < minR) {
+        const s = minR / len;
+        ex *= s;
+        ez *= s;
+      } else if (len > maxR) {
+        const s = maxR / len;
+        ex *= s;
+        ez *= s;
+      }
     }
 
     const tdx = ex - bx;
     const tdz = ez - bz;
     const tdLen = Math.hypot(tdx, tdz);
-    const windBack = 0.48 + Math.random() * 0.22;
+    const windBack = 0.55 + Math.random() * 0.25;
     if (tdLen > 1e-4) {
       sx = bx - (tdx / tdLen) * windBack;
       sz = bz - (tdz / tdLen) * windBack;
@@ -779,12 +828,12 @@ export function bootstrap(): () => void {
     let ez2 = sz + dz0 * WORLD_DICE_THROW_DIST_MUL;
     const r2 = Math.hypot(ex2, ez2);
     if (r2 > 1e-5) {
-      if (r2 < innerR) {
-        const s = innerR / r2;
+      if (r2 < minR) {
+        const s = minR / r2;
         ex2 *= s;
         ez2 *= s;
-      } else if (r2 > outerR) {
-        const s = outerR / r2;
+      } else if (r2 > maxR) {
+        const s = maxR / r2;
         ex2 *= s;
         ez2 *= s;
       }
@@ -795,7 +844,14 @@ export function bootstrap(): () => void {
     worldDiceEndX = ex2;
     worldDiceEndZ = ez2;
     const dist = Math.hypot(ex2 - sx, ez2 - sz);
-    worldDiceArcH = 0.48 + dist * 0.18;
+    // Taller arc for a satisfying board-game toss silhouette.
+    worldDiceArcH = 0.9 + dist * 0.28;
+
+    // Randomize the spin axes per-roll so no two tumbles look identical.
+    const sign = () => (Math.random() < 0.5 ? -1 : 1);
+    worldSpinVX = sign() * (9 + Math.random() * 7);
+    worldSpinVY = sign() * (11 + Math.random() * 9);
+    worldSpinVZ = sign() * (7 + Math.random() * 6);
 
     worldDiceModel.rotation.set(0, 0, 0);
     worldDiceModel.quaternion.identity();
@@ -803,6 +859,13 @@ export function bootstrap(): () => void {
     worldDiceTumbleT0 = clock.elapsedTime;
     worldDiceMode = 'tumble';
     worldDiceGroup.visible = true;
+    console.log('[IslandDice] throw', {
+      roll,
+      start: [sx.toFixed(2), worldDiceStartY.toFixed(2), sz.toFixed(2)],
+      end: [ex2.toFixed(2), worldDiceLandY.toFixed(2), ez2.toFixed(2)],
+      arcH: worldDiceArcH.toFixed(2),
+      dist: dist.toFixed(2),
+    });
   }
 
   function worldDiceUpdate(dt: number, elapsed: number) {
@@ -810,15 +873,26 @@ export function bootstrap(): () => void {
     const m = worldDiceModel;
     if (worldDiceMode === 'tumble') {
       const u = Math.min(1, (elapsed - worldDiceTumbleT0) / WORLD_DICE_TUMBLE_SEC);
+      if (u < 0.02) {
+        console.log('[IslandDice] tumble start', {
+          pos: [
+            worldDiceGroup.position.x.toFixed(2),
+            worldDiceGroup.position.y.toFixed(2),
+            worldDiceGroup.position.z.toFixed(2),
+          ],
+          visible: worldDiceGroup.visible,
+        });
+      }
       const k = easeInOutCubic(u);
       worldDiceGroup.position.x = THREE.MathUtils.lerp(worldDiceStartX, worldDiceEndX, k);
       worldDiceGroup.position.z = THREE.MathUtils.lerp(worldDiceStartZ, worldDiceEndZ, k);
       const yBase = THREE.MathUtils.lerp(worldDiceStartY, worldDiceLandY, k);
       worldDiceGroup.position.y = yBase + worldDiceArcH * 4 * k * (1 - k);
-      const spinDamp = (1 - u * 0.32) * 0.78;
-      m.rotation.x += dt * (10 + Math.sin(elapsed * 31) * 4) * spinDamp;
-      m.rotation.y += dt * (14 + Math.sin(elapsed * 17) * 2.5) * spinDamp;
-      m.rotation.z += dt * (8 + Math.cos(elapsed * 19) * 3) * spinDamp;
+      // Linear angular damping — starts full speed, eases out as the die nears the ground.
+      const spinDamp = 1 - u * 0.55;
+      m.rotation.x += dt * worldSpinVX * spinDamp;
+      m.rotation.y += dt * worldSpinVY * spinDamp;
+      m.rotation.z += dt * worldSpinVZ * spinDamp;
       if (u >= 1) {
         worldDiceGroup.position.set(worldDiceEndX, worldDiceLandY, worldDiceEndZ);
         worldDiceMode = 'snap';
@@ -838,6 +912,7 @@ export function bootstrap(): () => void {
       if (elapsed - worldDiceDwellT0 >= WORLD_DICE_DWELL_SEC) {
         worldDiceMode = 'idle';
         worldDiceGroup.visible = false;
+        console.log('[IslandDice] hide', { elapsed: elapsed.toFixed(2) });
       }
     }
   }
@@ -907,7 +982,7 @@ export function bootstrap(): () => void {
   function openLanding(square: number) {
     if (landingText && landingSub) {
       landingSub.textContent = SQUARE_LABELS[square] ?? 'Finance tip';
-      landingText.textContent = SQUARE_TIPS[square] ?? '';
+      landingText.textContent = getBoardLandingScenarioBody(square);
     }
     landing?.classList.add('is-open');
     landing?.setAttribute('aria-hidden', 'false');
@@ -941,7 +1016,7 @@ export function bootstrap(): () => void {
 
   const onRollClick = () => {
     if (rolling) return;
-    if (!worldDiceReady) {
+    if (!diceModel) {
       statusEl!.textContent = 'Loading 3D dice... try again in a moment.';
       return;
     }
@@ -951,31 +1026,40 @@ export function bootstrap(): () => void {
     diceWrap?.classList.add('dice-rolling');
     const roll = 1 + Math.floor(Math.random() * 6);
 
-    if (useWorldDice && worldDiceReady) {
-      diceBeginTumble();
-      worldDiceBeginRoll(roll);
-      window.setTimeout(() => {
-        if (disposed) return;
-        diceFace!.textContent = String(roll);
-        diceReadout!.textContent = `Last roll: ${roll}`;
-        diceSettleToFace(roll);
-      }, WORLD_DICE_TUMBLE_SEC * 1000);
-      const totalMs =
-        (WORLD_DICE_TUMBLE_SEC + WORLD_DICE_SNAP_SEC + WORLD_DICE_DWELL_SEC) * 1000;
-      window.setTimeout(() => {
-        if (disposed) return;
-        finishRollAfterAnimation(roll);
-      }, totalMs);
-    } else {
-      diceBeginTumble();
-      window.setTimeout(() => {
-        if (disposed) return;
-        diceFace!.textContent = String(roll);
-        diceReadout!.textContent = `Last roll: ${roll}`;
-        diceSettleToFace(roll);
-        finishRollAfterAnimation(roll);
-      }, DICE_TUMBLE_MS);
+    // Banana physically throws the world die (arcs over the lagoon, tumbles,
+    // snaps to the rolled face). The HUD "center-pop" mini-die (driven by
+    // dicePopTarget) is popped in alongside so both dice animate together.
+    if (!worldDiceReady) {
+      statusEl!.textContent = 'Loading 3D dice... try again in a moment.';
+      rolling = false;
+      if (rollBtn) rollBtn.disabled = false;
+      statusEl?.classList.remove('is-rolling');
+      diceWrap?.classList.remove('dice-rolling');
+      return;
     }
+    dicePopTarget = 1;
+    diceBeginTumble();
+    worldDiceBeginRoll(roll);
+
+    const tumbleMs = WORLD_DICE_TUMBLE_SEC * 1000;
+    const settleMs = (WORLD_DICE_SNAP_SEC + WORLD_DICE_DWELL_SEC) * 1000;
+
+    window.setTimeout(() => {
+      if (disposed) return;
+      diceFace!.textContent = String(roll);
+      diceReadout!.textContent = `Last roll: ${roll}`;
+      diceSettleToFace(roll);
+    }, tumbleMs);
+
+    window.setTimeout(() => {
+      if (disposed) return;
+      dicePopTarget = 0;
+    }, tumbleMs + settleMs);
+
+    window.setTimeout(() => {
+      if (disposed) return;
+      finishRollAfterAnimation(roll);
+    }, tumbleMs + settleMs + DICE_POP_OUT_SEC * 1000);
   };
   rollBtn?.addEventListener('click', onRollClick);
 
