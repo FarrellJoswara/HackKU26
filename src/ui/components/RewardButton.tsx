@@ -1,5 +1,5 @@
 /**
- * RewardButton — opt-in micro-reward wrapper for raw `<button>` elements.
+ * @file RewardButton — opt-in micro-reward wrapper for raw `<button>` elements.
  *
  * Why this exists: most high-traffic buttons in the app use bespoke
  * classes (`th-btnPlay`, `th-btnSettings`, `island-btnShell`, …) rather

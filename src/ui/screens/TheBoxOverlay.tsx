@@ -1,5 +1,5 @@
 /**
- * "The Box" as an overlay panel on top of Island Run.
+ * @file "The Box" as an overlay panel on top of Island Run.
  *
  * This keeps the AGENTS.md contract:
  * - UI stays in `src/ui/` and does not import game implementations.

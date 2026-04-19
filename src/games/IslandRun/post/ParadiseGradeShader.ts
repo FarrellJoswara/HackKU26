@@ -1,5 +1,5 @@
 /**
- * Full-screen grade after scene render: saturation, warmth, subtle highlight lift (post-bloom feel).
+ * @file Full-screen grade after scene render: saturation, warmth, subtle highlight lift (post-bloom feel).
  * Intended for use with `ShaderPass` + `OutputPass` (linear HDR in, ACES + sRGB out).
  */
 export const ParadiseGradeShader = {

@@ -1,3 +1,8 @@
+/**
+ * @file DebtRunner-specific geometry and obstacle types shared by the scene
+ * graph and `pathGenerator.ts`.
+ */
+
 import type { BudgetProfile } from '@/core/finance/budgetTypes';
 import type { RunnerHudState } from '@/core/runner/hudTypes';
 

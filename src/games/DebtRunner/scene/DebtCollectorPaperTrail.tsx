@@ -1,5 +1,5 @@
 /**
- * Bounded bill "trail" behind the collector. Samples parent world position on a timer — no React state in the hot path.
+ * @file Bounded bill "trail" behind the collector. Samples parent world position on a timer — no React state in the hot path.
  */
 
 import { useRef, type RefObject } from 'react';

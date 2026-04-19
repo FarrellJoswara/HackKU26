@@ -1,3 +1,9 @@
+/**
+ * @file DebtRunner budget profile model — per-category ratings (`bad` |
+ * `average` | `good`) and parsing helpers. Distinct from The Box allocation
+ * types in `@/core/budgetTypes`; bridges via `allocationsToBudgetProfile`.
+ */
+
 export type BudgetRating = 'bad' | 'average' | 'good';
 
 export type BudgetCategoryId =

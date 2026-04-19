@@ -3,7 +3,7 @@ import type { Vector2 } from 'three';
 import type { Bird, Block } from './types';
 
 /**
- * The single mutable bag of simulation state shared between the sim loop
+ * @file The single mutable bag of simulation state shared between the sim loop
  * (`SimDriver`), the scene's imperative mesh updater (`SceneUpdater`), and
  * the input layer.
  *

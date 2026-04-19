@@ -1,11 +1,9 @@
 /**
- * Tiny WebAudio sfx bank with a 4-voice pool and optional pitch variation.
+ * @file Tiny WebAudio sfx bank with a 4-voice pool and optional pitch variation.
  * Subscribes to the global `audio:play` event bus so gameplay code stays
  * loosely coupled. All synthesis is oscillator-based — no mp3 files.
  */
 import { eventBus } from '@/core/events';
-
-export type AudioChannel = 'sfx' | 'bgm';
 
 export type AudioId =
   | 'pull'
@@ -21,11 +19,7 @@ interface AudioContextLike {
   ctx: AudioContext;
   master: GainNode;
   sfxGain: GainNode;
-  musicGain: GainNode;
-  musicNode: OscillatorNode | null;
-  musicLfo: OscillatorNode | null;
   currentVolume: number;
-  musicOn: boolean;
 }
 
 let bank: AudioContextLike | null = null;
@@ -43,18 +37,11 @@ function ensureBank(): AudioContextLike | null {
     const sfxGain = ctx.createGain();
     sfxGain.gain.value = 0.9;
     sfxGain.connect(master);
-    const musicGain = ctx.createGain();
-    musicGain.gain.value = 0.25;
-    musicGain.connect(master);
     bank = {
       ctx,
       master,
       sfxGain,
-      musicGain,
-      musicNode: null,
-      musicLfo: null,
       currentVolume: 0.6,
-      musicOn: false,
     };
     return bank;
   } catch {
@@ -144,64 +131,20 @@ function playSfx(id: AudioId): void {
   }
 }
 
-function startMusic(b: AudioContextLike): void {
-  if (b.musicNode || !b.musicOn) return;
-  const t0 = b.ctx.currentTime;
-  const osc = b.ctx.createOscillator();
-  osc.type = 'triangle';
-  osc.frequency.setValueAtTime(220, t0);
-  const lfo = b.ctx.createOscillator();
-  const lfoGain = b.ctx.createGain();
-  lfo.frequency.value = 0.35;
-  lfoGain.gain.value = 14;
-  lfo.connect(lfoGain);
-  lfoGain.connect(osc.frequency);
-  osc.connect(b.musicGain);
-  osc.start(t0);
-  lfo.start(t0);
-  b.musicNode = osc;
-  b.musicLfo = lfo;
-}
-
-function stopMusic(b: AudioContextLike): void {
-  if (b.musicNode) {
-    try {
-      b.musicNode.stop();
-    } catch {
-      /* noop */
-    }
-    b.musicNode = null;
-  }
-  if (b.musicLfo) {
-    try {
-      b.musicLfo.stop();
-    } catch {
-      /* noop */
-    }
-    b.musicLfo = null;
-  }
-}
-
 export interface AudioConfig {
   volume: number;
-  musicOn: boolean;
 }
 
 let unsub: Array<() => void> = [];
 let booted = false;
 
-/** Update volume / music toggle from outside the bank. */
+/** Update master volume from outside the bank. */
 export function setAudioConfig(cfg: Partial<AudioConfig>): void {
   const b = ensureBank();
   if (!b) return;
   if (typeof cfg.volume === 'number') {
     b.currentVolume = cfg.volume;
     b.master.gain.value = cfg.volume;
-  }
-  if (typeof cfg.musicOn === 'boolean') {
-    b.musicOn = cfg.musicOn;
-    if (cfg.musicOn) startMusic(b);
-    else stopMusic(b);
   }
 }
 
@@ -213,15 +156,12 @@ export function initAudio(initial: AudioConfig): () => void {
   if (b) {
     b.currentVolume = initial.volume;
     b.master.gain.value = initial.volume;
-    b.musicOn = initial.musicOn;
-    // Only start music after first user gesture — we do it lazily on 'release'.
   }
   const offSfx = eventBus.on('audio:play', (ev) => {
     if (!ev || ev.channel === 'bgm') return;
     const bank2 = ensureBank();
     if (!bank2) return;
     if (bank2.ctx.state === 'suspended') void bank2.ctx.resume();
-    if (bank2.musicOn && !bank2.musicNode) startMusic(bank2);
     if (ev.id) playSfx(ev.id as AudioId);
   });
   unsub.push(offSfx);
@@ -230,7 +170,6 @@ export function initAudio(initial: AudioConfig): () => void {
     for (const u of unsub) u();
     unsub = [];
     if (bank) {
-      stopMusic(bank);
       try {
         void bank.ctx.close();
       } catch {

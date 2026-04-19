@@ -1,3 +1,7 @@
+/**
+ * @file Contact listener — turns Planck manifolds into gameplay impact events.
+ */
+
 import type { Body, Contact, ContactImpulse } from 'planck';
 import { GAME_CONFIG } from '../config';
 import type { BodyUserData } from './bodies';

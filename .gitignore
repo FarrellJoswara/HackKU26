@@ -9,7 +9,12 @@ dist-ssr
 .env
 .env.*
 !.env.example
+# `.env.local` is committed on purpose: shared devnet payer for Vite
+# embed at build time (e.g. Vercel) without dashboard env wiring.
+!.env.local
+.solana-payer.json
 
 .vscode/*
 !.vscode/extensions.json
 .idea
+.vercel

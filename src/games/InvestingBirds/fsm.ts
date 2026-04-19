@@ -1,3 +1,8 @@
+/**
+ * @file Pure reducer for Investing Birds run state — rounds, scoring, modal
+ * flags, and portfolio math. Side effects stay in `SimDriver` / event bus.
+ */
+
 import {
   DEMO_ALLOCATION,
   SLICE_RETURN_BOUNDS,
@@ -32,7 +37,7 @@ const EMPTY_SCORE_BY_TYPE: Record<LevelType, number> = {
 };
 
 export function getDefaultSettings(): Settings {
-  return { reducedMotion: false, colorblind: false, volume: 0.6, musicOn: true };
+  return { reducedMotion: false, colorblind: false, volume: 0.6 };
 }
 
 export function getInitialRunState(seed: number): RunState {

@@ -1,6 +1,6 @@
 /**
- * Central audio registry. Imported once from `main.tsx` so that every
- * sound id used elsewhere is guaranteed to be loaded.
+ * @file Central audio registry — registers every SFX/BGM id with the
+ * `AudioManager` singleton. Imported once from `main.tsx` so missing assets fail fast.
  */
 
 import collectorFootWav from '@/assets/sounds/collector_foot.wav?url';

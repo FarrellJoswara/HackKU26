@@ -1,5 +1,5 @@
 /**
- * Settings hub — audio + controls placeholders. Matches the title hub
+ * @file Settings hub — audio + controls placeholders. Matches the title hub
  * shell (beach backdrop + glass card) and shared menu layout tokens.
  */
 

@@ -1,5 +1,5 @@
 /**
- * Stylized "Debt Collector" — suit, briefcase, clipboard, phone; cute but stressful.
+ * @file Stylized "Debt Collector" — suit, briefcase, clipboard, phone; cute but stressful.
  * Animation cadence scales with `intensity` (chase tightness) and `stage`.
  */
 

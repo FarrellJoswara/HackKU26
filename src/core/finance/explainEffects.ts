@@ -1,3 +1,8 @@
+/**
+ * @file Builds user-facing effect copy from budget ratings for summaries and
+ * debrief UI. Pure presentation — does not mutate game state.
+ */
+
 import type { BudgetCategoryId, BudgetProfile, BudgetRating } from './budgetTypes';
 import { CATEGORY_LABELS } from './budgetTypes';
 

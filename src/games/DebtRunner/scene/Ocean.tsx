@@ -1,5 +1,5 @@
 /**
- * Ocean plane — INTENTIONALLY STATIC.
+ * @file Ocean plane — INTENTIONALLY STATIC.
  *
  * Earlier versions of this component animated:
  *   1. The plane's vertex Z values (wave displacement via useFrame), which

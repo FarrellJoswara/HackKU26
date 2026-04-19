@@ -1,5 +1,5 @@
 /**
- * Per-game input/output types. Each game owns its own — never reuse
+ * @file Per-game input/output types. Each game owns its own — never reuse
  * another game's types, just copy this file as a starting point.
  */
 

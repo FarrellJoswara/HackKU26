@@ -1,3 +1,8 @@
+/**
+ * @file Financial debrief after DebtRunner — budget effect copy, stats, and
+ * navigation into the next campaign step.
+ */
+
 import { ArrowLeft, ArrowRight, Sparkles } from 'lucide-react';
 import { eventBus } from '@/core/events';
 import type { UIProps } from '@/core/types';

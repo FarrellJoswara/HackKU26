@@ -1,3 +1,8 @@
+/**
+ * @file Pointer capture for slingshot aim/drag — maps screen coords to world
+ * space via `projection.ts` and dispatches FSM actions.
+ */
+
 import {
   useEffect,
   useRef,

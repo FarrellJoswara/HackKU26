@@ -1,5 +1,5 @@
 /**
- * InfoMark — small inline help affordance.
+ * @file InfoMark — small inline help affordance.
  *
  * Behavior:
  *  - **Desktop (mouse):** hover the mark → popover appears; leaving mark

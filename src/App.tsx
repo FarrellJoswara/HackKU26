@@ -1,4 +1,7 @@
 /**
+ * @file Root layout — composes the DOM UI layer and WebGL game layer without
+ * cross-imports between them (see AGENTS.md).
+ *
  * Top-level layout. Two stacked layers, totally decoupled:
  *
  *   [DOM   ] UIRegistry    — Tailwind-only React, never imports R3F

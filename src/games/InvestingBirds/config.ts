@@ -1,3 +1,8 @@
+/**
+ * @file Tunables, colors, and layout constants for Investing Birds (physics,
+ * slingshot, towers, scoring). Single place for balance iteration.
+ */
+
 import type { Allocation, BlockMaterial, LevelType } from './types';
 
 /** Tunables in one place so balance work stays cheap. */

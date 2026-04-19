@@ -1,6 +1,12 @@
+/**
+ * @file Bridges React overlay state to the fixed-position DOM portal and wires
+ * year-close navigation via `advanceCampaignYear`.
+ */
+
 import { Vector2 } from 'three';
 import { useMemo } from 'react';
 import { advanceCampaignYear } from '@/core/campaign/yearAdvance';
+import { GAME_IDS } from '@/games/registry';
 import { categoryAccent, GAME_CONFIG } from './config';
 import { useFrustum } from './frustumContext';
 import { worldToScreen } from './projection';
@@ -133,11 +139,11 @@ export function Overlay(props: OverlayProps) {
           // Investing Birds is the year-end mini-game on debt-free years,
           // so leaving from the end-of-game modal must close the year
           // through the unified pipeline (debt math, year++, gate reset,
-          // economy roll). Destination 'menu' preserves the existing UX
-          // ("Back to menu") while still applying the close-year writes.
+          // economy roll), then return to the island map.
           advanceCampaignYear({
             outcome: state.outcome ?? 'skipped',
-            destination: 'menu',
+            destination: 'game',
+            module: GAME_IDS.islandRun,
           });
         }}
         onTogglePause={() =>

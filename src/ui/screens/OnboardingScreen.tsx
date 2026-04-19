@@ -1,5 +1,5 @@
 /**
- * One-shot onboarding beat shown before "New Game" the first time the
+ * @file One-shot onboarding beat shown before "New Game" the first time the
  * player launches the game. Either action (Continue or Skip) sets the
  * `onboardingComplete` flag so it never reappears for that save.
  *

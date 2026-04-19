@@ -1,5 +1,5 @@
 /**
- * Box validation surfacing — `useBoxValidation`.
+ * @file Box validation surfacing — `useBoxValidation`.
  *
  * Locked spec (`box_ui_clarified_requirements_7711a010.plan.md`):
  *  - **No live-per-keystroke** validation noise.

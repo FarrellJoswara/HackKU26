@@ -3,7 +3,7 @@ import { CAMERA_DESIGN } from './config';
 import type { Frustum, ViewportPx } from './projection';
 
 /**
- * Shared, resize-only-updated frustum + viewport size. All consumers
+ * @file Shared, resize-only-updated frustum + viewport size. All consumers
  * (CameraRig, Scene, Overlay, InputLayer) read this so world↔screen math
  * is consistent everywhere.
  */

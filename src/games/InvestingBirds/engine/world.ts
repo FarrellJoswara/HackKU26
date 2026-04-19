@@ -1,3 +1,7 @@
+/**
+ * @file Planck world bootstrap — ground edges, gravity, and engine lifecycle.
+ */
+
 import {
   EdgeShape,
   Vec2,

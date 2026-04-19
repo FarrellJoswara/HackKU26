@@ -1,5 +1,5 @@
 /**
- * Single sanitizer for `boxAllocations` after any external mutation
+ * @file Single sanitizer for `boxAllocations` after any external mutation
  * (Island Run choices, future logic, etc). Mirrors the rules baked into
  * `TheBoxScreen` / `TheBoxOverlay` so out-of-band updates cannot leave
  * an illegal state in `playerData`.

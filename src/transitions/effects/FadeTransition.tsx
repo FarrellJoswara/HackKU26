@@ -1,5 +1,5 @@
 /**
- * Default placeholder transition: simple CSS opacity fade through black.
+ * @file Default placeholder transition: simple CSS opacity fade through black.
  *
  * Hardened against three failure modes that produced visible glitches:
  *  1. Mid-flight throw leaving the overlay full-screen and pointer-blocking.

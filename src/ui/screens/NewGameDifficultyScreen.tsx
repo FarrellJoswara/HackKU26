@@ -1,5 +1,5 @@
 /**
- * Difficulty picker shown after the user chooses "New Game" from the
+ * @file Difficulty picker shown after the user chooses "New Game" from the
  * title hub's Play modal. Stores the choice in `playerData` and
  * navigates into the game.
  *

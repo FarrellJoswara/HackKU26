@@ -1,5 +1,5 @@
 /**
- * Central game registry. Each entry is a `React.lazy` import so games
+ * @file Central game registry. Each entry is a `React.lazy` import so games
  * are code-split — adding a 50MB game does not bloat the initial bundle.
  *
  * TODO: developers — add your game here. The `ModuleId` you choose is

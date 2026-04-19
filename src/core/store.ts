@@ -1,5 +1,5 @@
 /**
- * Global Zustand store. Intentionally generic — concrete game/UI shapes
+ * @file Global Zustand store. Intentionally generic — concrete game/UI shapes
  * live in `playerData` so any developer can add fields without touching
  * this file or breaking other modules.
  *

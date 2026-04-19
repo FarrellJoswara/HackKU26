@@ -1,5 +1,5 @@
 /**
- * `TransitionManager` is the *only* component that should change
+ * @file `TransitionManager` is the *only* component that should change
  * `appState`/`activeModule` when a visual hand-off is desired.
  *
  *   eventBus.emit('navigate:request', { to: 'game', module: gameId });

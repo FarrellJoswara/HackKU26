@@ -1,5 +1,5 @@
 /**
- * "The Box" — zero-based budgeting UI (Financial Freedom / GAME_DESIGN.md).
+ * @file "The Box" — zero-based budgeting UI (Financial Freedom / GAME_DESIGN.md).
  *
  * Architecture (AGENTS.md):
  * - Lives under `src/ui/` only — no imports from `src/games/**`.

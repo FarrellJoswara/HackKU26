@@ -1,3 +1,8 @@
+/**
+ * @file Maps funding ratios (allocation ÷ income) to scenario tiers for
+ * copy selection. Tunable band defaults for demos and tests.
+ */
+
 import type { ScenarioTier } from './types';
 
 /** `allocation / annualSalary` (or similar) — games supply the ratio. */

@@ -1,3 +1,8 @@
+/**
+ * @file Transition contracts — `TransitionTarget`, animation options, and the
+ * `Transition` strategy interface used by `TransitionManager` and the registry.
+ */
+
 import type { AppState, ModuleId } from '@/core/types';
 
 /**

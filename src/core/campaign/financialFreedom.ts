@@ -1,5 +1,5 @@
 /**
- * Financial Freedom (FI) detection.
+ * @file Financial Freedom (FI) detection.
  *
  * The campaign router calls `hasReachedFinancialFreedom(playerData)` at
  * `island:yearComplete` to decide whether to route the player to the

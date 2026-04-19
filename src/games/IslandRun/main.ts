@@ -1,3 +1,9 @@
+/**
+ * @file Imperative Island Run game loop — own `WebGLRenderer`, dice/hops,
+ * scenario modals, and event-bus integration. Bootstrapped from `index.tsx`;
+ * intentionally outside R3F to avoid nested WebGL contexts.
+ */
+
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';

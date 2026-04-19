@@ -1,5 +1,5 @@
 /**
- * Install a single document-level click delegator that applies the
+ * @file Install a single document-level click delegator that applies the
  * gamified click feedback (sound + ripple + pulse) to every interactive
  * surface in the app, without requiring per-component changes.
  *

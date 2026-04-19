@@ -1,3 +1,9 @@
+/**
+ * @file Procedural beach track generation — straights, turns, obstacles, and
+ * clearance validation. Tunable from resolved `BudgetEffects` so the budget
+ * profile changes how the run *feels*, not just numbers in the HUD.
+ */
+
 import type { BudgetEffects } from '@/core/finance/budgetEffectResolver';
 import type { Heading, ObstacleKind, ObstacleSpec, TrackTile, TurnDirection } from './types';
 

@@ -1,5 +1,5 @@
 /**
- * Every non-start square resolves to an interactive beat from the catalog.
+ * @file Every non-start square resolves to an interactive beat from the catalog.
  * Square 0 is the Start / year-end gate (handled only in `main.ts`).
  *
  * Each payload includes a `tier` for tier-based audio (and any future UI);

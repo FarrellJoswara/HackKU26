@@ -1,5 +1,5 @@
 /**
- * Vitest setup file — runs once before any test file.
+ * @file Vitest setup file — runs once before any test file.
  *
  * Pulls in `@testing-library/jest-dom` matchers (`toBeInTheDocument`,
  * `toHaveAttribute`, …) and stubs a couple of browser APIs jsdom does

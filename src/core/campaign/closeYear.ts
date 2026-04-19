@@ -1,5 +1,5 @@
 /**
- * Pure year-close pipeline.
+ * @file Pure year-close pipeline.
  *
  * `advanceCampaignYear` (`yearAdvance.ts`) is the only side-effecting
  * caller — it merges the returned patch into `playerData` and emits the

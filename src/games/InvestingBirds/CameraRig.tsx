@@ -1,3 +1,8 @@
+/**
+ * @file Static orthographic camera rig — reads `FrustumContext` and pins the
+ * view to the design frustum (no follow cam, no gameplay camera shake).
+ */
+
 import { OrthographicCamera } from '@react-three/drei';
 import { useLayoutEffect, useRef } from 'react';
 import { Color, type OrthographicCamera as OrthoCam } from 'three';

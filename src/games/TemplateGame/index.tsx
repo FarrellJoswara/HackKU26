@@ -1,5 +1,5 @@
 /**
- * Boilerplate R3F mini-game. Copy this folder to start a new game.
+ * @file Boilerplate R3F mini-game. Copy this folder to start a new game.
  *
  * Contract:
  *   - Receives `inputs: TemplateInput` from the host (set by the caller

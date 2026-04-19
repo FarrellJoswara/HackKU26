@@ -1,5 +1,5 @@
 /**
- * Fork of three.js `Water` (flat mirror) with stronger scatter / tint vs mirror reflection.
+ * @file Fork of three.js `Water` (flat mirror) with stronger scatter / tint vs mirror reflection.
  * @see https://github.com/mrdoob/three.js/blob/dev/examples/jsm/objects/Water.js
  */
 import {

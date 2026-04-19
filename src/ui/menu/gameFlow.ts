@@ -1,5 +1,5 @@
 /**
- * Shared menu-flow constants and selectors.
+ * @file Shared menu-flow constants and selectors.
  *
  * Single source of truth for:
  *   - The placeholder game title.

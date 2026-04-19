@@ -1,5 +1,5 @@
 /**
- * Mountain Success — financial-freedom cinematic.
+ * @file Mountain Success — financial-freedom cinematic.
  *
  * Mirrors the IslandRun shell (own `WebGLRenderer` mounted *outside* the
  * host R3F `<Canvas>` via `App.tsx`). The DOM here is just:

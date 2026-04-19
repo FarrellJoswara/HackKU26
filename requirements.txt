@@ -1,0 +1,29 @@
+# =============================================================================
+# HackKU26 — dependency manifest (Python / pip)
+# =============================================================================
+#
+# This repository ships a Vite + React + TypeScript application. Runtime and
+# build dependencies are declared under npm:
+#
+#   package.json       — direct dependency names and semver ranges
+#   package-lock.json  — exact resolved versions (use with npm ci)
+#
+# Install the application stack (required):
+#
+#   npm ci
+#
+#   or, if you do not need a lockfile-reproducible install:
+#
+#   npm install
+#
+# There are no third-party Python packages required to build, test, or run
+# this project. This file exists so environments that standardize on
+# `pip install -r requirements.txt` have a single entry point; that command
+# completes successfully with zero package installs.
+#
+# If you add Python tooling or scripts later, pin versions here using the
+# usual pip freeze / manual edit workflow, for example:
+#
+#   pip install "package~=1.2"
+#   pip freeze --exclude-editable >> requirements.txt
+#

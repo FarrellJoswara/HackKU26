@@ -1,3 +1,7 @@
+/**
+ * @file Gradient sunset skydome mesh shared by Island Run and other tropical scenes.
+ */
+
 import { BackSide, Color, Mesh, ShaderMaterial, SphereGeometry } from 'three';
 
 export interface ParadiseSkydomeOptions {

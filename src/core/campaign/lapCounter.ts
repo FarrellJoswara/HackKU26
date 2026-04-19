@@ -1,5 +1,5 @@
 /**
- * Pure helper for "did the player just complete a lap?" decisions.
+ * @file Pure helper for "did the player just complete a lap?" decisions.
  *
  * Single source-of-truth rule (referenced from `IslandRun/main.ts` and
  * `GAME_DESIGN.md`):

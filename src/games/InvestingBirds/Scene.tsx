@@ -1,3 +1,8 @@
+/**
+ * @file R3F scene graph — towers, bird, slingshot visuals, instancing, and
+ * frame hooks. No DOM; pairs with `SimDriver` + Planck for physics.
+ */
+
 import { useFrame, useThree } from '@react-three/fiber';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {

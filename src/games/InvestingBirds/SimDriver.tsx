@@ -1,3 +1,8 @@
+/**
+ * @file Fixed-timestep Planck advance, contact harvesting, and bird sync —
+ * the gameplay heart between R3F frames and the mutable `SimRef` bag.
+ */
+
 import { useFrame } from '@react-three/fiber';
 import { useEffect, useRef, type Dispatch } from 'react';
 import { Vec2, type Body } from 'planck';

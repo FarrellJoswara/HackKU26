@@ -1,3 +1,8 @@
+/**
+ * @file Procedural level layout — tower stacks from portfolio allocation,
+ * block materials, and per-level-type bird counts.
+ */
+
 import { Vector2 } from 'three';
 import {
   birdsForLevelType,

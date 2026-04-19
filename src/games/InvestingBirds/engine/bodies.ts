@@ -1,3 +1,7 @@
+/**
+ * @file Planck body factories and sync — bird circle, block polygons, launch/place.
+ */
+
 import {
   BoxShape,
   CircleShape,

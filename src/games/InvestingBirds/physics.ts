@@ -1,3 +1,8 @@
+/**
+ * @file Planck/Three bridge — bird/block cloning, damage, collisions helpers,
+ * and slingshot clamp math used by `SimDriver` and the scene.
+ */
+
 import { Vector2 } from 'three';
 import { GAME_CONFIG } from './config';
 import type { Bird, Block, LevelType } from './types';

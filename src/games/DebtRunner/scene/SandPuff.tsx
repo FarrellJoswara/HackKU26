@@ -1,5 +1,5 @@
 /**
- * Tiny one-shot sand-puff particle burst. We render N sprites that animate
+ * @file Tiny one-shot sand-puff particle burst. We render N sprites that animate
  * outward + upward and fade out, then call `onDone` so the parent can clean
  * up. Cheap, no physics — just useFrame interpolation.
  */

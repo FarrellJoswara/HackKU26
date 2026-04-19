@@ -1,5 +1,5 @@
 /**
- * useMicroReward — instant, low-cost feedback for any UI control.
+ * @file useMicroReward — instant, low-cost feedback for any UI control.
  *
  * Goal: every important click in the app produces a snappy visual + audio
  * response within one frame, without bespoke per-screen code.

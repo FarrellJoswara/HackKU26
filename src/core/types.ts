@@ -1,5 +1,5 @@
 /**
- * Core shared types. Keep this file generic — concrete game/UI shapes belong
+ * @file Core shared types. Keep this file generic — concrete game/UI shapes belong
  * in the module that owns them (e.g. `games/TemplateGame/types.ts`).
  *
  * The whole architecture rests on three ideas:

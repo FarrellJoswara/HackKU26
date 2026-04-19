@@ -1,5 +1,5 @@
 /**
- * R3F port of Island Run's ParadiseSkydome — gradient bands behind the scene.
+ * @file R3F port of Island Run's ParadiseSkydome — gradient bands behind the scene.
  * @see IslandBoardWeb/src/skydome/ParadiseSkydome.ts
  */
 

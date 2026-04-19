@@ -1,5 +1,5 @@
 /**
- * Routes the current `appState` / `activeModule` to a 2D React screen.
+ * @file Routes the current `appState` / `activeModule` to a 2D React screen.
  * Lives in the DOM layer next to (NOT inside) the R3F `<Canvas>`.
  *
  * Add a new screen:

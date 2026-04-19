@@ -1,5 +1,5 @@
 /**
- * Pure Box submit normalization.
+ * @file Pure Box submit normalization.
  *
  * Both `TheBoxScreen` (full-page) and `TheBoxOverlay` (in-game panel)
  * need to:

@@ -1,3 +1,9 @@
+/**
+ * @file Resolves a `BudgetProfile` into runner tuning: multipliers, tier,
+ * and per-category notes. Single place where rating → gameplay constants
+ * is defined so DebtRunner cannot drift from the design spreadsheet.
+ */
+
 import type { BudgetCategoryId, BudgetProfile, BudgetRating } from './budgetTypes';
 import { CATEGORY_LABELS } from './budgetTypes';
 

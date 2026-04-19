@@ -1,5 +1,5 @@
 /**
- * Boot / splash screen. Auto-navigates to the menu after a tiny delay
+ * @file Boot / splash screen. Auto-navigates to the menu after a tiny delay
  * so devs see the transition pipeline working out of the box.
  *
  * TODO: replace with real loading logic — preload assets, wait for audio

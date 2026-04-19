@@ -1,5 +1,5 @@
 /**
- * BeachDecor — large, varied, fully-static tropical scatter that surrounds
+ * @file BeachDecor — large, varied, fully-static tropical scatter that surrounds
  * the player at every point along the procedural path.
  *
  * Design constraints (do not relax without checking the conversation

@@ -1,5 +1,5 @@
 /**
- * Presentational Play modal: Continue / New Game / Cancel.
+ * @file Presentational Play modal: Continue / New Game / Cancel.
  *
  * Owns no app state — the parent passes `open`, `hasSave`, and the three
  * callbacks. Closes on Escape or backdrop click.

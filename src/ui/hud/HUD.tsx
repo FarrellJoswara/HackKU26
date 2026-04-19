@@ -1,5 +1,5 @@
 /**
- * In-game HUD shell. Lives over the R3F canvas during the `game` app state.
+ * @file In-game HUD shell. Lives over the R3F canvas during the `game` app state.
  *
  * The DebtRunner HUD is fully re-skinned to the tropical palette:
  *   - rounded sand-pill panels (`tropic-hudPill` + `tropic-hudPill--contrast`)

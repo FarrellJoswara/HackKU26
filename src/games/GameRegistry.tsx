@@ -1,5 +1,5 @@
 /**
- * R3F router. Mount this inside the app's `<Canvas>`. It watches
+ * @file R3F router. Mount this inside the app's `<Canvas>`. It watches
  * `activeModule` from the store and renders the matching lazy-loaded
  * game inside `<Suspense>`.
  *

@@ -1,5 +1,5 @@
 /**
- * Island board landing copy from the shared `@/core/scenarios` catalog.
+ * @file Island board landing copy from the shared `@/core/scenarios` catalog.
  * Funding ratios can be derived from `playerData.boxAllocations` by the
  * caller and passed in so tier reflects real allocations.
  */

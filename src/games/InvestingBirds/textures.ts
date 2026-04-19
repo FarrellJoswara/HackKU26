@@ -1,3 +1,7 @@
+/**
+ * @file Procedural / loaded textures for block materials and category theming.
+ */
+
 import {
   CanvasTexture,
   RepeatWrapping,

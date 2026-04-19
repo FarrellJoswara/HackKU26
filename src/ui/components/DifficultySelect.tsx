@@ -1,5 +1,5 @@
 /**
- * Presentational difficulty picker.
+ * @file Presentational difficulty picker.
  *
  * Data-driven from `DIFFICULTIES` in `@/ui/menu/gameFlow`. Pure
  * controlled component: owner passes `value` and `onChange`.

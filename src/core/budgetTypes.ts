@@ -1,5 +1,5 @@
 /**
- * Financial Freedom — "The Box" budgeting phase (GDD).
+ * @file Financial Freedom — "The Box" budgeting phase (GDD).
  * Shared IDs + `playerData` keys so UI and future logic stay aligned.
  *
  * @see GAME_DESIGN.md — "The Box (The Budgeting Phase)"

@@ -1,5 +1,5 @@
 /**
- * Lightweight, non-interactive, opaque-enough placeholder used as a
+ * @file Lightweight, non-interactive, opaque-enough placeholder used as a
  * `<Suspense fallback={...}>` for lazy-loaded screens and games.
  *
  * Design intent:

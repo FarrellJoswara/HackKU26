@@ -1,5 +1,5 @@
 /**
- * Tropical "wave wash" transition. Replaces the harsh black fade with a
+ * @file Tropical "wave wash" transition. Replaces the harsh black fade with a
  * coral->turquoise sweep that reads like a wave breaking across the screen.
  *
  * Hardening notes (fixes for visible glitches):

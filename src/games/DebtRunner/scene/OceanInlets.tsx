@@ -1,5 +1,5 @@
 /**
- * OceanInlets — large, irregularly-shaped water bodies cut into the
+ * @file OceanInlets — large, irregularly-shaped water bodies cut into the
  * background sand so the floor reads as living shoreline with the ocean
  * pushing in past the dock, rather than a flat tan plane.
  *

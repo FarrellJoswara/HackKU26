@@ -1,5 +1,5 @@
 /**
- * Resolve a player choice into a sanitized `boxAllocations` patch.
+ * @file Resolve a player choice into a sanitized `boxAllocations` patch.
  *
  * The IslandRun React shell calls `applyIslandScenarioChoice` after
  * receiving an `island:scenarioChoice` event from the imperative game

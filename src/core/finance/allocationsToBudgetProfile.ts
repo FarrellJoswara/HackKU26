@@ -1,5 +1,5 @@
 /**
- * Maps Box dollar allocations → DebtRunner `BudgetProfile` (bad/avg/good
+ * @file Maps Box dollar allocations → DebtRunner `BudgetProfile` (bad/avg/good
  * ratings). The DebtRunner contract was authored before The Box existed,
  * so this is the single bridge between the two budget shapes — keep all
  * thresholds in one place to avoid drift.

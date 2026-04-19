@@ -1,5 +1,5 @@
 /**
- * In-world copy strings for The Box.
+ * @file In-world copy strings for The Box.
  *
  * Centralises Island-flavored helper text + soft warnings so the full
  * Box screen and the IslandRun overlay stay in sync (same words, same

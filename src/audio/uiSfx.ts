@@ -1,5 +1,5 @@
 /**
- * Procedural Web Audio UI sound effects.
+ * @file Procedural Web Audio UI sound effects.
  *
  * Why procedural instead of WAV files?
  *   - The hackathon repo intentionally avoids shipping new binary assets

@@ -1,5 +1,5 @@
 /**
- * Mountain Success — financial-freedom cinematic.
+ * @file Mountain Success — financial-freedom cinematic.
  *
  * Self-contained vanilla Three.js scene: owns its own `WebGLRenderer`
  * (mounted by `App.tsx` outside the host R3F `<Canvas>`). Mirrors the

@@ -1,5 +1,5 @@
 /**
- * Tiny typed Pub/Sub Event Bus. Framework-agnostic — no React import in
+ * @file Tiny typed Pub/Sub Event Bus. Framework-agnostic — no React import in
  * the core implementation so it can be called from R3F render loops,
  * Howler callbacks, or plain functions.
  *

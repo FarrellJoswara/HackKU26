@@ -1,5 +1,5 @@
 /**
- * Playthrough summary — shown once the Mountain Success cinematic finishes.
+ * @file Playthrough summary — shown once the Mountain Success cinematic finishes.
  *
  * This is the end-of-campaign recap. It currently renders **placeholder
  * data** so the layout can land before the real run-tracking hooks ship;

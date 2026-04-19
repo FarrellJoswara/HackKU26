@@ -1,5 +1,5 @@
 /**
- * Procedural sand plane — fine grain bump on a warm sand color, no external
+ * @file Procedural sand plane — fine grain bump on a warm sand color, no external
  * texture file (we don't ship a sand albedo). Aligned so the boardwalk reads
  * as sitting on the beach.
  */

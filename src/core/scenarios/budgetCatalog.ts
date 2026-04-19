@@ -1,3 +1,8 @@
+/**
+ * @file Curated narrative lines per budget category and scenario tier. Drives
+ * Island Run and related copy; strings are short and player-facing.
+ */
+
 import type { BudgetCategoryId } from '../budgetTypes';
 import type { ScenarioTier } from './types';
 

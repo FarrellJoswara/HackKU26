@@ -1,3 +1,8 @@
+/**
+ * @file Deterministic scenario line selection — seeded RNG, tier lookup, and
+ * helpers for narrative beats tied to budget categories.
+ */
+
 import type { BudgetCategoryId } from '../budgetTypes';
 import { BUDGET_SCENARIO_LINES } from './budgetCatalog';
 import type { ScenarioTier } from './types';

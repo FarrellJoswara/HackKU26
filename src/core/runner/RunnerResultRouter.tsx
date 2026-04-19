@@ -1,3 +1,9 @@
+/**
+ * @file Listens for `runner:finished`, writes last-run stats to `playerData`,
+ * bumps catch counters when applicable, and navigates to the post-run summary.
+ * Mount once under `App`; renders `null`.
+ */
+
 import { useCallback } from 'react';
 import { useEventBus, eventBus } from '@/core/events';
 import { useAppStore } from '@/core/store';

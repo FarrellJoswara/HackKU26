@@ -1,3 +1,8 @@
+/**
+ * @file DebtRunner loss screen — explains fail reason, applies year-close flow,
+ * and routes back into the campaign.
+ */
+
 import { useEffect } from 'react';
 import { Skull, AlertTriangle, RotateCcw, ArrowRight } from 'lucide-react';
 import { eventBus } from '@/core/events';

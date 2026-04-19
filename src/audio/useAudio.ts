@@ -1,7 +1,7 @@
 /**
- * React hook over `AudioManager`. Use it when a component needs reactive
- * volume state (e.g. a settings slider). For one-shot triggers, just
- * `import { audio } from '@/audio/AudioManager'` directly.
+ * @file React hook over `AudioManager` for reactive volume/mute state (e.g.
+ * settings sliders). For one-shot playback, import `audio` directly from
+ * `AudioManager.ts`.
  */
 
 import { useCallback, useState } from 'react';

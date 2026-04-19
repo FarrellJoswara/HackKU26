@@ -1,5 +1,5 @@
 /**
- * Tropical obstacle props. Each `kind` maps to a themed silhouette:
+ * @file Tropical obstacle props. Each `kind` maps to a themed silhouette:
  *   block  -> coconut on the sand
  *   low    -> grumpy crab (jump over it)
  *   high   -> overhead palm-leaf bar (slide / duck)

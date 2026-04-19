@@ -1,5 +1,5 @@
 /**
- * Phased goal-rail math for The Box.
+ * @file Phased goal-rail math for The Box.
  *
  * Per the locked Box-UI spec ("Goals, targets, incentives"):
  *  - **Debt phase** (high-interest debt > 0): foreground "path to $0 debt".

@@ -1,3 +1,12 @@
+/**
+ * @file Browser entry — mounts the React tree, registers audio, wires global
+ * campaign subscribers, and installs shared UI affordances (click feedback).
+ *
+ * Side effects at module scope are intentionally idempotent so React 18
+ * StrictMode’s development double-invocation does not duplicate listeners
+ * or one-shot initialization.
+ */
+
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';

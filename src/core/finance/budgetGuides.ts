@@ -1,5 +1,5 @@
 /**
- * Difficulty-tuned **soft** spending benchmarks for The Box.
+ * @file Difficulty-tuned **soft** spending benchmarks for The Box.
  *
  * Per the locked Box-UI spec (see plan
  * `box_ui_clarified_requirements_7711a010.plan.md` → "Goals, targets,

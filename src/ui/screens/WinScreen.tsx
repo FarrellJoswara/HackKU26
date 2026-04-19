@@ -1,3 +1,8 @@
+/**
+ * @file DebtRunner win screen — celebrates survival, shows last-run stats,
+ * and advances the campaign year toward The Box / next loop.
+ */
+
 import { useEffect } from 'react';
 import { Trophy, Sun, ArrowRight } from 'lucide-react';
 import { eventBus } from '@/core/events';

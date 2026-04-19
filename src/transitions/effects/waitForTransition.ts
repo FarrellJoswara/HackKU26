@@ -1,5 +1,5 @@
 /**
- * Awaits a CSS transition on `el` for a specific property, with a hard
+ * @file Awaits a CSS transition on `el` for a specific property, with a hard
  * timeout fallback so a missed `transitionend` (interrupted, unchanged
  * value, duration 0, or browser quirk) can never deadlock a transition
  * effect.

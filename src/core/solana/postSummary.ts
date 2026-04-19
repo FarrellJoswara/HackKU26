@@ -1,5 +1,5 @@
 /**
- * Post a playthrough summary to a Solana cluster as an SPL Memo
+ * @file Post a playthrough summary to a Solana cluster as an SPL Memo
  * transaction.
  *
  * The memo program (`MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr`) is

@@ -1,5 +1,5 @@
 /**
- * Mountain Success — quietly orbiting background.
+ * @file Mountain Success — quietly orbiting background.
  *
  * Mounts the same Three.js scene as the cinematic but in
  * "background mode": no captions, no completion timer, the camera

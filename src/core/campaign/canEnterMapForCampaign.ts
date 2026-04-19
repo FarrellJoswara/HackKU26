@@ -1,5 +1,5 @@
 /**
- * Soft gate: can the player enter the Island map for the *campaign* path?
+ * @file Soft gate: can the player enter the Island map for the *campaign* path?
  *
  * Pure function — no React, no store import. Reads a snapshot of
  * `playerData` so it is trivial to unit test and to call from a router.

@@ -1,3 +1,8 @@
+/**
+ * @file HUD state streamed from the DebtRunner R3F scene to DOM overlays
+ * (stress meter, debuffs, pause). Kept serializable for debugging.
+ */
+
 export interface RunnerHudState {
   timerSeconds: number;
   stamina: number;

@@ -1,5 +1,5 @@
 /**
- * Wet-sand band + foam ring between ocean and dry sand (Island Run lagoonFoam echo).
+ * @file Wet-sand band + foam ring between ocean and dry sand (Island Run lagoonFoam echo).
  * Large static rings read as distant shoreline from the runner camera.
  */
 

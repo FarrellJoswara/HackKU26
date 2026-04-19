@@ -1,3 +1,8 @@
+/**
+ * @file Board square copy — short themed finance tips and human-readable labels
+ * for the Island board (12 squares).
+ */
+
 /** One themed finance tip per board square (12). */
 export const SQUARE_TIPS: readonly string[] = [
   'Start an emergency fund - small deposits still build real safety.',

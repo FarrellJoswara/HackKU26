@@ -9,6 +9,7 @@ import {
   INFLATION_RANGE_MIN,
 } from '@/core/budgetTypes';
 import { INVESTED_BALANCE_KEY } from '@/core/finance/boxGoalRail';
+import { GAME_IDS } from '@/games/registry';
 import { CAMPAIGN_KEYS } from './campaignKeys';
 import { advanceCampaignYear } from './yearAdvance';
 
@@ -90,21 +91,39 @@ describe('advanceCampaignYear', () => {
     expect(summary.debtAfterUsd).toBe(0);
   });
 
-  it('routes to the menu when destination=menu (Investing Birds / Mountain Success)', () => {
+  it('routes to the menu when destination=menu', () => {
     freshStore({
       [BOX_PLAYER_DATA_KEYS.currentYear]: 5,
       [BOX_PLAYER_DATA_KEYS.highInterestDebtBalance]: 0,
     });
-    const navs: Array<{ to: string }> = [];
-    eventBus.on('navigate:request', (p) => navs.push({ to: p.to }));
+    const navs: Array<{ to: string; module: unknown }> = [];
+    eventBus.on('navigate:request', (p) => navs.push({ to: p.to, module: p.module }));
 
     const summary = advanceCampaignYear({ outcome: 'win', destination: 'menu' });
 
-    expect(navs).toEqual([{ to: 'menu' }]);
+    expect(navs).toEqual([{ to: 'menu', module: null }]);
     expect(useAppStore.getState().playerData[BOX_PLAYER_DATA_KEYS.currentYear]).toBe(6);
     expect(useAppStore.getState().playerData[CAMPAIGN_KEYS.year]).toBe(6);
     expect(useAppStore.getState().playerData[CAMPAIGN_KEYS.boxReadyForYear]).toBe(0);
     expect(summary.toYear).toBe(6);
+  });
+
+  it('routes to a game module when destination=game (Investing Birds → island)', () => {
+    freshStore({
+      [BOX_PLAYER_DATA_KEYS.currentYear]: 5,
+      [BOX_PLAYER_DATA_KEYS.highInterestDebtBalance]: 0,
+    });
+    const navs: Array<{ to: string; module: unknown }> = [];
+    eventBus.on('navigate:request', (p) => navs.push({ to: p.to, module: p.module }));
+
+    advanceCampaignYear({
+      outcome: 'win',
+      destination: 'game',
+      module: GAME_IDS.islandRun,
+    });
+
+    expect(navs).toEqual([{ to: 'game', module: GAME_IDS.islandRun }]);
+    expect(useAppStore.getState().playerData[BOX_PLAYER_DATA_KEYS.currentYear]).toBe(6);
   });
 
   it('persists yearly economy updates: inflation, employer match policy, invested balance', () => {

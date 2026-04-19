@@ -1,5 +1,5 @@
 /**
- * Pure world↔screen projection for InvestingBirds2.
+ * @file Pure world↔screen projection for Investing Birds.
  *
  * The design frustum is **fixed** (set once, re-aspect-fit only on window
  * resize). `worldToScreen` returns CSS pixels relative to the top-left of

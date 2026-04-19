@@ -1,5 +1,5 @@
 /**
- * One-time DebtRunner tutorial — explains controls and the goal before
+ * @file One-time DebtRunner tutorial — explains controls and the goal before
  * the first run. Only shown when:
  *   - The campaign router routed here for year-end (debt > 0), AND
  *   - `playerData.debtRunner.tutorialSeen` is falsy.

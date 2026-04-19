@@ -1,5 +1,5 @@
 /**
- * Cute beach runner character.
+ * @file Cute beach runner character.
  *
  * Visual goals:
  *  - exaggerated head-to-body ratio (chibi-ish) for personality

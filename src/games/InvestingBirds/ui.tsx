@@ -1,3 +1,8 @@
+/**
+ * @file DOM overlay for Investing Birds — HUD, pause, allocation UI, and
+ * end-of-round flows. Consumes `RunState` from the host shell, not R3F directly.
+ */
+
 import {
   BarChart3,
   Bitcoin,
@@ -1230,14 +1235,6 @@ export function InvestingBirdsOverlay(props: InvestingBirdsOverlayProps) {
                   }
                 />
               </label>
-              <label className="flex items-center justify-between gap-3">
-                <span>Music</span>
-                <input
-                  type="checkbox"
-                  checked={settings.musicOn}
-                  onChange={(e) => onUpdateSettings({ musicOn: e.target.checked })}
-                />
-              </label>
               <label className="flex flex-col gap-1">
                 <span className="flex justify-between">
                   <span>Volume</span>
@@ -1685,7 +1682,7 @@ export function InvestingBirdsOverlay(props: InvestingBirdsOverlayProps) {
             <div className="mt-6 flex flex-wrap justify-center gap-3">
               <button type="button" className={btnPrimary} onClick={onReturnMenu}>
                 <X className="size-4" />
-                Main menu
+                Return to the map
               </button>
             </div>
           </div>

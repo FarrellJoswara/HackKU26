@@ -1,5 +1,5 @@
 /**
- * Vitest config — kept separate from `vite.config.ts` so the production
+ * @file Vitest config — kept separate from `vite.config.ts` so the production
  * dev/build pipeline does not pull in test-only plugins or types.
  *
  * Mirrors the alias `@ -> ./src` so test files import the same way the

@@ -1,5 +1,5 @@
 /**
- * Tailwind primitive button. Variants are tuned for the tropical theme:
+ * @file Tailwind primitive button. Variants are tuned for the tropical theme:
  * `coral` (default primary), `turquoise`, `sand`, plus the legacy
  * `primary` / `ghost` kept for back-compat with older screens.
  *

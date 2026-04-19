@@ -1,5 +1,5 @@
 /**
- * Authored interactive scenario beats for Island Run landings.
+ * @file Authored interactive scenario beats for Island Run landings.
  *
  * Each beat ships a setup line and 2–3 choices. Each choice points at a
  * **whitelisted** delta map (sparse `BudgetCategoryId` -> dollar shift)

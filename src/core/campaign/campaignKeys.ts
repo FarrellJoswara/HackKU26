@@ -1,5 +1,5 @@
 /**
- * Centralized `playerData` keys for campaign / loop state.
+ * @file Centralized `playerData` keys for campaign / loop state.
  *
  * Why nest under `campaign.*` and `debtRunner.*` strings?
  *  - Avoids string typos at call sites — every read/write goes through

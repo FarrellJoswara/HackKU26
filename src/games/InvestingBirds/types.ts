@@ -1,3 +1,8 @@
+/**
+ * @file Investing Birds domain types — FSM state, allocations, blocks, levels,
+ * and overlay actions. Shared by R3F scene, Planck layer, and DOM UI.
+ */
+
 import type { Vector2 } from 'three';
 
 export type InvestingBirdsState =
@@ -144,8 +149,6 @@ export interface Settings {
   colorblind: boolean;
   /** Audio volume 0..1 (master). */
   volume: number;
-  /** Background music on/off. */
-  musicOn: boolean;
 }
 
 export interface RunState {

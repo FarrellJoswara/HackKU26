@@ -1,3 +1,9 @@
+/**
+ * @file DebtRunner — R3F endless runner: procedural track, beach scene,
+ * debt-collector chase, and HUD wiring. Emits `runner:finished` with outcomes
+ * for `RunnerResultRouter`; consumes resolved budget effects from core.
+ */
+
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import type { Group, PerspectiveCamera } from 'three';

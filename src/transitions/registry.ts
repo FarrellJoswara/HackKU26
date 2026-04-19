@@ -1,5 +1,5 @@
 /**
- * Transition registry. Hot-swap effects by changing `activeTransitionId`
+ * @file Transition registry. Hot-swap effects by changing `activeTransitionId`
  * — no code that *triggers* transitions ever needs to know which effect
  * is mounted.
  *

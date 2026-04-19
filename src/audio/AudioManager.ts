@@ -1,5 +1,5 @@
 /**
- * Howler-backed audio singleton. Import the shared `audio` instance and
+ * @file Howler-backed audio singleton. Import the shared `audio` instance and
  * call from anywhere — UI button handlers, R3F frame loops, event bus
  * subscribers, etc. No React required.
  *

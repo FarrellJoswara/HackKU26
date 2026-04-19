@@ -1,5 +1,5 @@
 /**
- * Full-bleed beach + procedural layers used behind the title hub and
+ * @file Full-bleed beach + procedural layers used behind the title hub and
  * other menu screens that should match its look.
  */
 

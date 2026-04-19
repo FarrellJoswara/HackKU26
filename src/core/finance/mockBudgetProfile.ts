@@ -1,3 +1,8 @@
+/**
+ * @file Deterministic mock `BudgetProfile` for tests and dev shortcuts when
+ * no persisted player save exists.
+ */
+
 import type { BudgetProfile } from './budgetTypes';
 
 export const MOCK_BUDGET_PROFILE: BudgetProfile = {

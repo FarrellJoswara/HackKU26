@@ -1,5 +1,5 @@
 /**
- * Title hub — the new main menu.
+ * @file Title hub — the new main menu.
  *
  * Shows the placeholder game title plus two primary actions: Play and
  * Settings. Play opens a local modal (`PlayModeDialog`) that branches

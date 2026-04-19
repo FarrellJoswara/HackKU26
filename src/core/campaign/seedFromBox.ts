@@ -1,5 +1,5 @@
 /**
- * Map Box investment sub-rows → Investing Birds normalized portfolio
+ * @file Map Box investment sub-rows → Investing Birds normalized portfolio
  * shares (sum to 1). Pure module: no React, no `import.meta.env`, no
  * cross-package imports.
  *

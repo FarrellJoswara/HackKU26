@@ -1,5 +1,5 @@
 /**
- * Maps the player's most recent Box budget submission to the four
+ * @file Maps the player's most recent Box budget submission to the four
  * Investing Birds portfolio categories.
  *
  * The Box stores five investment subcategories (Index Funds / Individual

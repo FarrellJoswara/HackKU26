@@ -1,3 +1,8 @@
+/**
+ * @file Campaign finale — end-of-run stats, celebration shell, and return to
+ * the title hub when the financial-freedom arc completes.
+ */
+
 import { PartyPopper, Home } from 'lucide-react';
 import { eventBus } from '@/core/events';
 import type { UIProps } from '@/core/types';

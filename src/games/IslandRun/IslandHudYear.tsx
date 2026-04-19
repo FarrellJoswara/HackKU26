@@ -1,3 +1,7 @@
+/**
+ * @file Small HUD chip showing the active campaign year (mirrors Box / campaign keys).
+ */
+
 import { useAppStore } from '@/core/store';
 import { CAMPAIGN_KEYS } from '@/core/campaign/campaignKeys';
 import { BOX_DEFAULTS, BOX_PLAYER_DATA_KEYS, readNumber } from '@/core/budgetTypes';

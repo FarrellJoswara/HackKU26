@@ -1,3 +1,8 @@
+/**
+ * @file Pre-run briefing — translates resolved budget effects into cards and
+ * starts DebtRunner with the active module id.
+ */
+
 import { AlertTriangle, CheckCircle2, Play, Sparkles } from 'lucide-react';
 import { Button } from '../components/Button';
 import { eventBus } from '@/core/events';

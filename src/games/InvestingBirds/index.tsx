@@ -1,3 +1,9 @@
+/**
+ * @file Investing Birds — Angry-Birds-style portfolio mini-game: own `<Canvas>`,
+ * Planck physics, FSM, and DOM overlay. Mounted from `App.tsx` outside the
+ * host `GameRegistry` canvas; seeds allocation from Box / campaign state.
+ */
+
 import { Canvas } from '@react-three/fiber';
 import {
   useCallback,
@@ -116,7 +122,6 @@ export default function InvestingBirds({
   useEffect(() => {
     const cleanup = initAudio({
       volume: state.settings.volume,
-      musicOn: state.settings.musicOn,
     });
     return cleanup;
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -124,9 +129,8 @@ export default function InvestingBirds({
   useEffect(() => {
     setAudioConfig({
       volume: state.settings.volume,
-      musicOn: state.settings.musicOn,
     });
-  }, [state.settings.volume, state.settings.musicOn]);
+  }, [state.settings.volume]);
 
   // Persist high score per allocation (localStorage; not shown in UI).
   useEffect(() => {

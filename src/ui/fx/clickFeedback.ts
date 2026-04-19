@@ -1,5 +1,5 @@
 /**
- * Per-element click feedback: short visual pulse + ripple + UI click sound.
+ * @file Per-element click feedback: short visual pulse + ripple + UI click sound.
  *
  * Designed so it can be invoked from anywhere — React handlers, the
  * global delegator (`installGlobalClickFx.ts`), or imperative game code

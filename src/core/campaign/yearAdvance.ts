@@ -1,5 +1,5 @@
 /**
- * Closes a Year Loop and routes the player to the next destination.
+ * @file Closes a Year Loop and routes the player to the next destination.
  *
  * Per `GAME_DESIGN.md` §"The Core Game Loop (Per Year)":
  *
@@ -29,7 +29,7 @@
 
 import { eventBus } from '@/core/events';
 import { useAppStore } from '@/core/store';
-import type { AppState } from '@/core/types';
+import type { AppState, ModuleId } from '@/core/types';
 import {
   computeCloseYear,
   type YearAdvanceOutcome,
@@ -44,18 +44,24 @@ export type YearCloseDestination = Extract<
   'budget' | 'menu' | 'playthroughSummary'
 >;
 
-export interface AdvanceCampaignYearOptions {
-  /** `win` / `loss` of the year-end mini-game, or `skipped` when bypassed. */
-  outcome: YearAdvanceOutcome;
-  /**
-   * Where to route after applying the close-year patch.
-   *  - `'budget'` (default): straight back to The Box for next year's budget.
-   *  - `'menu'`: back to the Title Hub (used by Investing Birds end).
-   *  - `'playthroughSummary'`: post-cinematic recap shown after the
-   *    Mountain Success ending.
-   */
-  destination?: YearCloseDestination;
-}
+export type AdvanceCampaignYearOptions =
+  | {
+      outcome: YearAdvanceOutcome;
+      /**
+       * Where to route after applying the close-year patch.
+       *  - `'budget'` (default): straight back to The Box for next year's budget.
+       *  - `'menu'`: back to the Title Hub.
+       *  - `'playthroughSummary'`: post-cinematic recap shown after the
+       *    Mountain Success ending.
+       */
+      destination?: YearCloseDestination;
+    }
+  | {
+      outcome: YearAdvanceOutcome;
+      /** Return to a `game` route — e.g. the island map after Investing Birds. */
+      destination: 'game';
+      module: ModuleId;
+    };
 
 /**
  * Apply year-end mechanics and route the player to the chosen destination.
@@ -70,7 +76,6 @@ export function advanceCampaignYear(
     typeof optsOrOutcome === 'string'
       ? { outcome: optsOrOutcome }
       : optsOrOutcome;
-  const destination: YearCloseDestination = opts.destination ?? 'budget';
 
   const { playerData, mergePlayerData } = useAppStore.getState();
   const { patch, summary } = computeCloseYear({
@@ -80,7 +85,19 @@ export function advanceCampaignYear(
 
   mergePlayerData(patch);
 
-  eventBus.emit('navigate:request', { to: destination, module: null });
+  if ('destination' in opts && opts.destination === 'game') {
+    eventBus.emit('navigate:request', {
+      to: 'game',
+      module: opts.module,
+    });
+  } else {
+    const appOpts = opts as {
+      outcome: YearAdvanceOutcome;
+      destination?: YearCloseDestination;
+    };
+    const destination = appOpts.destination ?? 'budget';
+    eventBus.emit('navigate:request', { to: destination, module: null });
+  }
 
   return summary;
 }

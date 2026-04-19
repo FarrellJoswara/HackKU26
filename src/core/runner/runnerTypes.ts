@@ -1,3 +1,8 @@
+/**
+ * @file Shared TypeScript types for DebtRunner session config and completion
+ * payloads crossing the event bus and persisted `playerData` keys.
+ */
+
 import type { BudgetProfile } from '../finance/budgetTypes';
 import type { ModuleId } from '../types';
 import type { BudgetEffectNote, RunnerSessionConfig } from '../finance/budgetEffectResolver';

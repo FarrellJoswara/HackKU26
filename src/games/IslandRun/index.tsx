@@ -1,5 +1,5 @@
 /**
- * Self-contained Island Run. Owns every file it needs inside this folder
+ * @file Self-contained Island Run. Owns every file it needs inside this folder
  * (`main.ts`, `tips.ts`, `post/`, `skydome/`, `water/`, `style.css`,
  * `assets/`). No iframe, no second Vite project, no `public/` output.
  *

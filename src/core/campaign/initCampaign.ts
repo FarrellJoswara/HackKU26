@@ -1,5 +1,5 @@
 /**
- * Campaign event glue. Subscribes **once** at module import to:
+ * @file Campaign event glue. Subscribes **once** at module import to:
  *
  *  - `box:budget:submit` — derives `runner.profile`, sets the soft map
  *    gate flag, and (when applicable) routes the player back to the
