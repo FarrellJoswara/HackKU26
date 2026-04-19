@@ -339,11 +339,13 @@ export default function DebtRunnerGame(_props: GameProps) {
       collector.current.lookAt(p);
     }
 
+    // Third-person follow: camera sits BEHIND the player (opposite of forward)
+    // and looks AHEAD down the path so the player runs away from the lens.
     state.camera.position.lerp(
-      pos.clone().add(forward.clone().multiplyScalar(cameraFollow.current.z)).setY(cameraFollow.current.y),
+      pos.clone().add(forward.clone().multiplyScalar(-cameraFollow.current.z)).setY(cameraFollow.current.y),
       Math.min(1, dt * 4),
     );
-    state.camera.lookAt(pos.clone().add(forward.clone().multiplyScalar(-12)));
+    state.camera.lookAt(pos.clone().add(forward.clone().multiplyScalar(12)));
   });
 
   useEffect(() => {
