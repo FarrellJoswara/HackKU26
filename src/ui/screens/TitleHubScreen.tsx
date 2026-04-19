@@ -13,7 +13,6 @@
 import { useState } from 'react';
 import {
   Bird,
-  Box,
   Footprints,
   Layers,
   LayoutGrid,
@@ -124,19 +123,6 @@ export default function TitleHubScreen(_props: UIProps<unknown>) {
               >
                 <Layers className="size-4" />
                 The Box over Island Run
-              </button>
-              <button
-                type="button"
-                className="island-btnShell"
-                onClick={() =>
-                  eventBus.emit('navigate:request', {
-                    to: 'game',
-                    module: GAME_IDS.template,
-                  })
-                }
-              >
-                <Box className="size-4" />
-                Cube demo (template)
               </button>
               <button
                 type="button"

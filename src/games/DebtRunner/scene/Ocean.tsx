@@ -6,8 +6,9 @@
 import { useLayoutEffect, useMemo, useRef } from 'react';
 import { useFrame, useLoader } from '@react-three/fiber';
 import { PlaneGeometry, RepeatWrapping, TextureLoader, Vector2, type Mesh } from 'three';
+import waterNormalsUrl from '@/games/IslandRun/assets/textures/waternormals.jpg?url';
 
-const WATER_NORMALS = '/island-board/textures/waternormals.jpg';
+const WATER_NORMALS = waterNormalsUrl;
 
 export default function Ocean() {
   const ref = useRef<Mesh>(null);

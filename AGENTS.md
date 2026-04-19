@@ -241,7 +241,7 @@ Need to share data between two of those? **Add to `EventMap` or `playerData`.** 
 ## 9. When in doubt
 
 1. Reread the **Hard architectural rules** in §1.
-2. Read the existing file most similar to what you want to add (TemplateGame, MainMenu, FadeTransition).
+2. Read the existing file most similar to what you want to add (TemplateGame, TitleHubScreen, FadeTransition).
 3. If a request seems to require violating a rule, **stop and ask the user** which rule they want relaxed and why.
 
 The whole point of this scaffold is that adding a feature should touch *one* folder plus *one* registry line. If your change spans more than that, you're probably doing it wrong — re-plan.

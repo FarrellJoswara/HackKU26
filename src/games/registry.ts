@@ -15,7 +15,6 @@ export type GameComponent = ComponentType<GameProps<any, any>>;
 export type LazyGame = LazyExoticComponent<GameComponent>;
 
 export const GAME_IDS = {
-  template: moduleId('template'),
   /** Endless-runner consequence game, driven by a budget profile. */
   debtRunner: moduleId('debtRunner'),
   /** Island Run — fully self-contained imperative Three.js game inside `src/games/IslandRun/`. Rendered outside the host `<Canvas>` by `App.tsx`, not via `GameRegistry`. */
@@ -25,10 +24,12 @@ export const GAME_IDS = {
 } as const;
 
 export const GAME_MODULES: Record<ModuleId, LazyGame> = {
-  [GAME_IDS.template]: lazy(() => import('./TemplateGame')),
   [GAME_IDS.debtRunner]: lazy(() => import('./DebtRunner')),
   [GAME_IDS.investingBirds]: lazy(() => import('./InvestingBirds')),
   // Island Run has no R3F module — it mounts directly from App.tsx (see src/games/IslandRun/main.ts).
+  // TemplateGame remains in `src/games/TemplateGame/` as a copy-paste starter
+  // (referenced by AGENTS.md), but is intentionally unregistered so it does
+  // not appear in any menu.
 };
 
 export function getGame(id: ModuleId | null | undefined): LazyGame | null {

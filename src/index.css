@@ -40,8 +40,11 @@ body,
 #root {
   height: 100%;
   margin: 0;
-  background: #000;
-  color: #fff;
+  /* The host R3F <Canvas> uses `alpha: true`, so this color shows through
+     any letterboxing or while a lazy-loaded game module is mounting.
+     Keep it on-theme so transitions never flash to black. */
+  background: linear-gradient(180deg, #7ec8ff 0%, #4aa8d8 35%, #2d8a9e 100%);
+  color: var(--island-color-ink);
   font-family: var(--island-font-body);
   overflow: hidden;
   -webkit-font-smoothing: antialiased;

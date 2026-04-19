@@ -1,54 +1,67 @@
 /**
- * Textured sand plane (Island Run sand albedo) + procedural grain bump,
- * aligned so the boardwalk reads as sitting on the beach.
+ * Procedural sand plane — fine grain bump on a warm sand color, no external
+ * texture file (we don't ship a sand albedo). Aligned so the boardwalk reads
+ * as sitting on the beach.
  */
 
-import { useLayoutEffect, useMemo } from 'react';
-import { CanvasTexture, RepeatWrapping, SRGBColorSpace } from 'three';
-import { useLoader } from '@react-three/fiber';
-import { TextureLoader } from 'three';
+import { useMemo } from 'react';
+import { CanvasTexture, RepeatWrapping } from 'three';
 
-const SAND_ALBEDO = '/island-board/textures/sand/albedo.jpg';
+function createSandTextures(): { albedo: CanvasTexture; bump: CanvasTexture } {
+  const size = 128;
 
-function createGrainBumpTexture(): CanvasTexture {
-  const size = 64;
-  const c = document.createElement('canvas');
-  c.width = size;
-  c.height = size;
-  const ctx = c.getContext('2d');
-  if (!ctx) throw new Error('2d context');
-  const img = ctx.createImageData(size, size);
-  for (let i = 0; i < img.data.length; i += 4) {
-    const v = 90 + Math.random() * 100;
-    img.data[i] = v;
-    img.data[i + 1] = v;
-    img.data[i + 2] = v;
-    img.data[i + 3] = 255;
+  // Albedo: warm sand color with subtle per-pixel variation so it doesn't
+  // look like a flat plastic plane in motion.
+  const albedoCanvas = document.createElement('canvas');
+  albedoCanvas.width = size;
+  albedoCanvas.height = size;
+  const aCtx = albedoCanvas.getContext('2d');
+  if (!aCtx) throw new Error('2d context');
+  const aImg = aCtx.createImageData(size, size);
+  for (let i = 0; i < aImg.data.length; i += 4) {
+    const jitter = Math.random() * 18 - 9;
+    aImg.data[i] = Math.max(0, Math.min(255, 240 + jitter));
+    aImg.data[i + 1] = Math.max(0, Math.min(255, 212 + jitter));
+    aImg.data[i + 2] = Math.max(0, Math.min(255, 165 + jitter));
+    aImg.data[i + 3] = 255;
   }
-  ctx.putImageData(img, 0, 0);
-  const tex = new CanvasTexture(c);
-  tex.wrapS = tex.wrapT = RepeatWrapping;
-  tex.repeat.set(24, 24);
-  return tex;
+  aCtx.putImageData(aImg, 0, 0);
+  const albedo = new CanvasTexture(albedoCanvas);
+  albedo.wrapS = albedo.wrapT = RepeatWrapping;
+  albedo.repeat.set(18, 18);
+  albedo.anisotropy = 8;
+
+  // Bump: tighter noise for the grain feel.
+  const bumpCanvas = document.createElement('canvas');
+  bumpCanvas.width = size;
+  bumpCanvas.height = size;
+  const bCtx = bumpCanvas.getContext('2d');
+  if (!bCtx) throw new Error('2d context');
+  const bImg = bCtx.createImageData(size, size);
+  for (let i = 0; i < bImg.data.length; i += 4) {
+    const v = 90 + Math.random() * 100;
+    bImg.data[i] = v;
+    bImg.data[i + 1] = v;
+    bImg.data[i + 2] = v;
+    bImg.data[i + 3] = 255;
+  }
+  bCtx.putImageData(bImg, 0, 0);
+  const bump = new CanvasTexture(bumpCanvas);
+  bump.wrapS = bump.wrapT = RepeatWrapping;
+  bump.repeat.set(24, 24);
+
+  return { albedo, bump };
 }
 
 export default function BeachSand() {
-  const albedo = useLoader(TextureLoader, SAND_ALBEDO);
-  const bumpMap = useMemo(() => createGrainBumpTexture(), []);
-
-  useLayoutEffect(() => {
-    albedo.wrapS = albedo.wrapT = RepeatWrapping;
-    albedo.repeat.set(18, 18);
-    albedo.colorSpace = SRGBColorSpace;
-    albedo.anisotropy = 8;
-  }, [albedo]);
+  const { albedo, bump } = useMemo(() => createSandTextures(), []);
 
   return (
     <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.2, 0]} receiveShadow>
       <planeGeometry args={[480, 480]} />
       <meshStandardMaterial
         map={albedo}
-        bumpMap={bumpMap}
+        bumpMap={bump}
         bumpScale={0.085}
         roughness={0.94}
         metalness={0}

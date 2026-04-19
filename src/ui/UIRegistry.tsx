@@ -27,7 +27,7 @@ type ScreenComp = LazyExoticComponent<ComponentType<UIProps<any>>>;
 /** Default screen for each top-level `AppState`. */
 const SCREENS: Partial<Record<AppState, ScreenComp>> = {
   boot: lazy(() => import('./screens/BootScreen')),
-  /** Title hub — Play / Settings. (Was MainMenu; that file is kept for reference.) */
+  /** Title hub — Play / Settings. */
   menu: lazy(() => import('./screens/TitleHubScreen')),
   /** Settings hub — audio, controls. */
   settings: lazy(() => import('./screens/SettingsScreen')),
