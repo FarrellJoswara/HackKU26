@@ -1,11 +1,12 @@
 /**
- * Tailwind primitive button. Keep variants minimal — UI screens compose
- * this into whatever look they need.
+ * Tailwind primitive button. Variants are tuned for the tropical theme:
+ * `coral` (default primary), `turquoise`, `sand`, plus the legacy
+ * `primary` / `ghost` kept for back-compat with older screens.
  */
 
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 
-type Variant = 'primary' | 'ghost';
+type Variant = 'coral' | 'turquoise' | 'sand' | 'primary' | 'ghost';
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: Variant;
@@ -13,15 +14,20 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   children: ReactNode;
 }
 
+// `tropic-pill` carries the rounded "candy" feel + ease-back hover.
+// We compose modifier classes for the color story; `primary`/`ghost`
+// still exist so older screens keep working without a refactor.
 const variantClass: Record<Variant, string> = {
-  primary:
-    'bg-indigo-500 hover:bg-indigo-400 active:bg-indigo-600 text-white shadow-lg shadow-indigo-900/30',
+  coral: 'tropic-pill tropic-pill--coral',
+  turquoise: 'tropic-pill tropic-pill--turquoise',
+  sand: 'tropic-pill tropic-pill--sand',
+  primary: 'tropic-pill tropic-pill--coral',
   ghost:
-    'bg-white/5 hover:bg-white/10 text-white/90 border border-white/10 backdrop-blur',
+    'tropic-pill tropic-pill--turquoise opacity-95 backdrop-blur',
 };
 
 export function Button({
-  variant = 'primary',
+  variant = 'coral',
   leadingIcon,
   className = '',
   children,
@@ -29,14 +35,7 @@ export function Button({
 }: ButtonProps) {
   return (
     <button
-      className={[
-        'inline-flex items-center gap-2 px-5 py-2.5 rounded-xl',
-        'text-sm font-medium tracking-wide select-none',
-        'transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-indigo-300/50',
-        'disabled:opacity-50 disabled:cursor-not-allowed',
-        variantClass[variant],
-        className,
-      ].join(' ')}
+      className={[variantClass[variant], 'text-sm', className].join(' ')}
       {...rest}
     >
       {leadingIcon}

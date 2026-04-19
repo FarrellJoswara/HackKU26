@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
-import type { Group } from 'three';
-import { Color, Vector3 } from 'three';
+import type { Group, PerspectiveCamera } from 'three';
+import { Color, MathUtils, Vector3 } from 'three';
+import { audio } from '@/audio/AudioManager';
 import { eventBus } from '@/core/events';
 import { useAppStore } from '@/core/store';
 import type { GameProps } from '@/core/types';
@@ -13,13 +14,94 @@ import type { RunnerFinishedPayload } from '@/core/runner/runnerTypes';
 import type { RunnerHudState } from '@/core/runner/hudTypes';
 import { generateTrackTiles } from './pathGenerator';
 import type { TrackTile } from './types';
+import BeachCharacter from './scene/BeachCharacter';
+import BeachObstacle from './scene/BeachObstacle';
+import DebtCollector from './scene/DebtCollector';
+import DebtCollectorPaperTrail from './scene/DebtCollectorPaperTrail';
+import BeachSand from './scene/BeachSand';
+import Ocean from './scene/Ocean';
+import ParadiseSkydomeMesh from './scene/ParadiseSkydomeMesh';
+import SandPuff from './scene/SandPuff';
+import ShorelineDecor from './scene/ShorelineDecor';
 
-const RIGHT = new Vector3(1, 0, 0);
+const UP = new Vector3(0, 1, 0);
 const TILE_SIZE = 8;
 const TURN_INPUT_BUFFER_SECONDS = 0.5;
 const BASE_SPEED = 10;
 /** Lateral offset for lane -1 / 0 / +1; must match obstacle mesh `obs.lane * LANE_SPACING`. */
 const LANE_SPACING = 2.2;
+/**
+ * Lane-shift smoothing — bigger = snappier, smaller = floatier. We separate
+ * lateral easing from the forward-motion lerp so the player no longer
+ * "teleports" between lanes; movement reads as a satisfying glide.
+ */
+const LANE_SMOOTH_SPEED = 9;
+/** Maximum character bank (radians) when shifting lanes. Visual-only. */
+const LANE_TILT_MAX = 0.35;
+/** Camera follow smoothing — position is slow (cinematic), look is fast (responsive). */
+const CAM_POS_SMOOTH = 3.2;
+const CAM_LOOK_SMOOTH = 9;
+/**
+ * Smoothing rate for the forward basis vector. Without this, crossing a turn
+ * tile rotates `forward` ~90deg in one frame and the camera + lane basis
+ * snap. This rate is fast enough to stay responsive but slow enough to mask
+ * the discrete tile boundary.
+ */
+const FORWARD_SMOOTH_SPEED = 8;
+/** Tilt smoothing — controls how quickly the character settles back to upright. */
+const TILT_SMOOTH_SPEED = 12;
+/** Camera follow offsets — Y is height, Z is distance behind player. */
+const CAMERA_HEIGHT = 4.4;
+const CAMERA_DISTANCE = 9.5;
+/** Vertical offset from `pos.y = 0` ground baseline up to the BeachCharacter inner pivot. */
+const GROUND_Y = 0;
+const JUMP_Y = 0.6;
+
+/**
+ * Frame-rate independent exponential damping factor.
+ * Equivalent to `1 - Math.exp(-speed * dt)` — gives identical visual smoothing
+ * regardless of FPS, unlike `Math.min(1, dt * speed)` which gets whippy at low FPS.
+ */
+function damp(speed: number, dt: number): number {
+  return 1 - Math.exp(-speed * dt);
+}
+
+// Module-level scratch vectors. Reused every frame to avoid GC pressure /
+// micro-stutters from `new Vector3(...)` allocations inside useFrame.
+const _forward = new Vector3();
+const _smoothForwardTarget = new Vector3();
+const _lateral = new Vector3();
+const _pos = new Vector3();
+const _lookAhead = new Vector3();
+const _cameraTarget = new Vector3();
+const _desiredLook = new Vector3();
+const _collectorTarget = new Vector3();
+const _playerWorldPos = new Vector3();
+const _collectorWobble = new Vector3();
+const _cornerIn = new Vector3();
+const _cornerOut = new Vector3();
+const _cornerBis = new Vector3();
+
+/** Plank segment length past chord — larger at turns to close outer-corner gaps. */
+const PLANK_OVERLAP_STRAIGHT = 0.42;
+const PLANK_OVERLAP_TURN = 1.12;
+/** Debt Collector mesh only during intro and when chase is critical. */
+// "Only at the very beginning" — small window after the run starts. After that,
+// the collector is hidden until the player is decisively about to die.
+const INTRO_COLLECTOR_VISIBLE_SEC = 3.2;
+// Hysteresis: show the collector only when conditions are clearly critical,
+// hide it once the player has recovered comfortably. Prevents the chase
+// silhouette from flickering on/off around the threshold while a player
+// hovers on the edge of "dangerous".
+const NEAR_DEATH_CHASE_GAP_SHOW = 4.0; // gap (m) below which we reveal
+const NEAR_DEATH_CHASE_GAP_HIDE = 6.5; // gap (m) above which we hide again
+const NEAR_DEATH_PRESSURE_SHOW = 0.9;
+const NEAR_DEATH_PRESSURE_HIDE = 0.74;
+
+interface ActiveSandPuff {
+  id: number;
+  position: [number, number, number];
+}
 
 function createEmptyHud(maxLives: number): RunnerHudState {
   return {
@@ -31,6 +113,7 @@ function createEmptyHud(maxLives: number): RunnerHudState {
     debtPressure: 0.2,
     chaseDistance: 16,
     monsterStage: 'manageable',
+    collectorPressure01: 0.22,
     debuffs: [],
     paused: false,
   };
@@ -42,6 +125,12 @@ function buildHudForSession(session: ReturnType<typeof resolveBudgetEffects>): R
   return base;
 }
 
+/** Cubic ease-out — used for lane motion so it feels natural (not linear). */
+function easeOutCubic(t: number) {
+  const c = MathUtils.clamp(t, 0, 1);
+  return 1 - (1 - c) ** 3;
+}
+
 export default function DebtRunnerGame(_props: GameProps) {
   const mergePlayerData = useAppStore((s) => s.mergePlayerData);
   const profileInput = useAppStore.getState().playerData['runner.profile'];
@@ -51,12 +140,30 @@ export default function DebtRunnerGame(_props: GameProps) {
 
   const initialHud = useMemo(() => buildHudForSession(session), [session]);
 
+  /**
+   * `player` is the OUTER yaw group — owns world position + faces along the path
+   * via `lookAt`. `playerTilt` is the inner BeachCharacter ref — owns ONLY the
+   * banking roll (`rotation.z`). They are intentionally split so `lookAt` and
+   * the manual roll write don't fight on the same Object3D's quaternion/Euler
+   * (which previously caused per-frame flicker at turn tiles).
+   */
   const player = useRef<Group>(null);
+  const playerTilt = useRef<Group>(null);
   const collector = useRef<Group>(null);
-  const cameraFollow = useRef(new Vector3(0, 5.2, 11.5));
+  const collectorVisualWrap = useRef<Group>(null);
+  /**
+   * Smoothed forward basis. `forward = next - active` rotates ~90deg in a
+   * single frame at turn tiles; using the raw vector for the lateral basis
+   * and the camera target snaps the view. We lerp this vector toward the raw
+   * forward every frame so the camera + lane basis transition smoothly across
+   * tile boundaries. Path math itself still uses raw tile positions.
+   */
+  const smoothedForwardRef = useRef(new Vector3(0, 0, -1));
   const hudRef = useRef<RunnerHudState>(initialHud);
   const [jumping, setJumping] = useState(false);
   const [hud, setHud] = useState<RunnerHudState>(initialHud);
+  const [puffs, setPuffs] = useState<ActiveSandPuff[]>([]);
+  const puffIdRef = useRef(0);
 
   const elapsed = useRef(0);
   const tileIndex = useRef(2);
@@ -64,25 +171,45 @@ export default function DebtRunnerGame(_props: GameProps) {
   const stumbleTimer = useRef(0);
   const injuryTimer = useRef(0);
   const hitLock = useRef(0);
+  const hitFlashRef = useRef(0);
+  const cameraKickRef = useRef(0);
+  /** Prior-frame chase gap — detects sharp closes for camera punch. */
+  const prevChaseDistanceRef = useRef(16);
+  const lastSfxFootRef = useRef(0);
+  const lastSfxRustleRef = useRef(0);
+  const lastSfxRingRef = useRef(0);
+  // Latched visibility for the chaser, with hysteresis so the mesh doesn't
+  // flicker on/off when the gap or pressure hovers near the threshold.
+  // Initialized to true because the intro window starts visible.
+  const collectorShownRef = useRef(true);
   const pauseRef = useRef(false);
   const finishedRef = useRef(false);
   const pendingTurn = useRef<{ direction: 'left' | 'right'; atSeconds: number } | null>(null);
   const consumedTurnTile = useRef<string | null>(null);
   const wrongTurnPenaltyTileId = useRef<string | null>(null);
   const playerLaneRef = useRef<-1 | 0 | 1>(0);
+  /** Smoothed lateral offset (independent from forward path math). */
+  const laneOffsetRef = useRef(0);
   const jumpingRef = useRef(false);
+  const wasGroundedRef = useRef(true);
+  const camLookTarget = useRef(new Vector3(0, 1, 0));
+  const [hurtFlash, setHurtFlash] = useState(false);
 
   useEffect(() => {
     hudRef.current = initialHud;
     setHud(initialHud);
   }, [initialHud]);
 
+  // Publish session info ONCE on mount / whenever the session resolves. The
+  // live HUD snapshot is published separately by the fixed-rate interval
+  // below — keeping `hud` out of this dep array prevents this effect from
+  // re-firing on every HUD tick.
   useEffect(() => {
     mergePlayerData({
       'runner.session': session,
-      'runner.hud': hud,
+      'runner.hud': initialHud,
     });
-  }, [mergePlayerData, session, hud]);
+  }, [mergePlayerData, session, initialHud]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -147,6 +274,16 @@ export default function DebtRunnerGame(_props: GameProps) {
     return tiles[safe]!;
   };
 
+  const spawnSandPuff = (position: [number, number, number]) => {
+    puffIdRef.current += 1;
+    const id = puffIdRef.current;
+    setPuffs((prev) => [...prev, { id, position }]);
+  };
+
+  const removeSandPuff = (id: number) => {
+    setPuffs((prev) => prev.filter((p) => p.id !== id));
+  };
+
   useFrame((state, dt) => {
     if (finishedRef.current) return;
     if (pauseRef.current) return;
@@ -155,6 +292,9 @@ export default function DebtRunnerGame(_props: GameProps) {
     hitLock.current = Math.max(0, hitLock.current - dt);
     injuryTimer.current = Math.max(0, injuryTimer.current - dt);
     stumbleTimer.current = Math.max(0, stumbleTimer.current - dt);
+    hitFlashRef.current = Math.max(0, hitFlashRef.current - dt);
+    cameraKickRef.current = Math.max(0, cameraKickRef.current - dt);
+    if (hurtFlash && hitFlashRef.current <= 0) setHurtFlash(false);
 
     let h = hudRef.current;
 
@@ -175,21 +315,70 @@ export default function DebtRunnerGame(_props: GameProps) {
     const activeTile = getTile(tileIndex.current);
     const nextTile = getTile(tileIndex.current + 1);
 
-    const forward = new Vector3(nextTile.x - activeTile.x, 0, nextTile.z - activeTile.z).normalize();
-    const offset = RIGHT.clone()
-      .crossVectors(new Vector3(0, 1, 0), forward)
-      .normalize()
-      .multiplyScalar(playerLaneRef.current * LANE_SPACING);
+    // Raw forward from the path graph — flips ~90deg in one frame at a turn
+    // tile. Used ONLY for path math (active->next interpolation, turn checks).
+    _smoothForwardTarget
+      .set(nextTile.x - activeTile.x, 0, nextTile.z - activeTile.z)
+      .normalize();
+
+    // Smoothed forward — used for the lateral basis and camera follow so the
+    // basis doesn't jump at the tile boundary. Plain exp-damp toward raw.
+    smoothedForwardRef.current.lerp(_smoothForwardTarget, damp(FORWARD_SMOOTH_SPEED, dt));
+    if (smoothedForwardRef.current.lengthSq() < 1e-6) {
+      // Degenerate guard — should never trigger in practice.
+      smoothedForwardRef.current.copy(_smoothForwardTarget);
+    } else {
+      smoothedForwardRef.current.normalize();
+    }
+    _forward.copy(smoothedForwardRef.current);
+
+    // Lateral basis from the SMOOTHED forward — eliminates the lane-snap at
+    // turn boundaries (Fix E in stabilize_debt_runner plan).
+    _lateral.crossVectors(UP, _forward).normalize();
+
+    // Smooth the lateral lane offset toward the discrete target lane.
+    // Forward path position is exact; lane shifts ease toward their target
+    // with frame-rate-independent exponential damping.
+    const targetLaneOffset = playerLaneRef.current * LANE_SPACING;
+    const blend = easeOutCubic(damp(LANE_SMOOTH_SPEED, dt));
+    laneOffsetRef.current += (targetLaneOffset - laneOffsetRef.current) * blend;
+
     const t = tileProgress.current / TILE_SIZE;
-    const pos = new Vector3(
-      activeTile.x + (nextTile.x - activeTile.x) * t + offset.x,
-      jumping ? 1.3 : 0.7,
-      activeTile.z + (nextTile.z - activeTile.z) * t + offset.z,
+    // pos.y here is the WORLD y of the player root group (`player` ref). The
+    // BeachCharacter mesh adds an internal +0.7 offset, so ground = 0 and
+    // jump = 0.6 keeps the rendered character at the same heights as before.
+    _pos.set(
+      activeTile.x + (nextTile.x - activeTile.x) * t + _lateral.x * laneOffsetRef.current,
+      jumping ? JUMP_Y : GROUND_Y,
+      activeTile.z + (nextTile.z - activeTile.z) * t + _lateral.z * laneOffsetRef.current,
     );
 
     if (player.current) {
-      player.current.position.lerp(pos, Math.min(1, dt * 16));
-      player.current.lookAt(pos.clone().add(forward));
+      // Forward position is set directly (no lerp) so the run never feels rubbery.
+      player.current.position.copy(_pos);
+      // Face along the SMOOTHED forward so the camera/character don't snap at turns.
+      _lookAhead.copy(_pos).add(_forward);
+      player.current.lookAt(_lookAhead);
+    }
+
+    if (playerTilt.current) {
+      // Banking roll lives on a SEPARATE object so it doesn't fight `lookAt`'s
+      // quaternion writes (Fix C in plan). lookAt = yaw, this = roll. Only.
+      const laneDelta = targetLaneOffset - laneOffsetRef.current;
+      const tilt = MathUtils.clamp(laneDelta / LANE_SPACING, -1, 1) * LANE_TILT_MAX;
+      playerTilt.current.rotation.z = MathUtils.lerp(
+        playerTilt.current.rotation.z,
+        -tilt,
+        damp(TILT_SMOOTH_SPEED, dt),
+      );
+    }
+
+    // Detect landing -> spawn sand puff (one per land event).
+    if (wasGroundedRef.current && jumping) {
+      wasGroundedRef.current = false;
+    } else if (!wasGroundedRef.current && !jumping) {
+      wasGroundedRef.current = true;
+      spawnSandPuff([_pos.x, 0.05, _pos.z]);
     }
 
     // Path turns: geometry already defines the route — no loss for silence.
@@ -242,6 +431,10 @@ export default function DebtRunnerGame(_props: GameProps) {
         if (blockedLow || blockedHigh || blockedSolid) {
           hitLock.current = 0.7;
           injuryTimer.current = 1.6 * session.effects.injuryDurationMultiplier;
+          // Visual feedback: red flash on character + brief camera kick.
+          hitFlashRef.current = 0.35;
+          setHurtFlash(true);
+          cameraKickRef.current = 0.3;
           h = {
             ...h,
             lives: h.lives - 1,
@@ -276,6 +469,25 @@ export default function DebtRunnerGame(_props: GameProps) {
     if (profile.food === 'bad') debuffs.push('Low Fuel');
     if (profile.miscFun === 'bad') debuffs.push('Burnout');
 
+    const chaseSpan = 23.7;
+    const chaseProx01 = 1 - MathUtils.clamp((nextChaseDistance - 0.3) / chaseSpan, 0, 1);
+    const debtNorm01 = MathUtils.clamp(debtPressure / 1.4, 0, 1);
+    const moraleStress01 = 1 - MathUtils.clamp(h.morale / 100, 0, 1);
+    const collectorPressure01 = MathUtils.clamp(
+      0.5 * chaseProx01 + 0.3 * debtNorm01 + 0.22 * moraleStress01,
+      0,
+      1,
+    );
+
+    const prevCh = prevChaseDistanceRef.current;
+    if (prevCh - nextChaseDistance > 0.45) {
+      cameraKickRef.current = Math.max(
+        cameraKickRef.current,
+        0.12 + Math.min(0.14, (prevCh - nextChaseDistance) * 0.06),
+      );
+    }
+    prevChaseDistanceRef.current = nextChaseDistance;
+
     const monsterStage =
       nextChaseDistance > 14
         ? 'manageable'
@@ -293,11 +505,15 @@ export default function DebtRunnerGame(_props: GameProps) {
       chaseDistance: nextChaseDistance,
       morale: Math.max(0, h.morale - (profile.miscFun === 'bad' ? 0.9 : 0.35) * dt),
       monsterStage,
+      collectorPressure01,
       debuffs,
     };
 
+    // Publish to the per-frame ref ONLY. A separate fixed-rate interval
+    // (mounted once below) copies hudRef -> React state + the player store
+    // every ~120ms. Calling setHud(h) here would re-render the entire R3F
+    // subtree at 60fps and was the dominant cause of visible jitter.
     hudRef.current = h;
-    setHud(h);
 
     // Win/loss gates (use same-frame HUD snapshot — not stale React state).
     if (h.lives <= 0) {
@@ -351,104 +567,283 @@ export default function DebtRunnerGame(_props: GameProps) {
       return;
     }
 
-    if (collector.current && player.current) {
-      const p = player.current.position.clone();
-      const collectorPos = p.clone().add(forward.clone().multiplyScalar(-Math.max(1, h.chaseDistance)));
-      collector.current.position.lerp(collectorPos, Math.min(1, dt * 6));
-      collector.current.scale.setScalar(session.effects.debtCollectorScale);
-      collector.current.lookAt(p);
+    const chaseVisualInt = MathUtils.clamp(1 - nextChaseDistance / 16, 0, 1);
+
+    // Visibility rule: show the collector during the brief intro window so
+    // the player learns there's a chaser, then hide it. Re-reveal ONLY when
+    // the player is decisively in trouble — using hysteresis so the
+    // silhouette doesn't strobe on/off near the boundary.
+    const inIntroWindow = elapsed.current < INTRO_COLLECTOR_VISIBLE_SEC;
+    const decisivelyDying =
+      h.chaseDistance < NEAR_DEATH_CHASE_GAP_SHOW ||
+      h.monsterStage === 'overwhelming' ||
+      h.collectorPressure01 >= NEAR_DEATH_PRESSURE_SHOW;
+    const decisivelySafe =
+      h.chaseDistance > NEAR_DEATH_CHASE_GAP_HIDE &&
+      h.monsterStage !== 'overwhelming' &&
+      h.collectorPressure01 < NEAR_DEATH_PRESSURE_HIDE;
+
+    if (inIntroWindow) {
+      collectorShownRef.current = true;
+    } else if (decisivelyDying) {
+      collectorShownRef.current = true;
+    } else if (decisivelySafe) {
+      collectorShownRef.current = false;
+    }
+    const collectorVisible = collectorShownRef.current;
+
+    if (collectorVisualWrap.current) {
+      collectorVisualWrap.current.visible = collectorVisible;
     }
 
-    // Third-person follow: camera sits BEHIND the player (opposite of forward)
-    // and looks AHEAD down the path so the player runs away from the lens.
-    state.camera.position.lerp(
-      pos.clone().add(forward.clone().multiplyScalar(-cameraFollow.current.z)).setY(cameraFollow.current.y),
-      Math.min(1, dt * 4),
-    );
-    state.camera.lookAt(pos.clone().add(forward.clone().multiplyScalar(12)));
+    if (collector.current && player.current) {
+      _playerWorldPos.copy(player.current.position);
+      _collectorTarget
+        .copy(_playerWorldPos)
+        .addScaledVector(_forward, -Math.max(1, h.chaseDistance));
+      const wobbleAmp = 0.09 * chaseVisualInt * session.effects.debtCollectorAggression;
+      _collectorWobble.copy(_lateral).multiplyScalar(Math.sin(elapsed.current * 6.2) * wobbleAmp);
+      _collectorTarget.add(_collectorWobble);
+
+      const followSpeed =
+        3.2 +
+        chaseVisualInt * 9.2 +
+        session.effects.debtCollectorAggression * 2.35 +
+        collectorPressure01 * 1.8;
+      collector.current.position.lerp(_collectorTarget, damp(followSpeed, dt));
+      collector.current.scale.setScalar(session.effects.debtCollectorScale);
+      collector.current.lookAt(_playerWorldPos);
+    }
+
+    // Camera: extend distance only while the collector is visible (intro / danger).
+    const camAlong = collectorVisible
+      ? MathUtils.clamp(Math.max(CAMERA_DISTANCE, nextChaseDistance + 1.85), 8.2, 26)
+      : CAMERA_DISTANCE;
+    const camDist = collectorVisible
+      ? MathUtils.clamp(camAlong - chaseVisualInt * 1.15, 8.2, 26)
+      : MathUtils.clamp(CAMERA_DISTANCE - chaseVisualInt * 0.45, 8.2, 12.5);
+    const camHeight = CAMERA_HEIGHT + chaseVisualInt * 0.42 - nextChaseDistance / 24;
+
+    _cameraTarget.copy(_pos).addScaledVector(_forward, -camDist);
+    _cameraTarget.y = camHeight;
+
+    if (cameraKickRef.current > 0) {
+      const kick = cameraKickRef.current / 0.3;
+      _cameraTarget.addScaledVector(_forward, -kick * 0.6);
+      _cameraTarget.y -= kick * 0.25;
+    }
+
+    state.camera.position.lerp(_cameraTarget, damp(CAM_POS_SMOOTH, dt));
+
+    const cam = state.camera as PerspectiveCamera;
+    if (cam && 'fov' in cam && typeof cam.fov === 'number') {
+      const targetFov = 50 - chaseVisualInt * 3.2 - collectorPressure01 * 1.2;
+      cam.fov = MathUtils.lerp(cam.fov, targetFov, damp(5, dt));
+      cam.updateProjectionMatrix();
+    }
+
+    _desiredLook.copy(_pos).addScaledVector(_forward, 12);
+    _desiredLook.x += -laneOffsetRef.current * 0.25;
+    _desiredLook.addScaledVector(_lateral, chaseVisualInt * 0.35);
+    camLookTarget.current.lerp(_desiredLook, damp(CAM_LOOK_SMOOTH, dt));
+    state.camera.lookAt(camLookTarget.current);
+
+    // Throttled collector SFX — only when the mesh is visible.
+    const intenSfx = chaseVisualInt;
+    if (collectorVisible && intenSfx > 0.08) {
+      const footIv = 0.38 - intenSfx * 0.14;
+      if (elapsed.current - lastSfxFootRef.current > footIv) {
+        lastSfxFootRef.current = elapsed.current;
+        audio.playSFX('collectorFootstep', { volume: 0.22 + intenSfx * 0.38 });
+      }
+      const rustleIv = 1.85 - intenSfx * 0.75;
+      if (elapsed.current - lastSfxRustleRef.current > rustleIv) {
+        lastSfxRustleRef.current = elapsed.current;
+        audio.playSFX('collectorPapers', { volume: 0.12 + intenSfx * 0.28 });
+      }
+      if (intenSfx > 0.55 && elapsed.current - lastSfxRingRef.current > 5.2 && Math.random() < 0.004) {
+        lastSfxRingRef.current = elapsed.current;
+        audio.playSFX('collectorPhone', { volume: 0.18 + intenSfx * 0.25 });
+      }
+    }
   });
 
+  // Single mount-time HUD pump. Runs at ~8Hz, reads the per-frame `hudRef`,
+  // and pushes that snapshot into both local React state (so the in-canvas
+  // HUD overlay updates) and the shared player store (so external screens
+  // see the live values). Crucially, this interval is created ONCE — its
+  // dep array doesn't include `hud`, so it isn't torn down/recreated 60
+  // times per second. That single change is the largest contributor to
+  // stable frame pacing in the runner.
   useEffect(() => {
-    const t = window.setInterval(() => {
-      mergePlayerData({ 'runner.hud': hud });
+    const handle = window.setInterval(() => {
+      const snapshot = hudRef.current;
+      setHud(snapshot);
+      mergePlayerData({ 'runner.hud': snapshot });
     }, 120);
-    return () => window.clearInterval(t);
-  }, [mergePlayerData, hud]);
+    return () => window.clearInterval(handle);
+  }, [mergePlayerData]);
+
+  // Visible window of tiles so far/cleanup stays cheap.
+  const visibleStart = Math.max(0, tileIndex.current - 6);
+  const visibleTiles = tiles.slice(visibleStart, tileIndex.current + 35);
 
   return (
     <>
-      <color attach="background" args={['#6ec6ff']} />
-      <fog attach="fog" args={[new Color('#8fd1ff'), 25, 120]} />
-      <ambientLight intensity={0.7} />
-      <directionalLight position={[10, 18, 8]} intensity={1.2} color="#ffe7b2" />
+      {/* ============================================================= */}
+      {/* Sky — Island Run ParadiseSkydome gradient (see scene component). */}
+      {/* Canvas clear color: zenith blue for any uncovered pixels.      */}
+      {/* ============================================================= */}
+      <color attach="background" args={['#47a8f2']} />
+      <ParadiseSkydomeMesh />
+      <fog attach="fog" args={[new Color('#ffd4b8'), 42, 200]} />
 
-      {/* Ocean */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.4, 0]}>
-        <planeGeometry args={[900, 900]} />
-        <meshStandardMaterial color="#2d9bd1" metalness={0.1} roughness={0.35} />
-      </mesh>
+      {/* Lighting aligned with IslandBoardWeb/src/main.ts beach board. */}
+      <ambientLight intensity={0.52} color="#fff4ea" />
+      <hemisphereLight color="#5bb8ff" groundColor="#edd4a8" intensity={0.68} position={[0, 40, 0]} />
+      <directionalLight position={[-22, 15, 13]} intensity={1.48} color="#ffe8cc" castShadow={false} />
+      <directionalLight position={[18, 6, -22]} intensity={0.46} color="#b8dcff" castShadow={false} />
 
-      {/* Beach base */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.2, 0]}>
-        <planeGeometry args={[420, 420]} />
-        <meshStandardMaterial color="#e5c07b" roughness={0.95} />
-      </mesh>
+      <Ocean />
+      <ShorelineDecor />
+      <BeachSand />
 
-      {tiles
-        .slice(Math.max(0, tileIndex.current - 6), tileIndex.current + 35)
-        .map((tile: TrackTile, visibleIndex) => {
-        const absoluteIndex = Math.max(0, tileIndex.current - 6) + visibleIndex;
+      {/* Distant island silhouettes — softer greens so fog reads as depth. */}
+      <group position={[0, 0, -80]}>
+        <mesh position={[-30, 4, 0]}>
+          <sphereGeometry args={[8, 14, 10, 0, Math.PI * 2, 0, Math.PI / 2]} />
+          <meshStandardMaterial color="#4a9576" roughness={1} metalness={0} />
+        </mesh>
+        <mesh position={[26, 3.6, -10]}>
+          <sphereGeometry args={[7, 14, 10, 0, Math.PI * 2, 0, Math.PI / 2]} />
+          <meshStandardMaterial color="#3d7f62" roughness={1} metalness={0} />
+        </mesh>
+      </group>
+
+      {/* ============================================================= */}
+      {/* Path — light-warm boardwalk with rope-post borders.            */}
+      {/* ============================================================= */}
+      {visibleTiles.map((tile: TrackTile, visibleIndex) => {
+        const absoluteIndex = visibleStart + visibleIndex;
         const nextTile = getTile(absoluteIndex + 1);
+        const nextNextTile = getTile(absoluteIndex + 2);
         const dx = nextTile.x - tile.x;
         const dz = nextTile.z - tile.z;
         const distance = Math.max(0.01, Math.sqrt(dx * dx + dz * dz));
         const yaw = Math.atan2(dx, dz);
+        const isTurn = tile.turn !== 'straight';
+        const depthLen = distance + (isTurn ? PLANK_OVERLAP_TURN : PLANK_OVERLAP_STRAIGHT);
         const width = tile.narrow ? 5.8 : 6.6;
-        const obstacleColor = tile.slippery ? '#5fa8ff' : '#7d4f28';
+        const plankColor = tile.slippery ? '#7ec9d2' : '#e6c79a';
+
+        let bisYaw = 0;
+        if (isTurn) {
+          _cornerIn.set(dx, 0, dz).normalize();
+          const odx = nextNextTile.x - nextTile.x;
+          const odz = nextNextTile.z - nextTile.z;
+          const od = Math.max(0.01, Math.hypot(odx, odz));
+          _cornerOut.set(odx / od, 0, odz / od);
+          _cornerBis.copy(_cornerIn).add(_cornerOut);
+          if (_cornerBis.lengthSq() < 1e-8) {
+            _cornerBis.copy(_cornerOut);
+          } else {
+            _cornerBis.normalize();
+          }
+          bisYaw = Math.atan2(_cornerBis.x, _cornerBis.z);
+        }
+
         return (
-          <group
-            key={tile.id}
-            position={[(tile.x + nextTile.x) * 0.5, 0, (tile.z + nextTile.z) * 0.5]}
-            rotation={[0, yaw, 0]}
-          >
-            <mesh>
-              <boxGeometry args={[width, 0.35, distance + 0.35]} />
-              <meshStandardMaterial color="#9a6b3f" roughness={0.8} />
-            </mesh>
-            {tile.obstacles.map((obs, index) => (
-              <mesh key={`${tile.id}-${obs.label}-${index}`} position={[obs.lane * LANE_SPACING, 0.8, 0]}>
-                <boxGeometry args={[1.2, obs.kind === 'low' ? 0.7 : 1.7, 1.2]} />
-                <meshStandardMaterial color={obstacleColor} />
+          <group key={tile.id}>
+            <group
+              position={[(tile.x + nextTile.x) * 0.5, 0, (tile.z + nextTile.z) * 0.5]}
+              rotation={[0, yaw, 0]}
+            >
+              <mesh receiveShadow>
+                <boxGeometry args={[width, 0.32, depthLen]} />
+                <meshStandardMaterial
+                  color={plankColor}
+                  roughness={0.85}
+                  polygonOffset
+                  polygonOffsetFactor={-0.75}
+                  polygonOffsetUnits={-0.75}
+                />
               </mesh>
-            ))}
+              <mesh position={[0, 0.17, 0]}>
+                <boxGeometry args={[width, 0.02, depthLen]} />
+                <meshStandardMaterial
+                  color="#b6864a"
+                  transparent
+                  opacity={0.55}
+                  polygonOffset
+                  polygonOffsetFactor={-0.5}
+                  polygonOffsetUnits={-0.5}
+                />
+              </mesh>
+              <mesh position={[-width / 2, 0.45, 0]}>
+                <boxGeometry args={[0.12, 0.25, depthLen]} />
+                <meshStandardMaterial color="#8b5a2b" />
+              </mesh>
+              <mesh position={[width / 2, 0.45, 0]}>
+                <boxGeometry args={[0.12, 0.25, depthLen]} />
+                <meshStandardMaterial color="#8b5a2b" />
+              </mesh>
+              {tile.obstacles.map((obs, index) => (
+                <BeachObstacle
+                  key={`${tile.id}-${obs.label}-${index}`}
+                  kind={obs.kind}
+                  position={[obs.lane * LANE_SPACING, 0, 0]}
+                />
+              ))}
+            </group>
+            {isTurn ? (
+              <mesh position={[nextTile.x, 0.145, nextTile.z]} rotation={[0, bisYaw, 0]} receiveShadow>
+                <boxGeometry args={[2.65, 0.07, 2.65]} />
+                <meshStandardMaterial
+                  color={plankColor}
+                  roughness={0.88}
+                  polygonOffset
+                  polygonOffsetFactor={-1}
+                  polygonOffsetUnits={-1}
+                />
+              </mesh>
+            ) : null}
           </group>
         );
       })}
 
-      {/* Player */}
-      <group ref={player} position={[0, 0.7, 0]}>
-        <mesh castShadow>
-          <capsuleGeometry args={[0.34, 0.65, 4, 12]} />
-          <meshStandardMaterial color="#2a3d66" />
-        </mesh>
-        <mesh position={[0, 0.9, 0]}>
-          <sphereGeometry args={[0.24, 16, 16]} />
-          <meshStandardMaterial color="#ffd4aa" />
-        </mesh>
+      {/* Player.
+          Two-group split:
+            - outer <group ref={player}> = world position + yaw (lookAt)
+            - inner <BeachCharacter ref={playerTilt}> = bank/roll only
+          Splitting these prevents lookAt's quaternion writes from fighting
+          the manual `rotation.z` write that produces the lane-shift bank. */}
+      <group ref={player}>
+        <BeachCharacter
+          ref={playerTilt}
+          jumping={jumping}
+          hurtFlash={hurtFlash}
+          energy={MathUtils.clamp(hud.stamina / 100, 0, 1)}
+          meshRenderOrder={2}
+        />
       </group>
 
-      {/* Debt Collector */}
-      <group ref={collector} position={[0, 0.7, 7]}>
-        <mesh>
-          <boxGeometry args={[1.2, 1.8, 1.2]} />
-          <meshStandardMaterial color="#351313" emissive="#220707" />
-        </mesh>
-        <mesh position={[0, 1.2, 0.4]}>
-          <sphereGeometry args={[0.4, 12, 12]} />
-          <meshStandardMaterial color="#5a1f1f" emissive="#2a1010" />
-        </mesh>
+      {/* Sand puffs (one-shot particle systems). */}
+      {puffs.map((p) => (
+        <SandPuff key={p.id} position={p.position} onDone={() => removeSandPuff(p.id)} />
+      ))}
+
+      {/* Debt Collector + paper trail (trail samples collector world position). */}
+      <group ref={collectorVisualWrap}>
+        <DebtCollector
+          ref={collector}
+          intensity={MathUtils.clamp(1 - hud.chaseDistance / 16, 0, 1)}
+          monsterStage={hud.monsterStage}
+        />
+        <DebtCollectorPaperTrail
+          sourceRef={collector}
+          intensity={MathUtils.clamp(1 - hud.chaseDistance / 16, 0, 1)}
+        />
       </group>
     </>
   );
 }
-

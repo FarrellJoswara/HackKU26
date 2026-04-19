@@ -19,6 +19,20 @@
   --island-font-body: "Outfit", "DM Sans", system-ui, sans-serif;
   --island-font-ui: "DM Sans", "Outfit", system-ui, sans-serif;
   --island-focus-ring: 0 0 0 3px rgba(26, 77, 92, 0.45);
+
+  /* Tropical palette (cohesive across HUD, screens, transitions). */
+  --tropic-turquoise: #5ed6d9;
+  --tropic-turquoise-deep: #2aa6b0;
+  --tropic-coral: #ff8b6b;
+  --tropic-coral-deep: #e8624a;
+  --tropic-sun: #ffc36b;
+  --tropic-sun-deep: #f59f3a;
+  --tropic-sand: #fbe6be;
+  --tropic-sand-deep: #d9b97a;
+  --tropic-sea-deep: #1a4d5c;
+  --tropic-leaf: #3fa57a;
+  --tropic-leaf-deep: #1f7a52;
+  --tropic-cream: #fff7e8;
 }
 
 html,

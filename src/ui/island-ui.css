@@ -181,3 +181,349 @@
   background: rgba(255, 255, 255, 0.55);
   color: var(--island-color-ink);
 }
+
+/* ============================================================== */
+/* Tropical theme — cohesive UI for the beach endless runner.     */
+/* Keep everything soft, rounded, sun-warmed.                     */
+/* ============================================================== */
+
+/* Sunset sky — used as MainMenu / Win backdrop. */
+.tropic-bg-sunset {
+  background:
+    radial-gradient(ellipse 110% 70% at 50% 110%, rgba(255, 195, 107, 0.55), transparent 60%),
+    linear-gradient(180deg, #6fd6e0 0%, #ffc89e 55%, #ff8b6b 100%);
+}
+
+/* Stormy-but-warm — used for Loss screen so it still feels tropical. */
+.tropic-bg-storm {
+  background:
+    radial-gradient(ellipse 90% 60% at 50% 0%, rgba(255, 200, 158, 0.18), transparent 60%),
+    linear-gradient(180deg, #2b6e7a 0%, #1a4d5c 60%, #0e2a36 100%);
+}
+
+/* Soft cream paper — used for Summary screen, friendly + readable. */
+.tropic-bg-paper {
+  background:
+    radial-gradient(ellipse at top, rgba(255, 230, 180, 0.65), transparent 55%),
+    linear-gradient(180deg, #fff7e8 0%, #ffe7c5 100%);
+}
+
+/* Pastel turquoise lagoon — used as Briefing backdrop. */
+.tropic-bg-lagoon {
+  background:
+    radial-gradient(ellipse 90% 60% at 50% 0%, rgba(255, 255, 255, 0.4), transparent 55%),
+    linear-gradient(180deg, #aef0ec 0%, #5ed6d9 55%, #1a7a8c 100%);
+}
+
+/* Reusable tropical pill — friendly, rounded, satisfying tactile feel. */
+.tropic-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 46px;
+  padding: 12px 22px;
+  border-radius: 999px;
+  border: 2px solid rgba(255, 255, 255, 0.55);
+  cursor: pointer;
+  font-family: var(--island-font-body);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  transition:
+    transform 0.12s cubic-bezier(0.34, 1.56, 0.64, 1),
+    filter 0.18s ease,
+    box-shadow 0.18s ease;
+  user-select: none;
+}
+
+.tropic-pill:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.05);
+}
+
+.tropic-pill:active {
+  transform: translateY(1px) scale(0.98);
+}
+
+.tropic-pill:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 3px rgba(255, 255, 255, 0.6),
+    0 0 0 6px rgba(46, 188, 200, 0.55);
+}
+
+.tropic-pill:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.tropic-pill--coral {
+  background: linear-gradient(180deg, #ffb39a, #ff8b6b 55%, #e8624a);
+  color: #481b10;
+  box-shadow:
+    0 4px 0 #b94530,
+    0 10px 22px rgba(232, 98, 74, 0.35);
+}
+
+.tropic-pill--turquoise {
+  background: linear-gradient(180deg, #9ee6e9, #5ed6d9 55%, #2aa6b0);
+  color: #0e3a40;
+  box-shadow:
+    0 4px 0 #1f7a82,
+    0 10px 22px rgba(42, 166, 176, 0.32);
+}
+
+.tropic-pill--sand {
+  background: linear-gradient(180deg, #fff3d6, #fbe6be 55%, #d9b97a);
+  color: #4a3514;
+  box-shadow:
+    0 4px 0 #a8854a,
+    0 10px 22px rgba(168, 133, 74, 0.28);
+}
+
+/* Soft glass card on tropical backdrops. */
+.tropic-card {
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow:
+    0 14px 30px rgba(20, 60, 80, 0.18),
+    inset 0 1px rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(10px);
+  color: #2a2418;
+}
+
+.tropic-card-dark {
+  border-radius: 22px;
+  background: rgba(10, 35, 45, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow:
+    0 14px 30px rgba(0, 0, 0, 0.35),
+    inset 0 1px rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(10px);
+  color: #fffaf2;
+}
+
+/* HUD pill — slightly translucent sand panel used in-game. */
+.tropic-hudPill {
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(255, 248, 232, 0.92), rgba(248, 224, 178, 0.88));
+  border: 1.5px solid rgba(255, 255, 255, 0.85);
+  box-shadow:
+    0 6px 14px rgba(20, 60, 80, 0.18),
+    inset 0 1px rgba(255, 255, 255, 0.7);
+  color: #2a2418;
+  font-family: var(--island-font-body);
+  font-weight: 600;
+}
+
+/* Stronger fill + text lift for HUD over bright 3D beach / sky. */
+.tropic-hudPill--contrast {
+  background: linear-gradient(180deg, rgba(255, 250, 238, 0.97), rgba(248, 228, 185, 0.95));
+  text-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.95),
+    0 0 1px rgba(255, 255, 255, 0.6);
+  box-shadow:
+    0 6px 16px rgba(20, 60, 80, 0.24),
+    inset 0 1px rgba(255, 255, 255, 0.9);
+}
+
+/* Countdown urgency — timer pill when seconds are low. */
+@keyframes tropic-timer-beat {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.03);
+  }
+}
+
+.tropic-timer-urgent {
+  animation: tropic-timer-beat 0.95s ease-in-out infinite;
+  border-color: rgba(232, 98, 74, 0.55) !important;
+  box-shadow:
+    0 6px 18px rgba(232, 98, 74, 0.28),
+    inset 0 1px rgba(255, 255, 255, 0.75);
+}
+
+@keyframes tropic-bar-shimmer {
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+  50% {
+    filter: brightness(1.1);
+  }
+}
+
+.tropic-hudBarFill--shimmer {
+  animation: tropic-bar-shimmer 2.6s ease-in-out infinite;
+}
+
+/* Pause card — wave accent bar (Island / lagoon palette). */
+.tropic-pause-wave-top {
+  height: 10px;
+  width: 100%;
+  max-width: 28rem;
+  border-radius: 999px 999px 0 0;
+  background: linear-gradient(90deg, #7ec9d2, #ffd9c4, #ff8b6b, #7ec9d2);
+  opacity: 0.95;
+  box-shadow: 0 2px 8px rgba(20, 80, 90, 0.2);
+}
+
+.tropic-hudBar {
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(20, 60, 80, 0.18);
+  overflow: hidden;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.18);
+}
+
+.tropic-hudBar > span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.18s ease-out;
+}
+
+.tropic-hudBar--turquoise > span {
+  background: linear-gradient(90deg, #9ee6e9, #2aa6b0);
+}
+
+.tropic-hudBar--coral > span {
+  background: linear-gradient(90deg, #ffb39a, #e8624a);
+}
+
+.tropic-hudBar--sun > span {
+  background: linear-gradient(90deg, #ffe7a8, #f59f3a);
+}
+
+/* Subtle motion utilities (used sparingly). */
+@keyframes tropic-bobble {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-4px); }
+}
+
+@keyframes tropic-float-cloud {
+  0%   { transform: translateX(-2%); }
+  100% { transform: translateX(2%); }
+}
+
+@keyframes tropic-shimmer {
+  0%, 100% { opacity: 0.85; }
+  50%      { opacity: 1; }
+}
+
+@keyframes tropic-pop {
+  0%   { transform: scale(0.96); opacity: 0; }
+  60%  { transform: scale(1.03); opacity: 1; }
+  100% { transform: scale(1);    opacity: 1; }
+}
+
+.tropic-bobble {
+  animation: tropic-bobble 2.4s ease-in-out infinite;
+}
+
+.tropic-pop {
+  animation: tropic-pop 0.32s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.tropic-shimmer {
+  animation: tropic-shimmer 3.2s ease-in-out infinite;
+}
+
+/* Decorative palm silhouette / sun for screen backgrounds. */
+.tropic-sun {
+  position: absolute;
+  width: 240px;
+  height: 240px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 45% 45%, #fff5d6 0%, #ffd07a 50%, rgba(255, 195, 107, 0) 72%);
+  filter: blur(2px);
+  pointer-events: none;
+  animation: tropic-shimmer 5s ease-in-out infinite;
+}
+
+.tropic-clouds {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(60px 24px at 18% 30%, rgba(255, 255, 255, 0.85), transparent 70%),
+    radial-gradient(80px 28px at 78% 22%, rgba(255, 255, 255, 0.75), transparent 70%),
+    radial-gradient(50px 18px at 50% 18%, rgba(255, 255, 255, 0.7), transparent 70%);
+  pointer-events: none;
+  animation: tropic-float-cloud 14s ease-in-out infinite alternate;
+}
+
+/* Lives = row of seashell hearts; this is the empty/full circle base. */
+.tropic-shell {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid #b94530;
+  background: linear-gradient(180deg, #ffd9c4, #ffaa92);
+  box-shadow:
+    inset 0 -3px 0 rgba(184, 70, 48, 0.55),
+    0 2px 0 rgba(184, 70, 48, 0.35);
+  position: relative;
+}
+
+.tropic-shell::after {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  border-radius: 50%;
+  background: repeating-conic-gradient(from 90deg, rgba(184, 70, 48, 0.25) 0 12deg, transparent 12deg 24deg);
+  opacity: 0.7;
+}
+
+.tropic-shell--lost {
+  filter: grayscale(1);
+  opacity: 0.45;
+}
+
+/* DebtRunner — chase stress: vignette + heartbeat bar (--hb-dur from inline style). */
+.tropic-chase-vignette {
+  background: radial-gradient(ellipse 70% 65% at 50% 42%, transparent 38%, rgba(45, 8, 18, 0.72) 100%);
+  transition: opacity 0.4s ease-out;
+}
+
+@keyframes tropic-chase-heartbeat {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scaleX(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scaleX(1.06);
+  }
+}
+
+.tropic-chase-heartbeat-line {
+  transform-origin: center;
+  animation: tropic-chase-heartbeat var(--hb-dur, 1.15s) ease-in-out infinite;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, #ff8b6b, #b94530, #ff8b6b, transparent);
+  box-shadow: 0 0 12px rgba(185, 69, 48, 0.45);
+}
+
+@keyframes tropic-chase-stage-flash {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -6px) scale(0.96);
+  }
+  12% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, 0) scale(1);
+  }
+}
+
+.tropic-chase-stage-toast {
+  animation: tropic-chase-stage-flash 2.2s ease-out forwards;
+}

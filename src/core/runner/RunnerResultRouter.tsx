@@ -4,6 +4,7 @@ import { useAppStore } from '@/core/store';
 import type { RunnerFinishedPayload, StoredRunnerLastRun } from './runnerTypes';
 
 const PLAYER_DATA_KEY = 'runner.lastRun';
+const TIMES_CAUGHT_KEY = 'runner.timesCaught';
 
 export function RunnerResultRouter() {
   const mergePlayerData = useAppStore((s) => s.mergePlayerData);
@@ -15,7 +16,14 @@ export function RunnerResultRouter() {
         endedAtMs: payload.endedAtMs ?? Date.now(),
       };
 
-      mergePlayerData({ [PLAYER_DATA_KEY]: stored });
+      const prevCaught =
+        (useAppStore.getState().playerData[TIMES_CAUGHT_KEY] as number | undefined) ?? 0;
+      const caughtBump =
+        payload.outcome === 'loss' && payload.failReason === 'caught'
+          ? { [TIMES_CAUGHT_KEY]: prevCaught + 1 }
+          : {};
+
+      mergePlayerData({ ...caughtBump, [PLAYER_DATA_KEY]: stored });
 
       eventBus.emit('navigate:request', {
         to: payload.outcome === 'win' ? 'win' : 'loss',

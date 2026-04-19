@@ -9,15 +9,16 @@
 
 import type { Transition } from './types';
 import { FadeTransition } from './effects/FadeTransition';
+import { WaveTransition } from './effects/WaveTransition';
 
 export const TRANSITIONS: Record<string, Transition> = {
   [FadeTransition.id]: FadeTransition,
-  // TODO: register more, e.g.
-  // [WipeTransition.id]: WipeTransition,
-  // [CameraSwoopTransition.id]: CameraSwoopTransition,
+  // Tropical wave-wash; reads as part of the beach world rather than a cut.
+  [WaveTransition.id]: WaveTransition,
 };
 
-let activeTransitionId: string = FadeTransition.id;
+// Default to the tropical wave so every navigation feels themed.
+let activeTransitionId: string = WaveTransition.id;
 
 export function setActiveTransition(id: string): void {
   if (!TRANSITIONS[id]) {

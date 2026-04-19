@@ -11,15 +11,21 @@ export default function PostRunSummaryScreen(props: UIProps<Record<string, unkno
 
   if (!lastRun) {
     return (
-      <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-b from-slate-950 via-indigo-950 to-black text-white">
-        <div className="mx-4 w-full max-w-xl rounded-2xl border border-white/10 bg-black/40 p-6 backdrop-blur">
-          <h2 className="text-2xl font-semibold tracking-tight">Post-run summary</h2>
-          <p className="mt-2 text-sm text-white/70">
+      <div className="tropic-bg-paper absolute inset-0 flex items-center justify-center text-[#2a2418]">
+        <div className="tropic-card mx-4 w-full max-w-xl p-7">
+          <h2
+            className="text-2xl font-semibold text-[#1a4d5c]"
+            style={{ fontFamily: 'var(--island-font-display)' }}
+          >
+            Post-run summary
+          </h2>
+          <p className="mt-2 text-sm text-[#3d3428]/85">
             No run data saved yet. This screen will populate after the runner emits{' '}
-            <code className="rounded bg-white/10 px-1">runner:finished</code>.
+            <code className="rounded bg-[#fbe6be] px-1">runner:finished</code>.
           </p>
           <div className="mt-6">
             <Button
+              variant="turquoise"
               leadingIcon={<ArrowLeft className="size-4" />}
               onClick={() => eventBus.emit('navigate:request', { to: 'menu', module: null })}
             >
@@ -44,14 +50,22 @@ export default function PostRunSummaryScreen(props: UIProps<Record<string, unkno
   ];
 
   return (
-    <div className="absolute inset-0 overflow-auto bg-gradient-to-b from-slate-950 via-indigo-950 to-black text-white">
+    <div className="tropic-bg-paper absolute inset-0 overflow-auto text-[#2a2418]">
       <div className="mx-auto w-full max-w-3xl px-4 py-10">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="text-3xl font-semibold tracking-tight">Financial debrief</h2>
-            <p className="mt-1 text-sm text-white/70">
+            <p className="text-xs font-bold uppercase tracking-[0.22em] text-[#1a4d5c]/75">
+              Financial debrief
+            </p>
+            <h2
+              className="mt-1 text-3xl font-semibold text-[#1a4d5c]"
+              style={{ fontFamily: 'var(--island-font-display)' }}
+            >
+              {lastRun.outcome === 'win' ? 'Bright sunset, calm tide.' : 'The currents pulled hard.'}
+            </h2>
+            <p className="mt-1 text-sm text-[#3d3428]/80">
               Outcome:{' '}
-              <span className="font-medium text-white">
+              <span className="font-semibold text-[#1a4d5c]">
                 {lastRun.outcome === 'win' ? 'Win' : 'Loss'}
               </span>
               {lastRun.outcome === 'loss' && lastRun.failReason
@@ -61,7 +75,7 @@ export default function PostRunSummaryScreen(props: UIProps<Record<string, unkno
           </div>
           <div className="flex flex-col gap-2 sm:flex-row">
             <Button
-              variant="ghost"
+              variant="turquoise"
               leadingIcon={<ArrowLeft className="size-4" />}
               onClick={() =>
                 eventBus.emit('navigate:request', {
@@ -73,43 +87,45 @@ export default function PostRunSummaryScreen(props: UIProps<Record<string, unkno
               Back
             </Button>
             <Button
+              variant="coral"
               leadingIcon={<RotateCcw className="size-4" />}
               onClick={() => eventBus.emit('navigate:request', { to: 'menu', module: null })}
             >
-              New run (menu)
+              New run
             </Button>
           </div>
         </div>
 
         <div className="mt-8 grid gap-4 md:grid-cols-2">
-          <div className="rounded-2xl border border-white/10 bg-black/40 p-5 backdrop-blur">
-            <h3 className="text-sm font-semibold tracking-wide text-white/85">
+          <div className="tropic-card p-5">
+            <h3 className="text-sm font-bold uppercase tracking-wide text-[#1a4d5c]">
               Received profile
             </h3>
-            <p className="mt-1 text-xs text-white/60">
+            <p className="mt-1 text-xs text-[#3d3428]/75">
               Total debt pressure tier:{' '}
-              <span className="text-white/90">{lastRun.config.totalDebtPressureTier.toUpperCase()}</span>
+              <span className="font-semibold text-[#1a4d5c]">
+                {lastRun.config.totalDebtPressureTier.toUpperCase()}
+              </span>
             </p>
             <div className="mt-4 space-y-3">
               {ids.map((id) => (
                 <div key={id} className="space-y-1">
                   <div className="flex items-baseline justify-between gap-3 text-sm">
-                    <span className="text-white/90">{CATEGORY_LABELS[id]}</span>
+                    <span className="font-medium text-[#2a2418]">{CATEGORY_LABELS[id]}</span>
                     <span
                       className={
                         profile[id] === 'bad'
-                          ? 'text-rose-200'
+                          ? 'rounded-full bg-[#ff8b6b]/25 px-2 py-0.5 text-xs font-semibold text-[#b94530]'
                           : profile[id] === 'average'
-                            ? 'text-amber-200'
-                            : 'text-emerald-200'
+                            ? 'rounded-full bg-[#ffc36b]/30 px-2 py-0.5 text-xs font-semibold text-[#a8854a]'
+                            : 'rounded-full bg-[#5ed6d9]/30 px-2 py-0.5 text-xs font-semibold text-[#1a7a8c]'
                       }
                     >
                       {profile[id].toUpperCase()}
                     </span>
                   </div>
-                  <div className="h-2 rounded-full bg-white/10">
-                    <div
-                      className="h-2 rounded-full bg-cyan-400/70"
+                  <div className="tropic-hudBar tropic-hudBar--turquoise">
+                    <span
                       style={{
                         width:
                           profile[id] === 'good' ? '100%' : profile[id] === 'average' ? '65%' : '35%',
@@ -121,31 +137,34 @@ export default function PostRunSummaryScreen(props: UIProps<Record<string, unkno
             </div>
           </div>
 
-          <div className="rounded-2xl border border-white/10 bg-black/40 p-5 backdrop-blur">
+          <div className="tropic-card p-5">
             <div className="flex items-center gap-2">
-              <Sparkles className="size-4 text-indigo-200" />
-              <h3 className="text-sm font-semibold tracking-wide text-white/85">
+              <Sparkles className="size-4 text-[#f59f3a]" />
+              <h3 className="text-sm font-bold uppercase tracking-wide text-[#1a4d5c]">
                 What that caused in gameplay
               </h3>
             </div>
-            <ul className="mt-4 space-y-3 text-sm text-white/80">
+            <ul className="mt-4 space-y-3 text-sm text-[#2a2418]">
               {effects.map((e, idx) => (
-                <li key={`${e.categoryId}-${idx}`} className="rounded-xl bg-white/5 p-3">
+                <li
+                  key={`${e.categoryId}-${idx}`}
+                  className="rounded-2xl border border-[#fbe6be] bg-[#fff7e8]/85 p-3"
+                >
                   <div className="flex items-center justify-between gap-3">
-                    <span className="font-medium text-white/90">{e.title}</span>
+                    <span className="font-semibold text-[#1a4d5c]">{e.title}</span>
                     <span
                       className={
                         e.severity === 'high'
-                          ? 'rounded-full bg-rose-500/15 px-2 py-0.5 text-xs text-rose-200'
+                          ? 'rounded-full bg-[#ff8b6b]/25 px-2 py-0.5 text-xs font-semibold text-[#b94530]'
                           : e.severity === 'medium'
-                            ? 'rounded-full bg-amber-500/15 px-2 py-0.5 text-xs text-amber-200'
-                            : 'rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs text-emerald-200'
+                            ? 'rounded-full bg-[#ffc36b]/30 px-2 py-0.5 text-xs font-semibold text-[#a8854a]'
+                            : 'rounded-full bg-[#5ed6d9]/30 px-2 py-0.5 text-xs font-semibold text-[#1a7a8c]'
                       }
                     >
                       {e.severity.toUpperCase()}
                     </span>
                   </div>
-                  <p className="mt-2 text-white/75">{e.plainText}</p>
+                  <p className="mt-2 text-[#3d3428]/85">{e.plainText}</p>
                 </li>
               ))}
             </ul>
@@ -153,18 +172,21 @@ export default function PostRunSummaryScreen(props: UIProps<Record<string, unkno
         </div>
 
         {lastRun.outcome === 'loss' ? (
-          <div className="mt-6 rounded-2xl border border-white/10 bg-black/40 p-5 backdrop-blur">
-            <h3 className="text-sm font-semibold tracking-wide text-white/85">
+          <div className="tropic-card mt-6 p-5">
+            <h3 className="text-sm font-bold uppercase tracking-wide text-[#1a4d5c]">
               Why the loss makes sense (cause → effect)
             </h3>
             <div className="mt-4 grid gap-3 md:grid-cols-2">
               {effects
                 .filter((effect) => effect.severity !== 'low')
                 .map((effect) => (
-                <div key={effect.title} className="rounded-xl bg-white/5 p-4">
-                  <p className="text-sm font-medium text-white/90">{effect.title}</p>
-                  <p className="mt-2 text-sm text-white/75">{effect.plainText}</p>
-                </div>
+                  <div
+                    key={effect.title}
+                    className="rounded-2xl border border-[#fbe6be] bg-[#fff7e8]/85 p-4"
+                  >
+                    <p className="text-sm font-semibold text-[#1a4d5c]">{effect.title}</p>
+                    <p className="mt-2 text-sm text-[#3d3428]/85">{effect.plainText}</p>
+                  </div>
                 ))}
             </div>
           </div>
@@ -173,4 +195,3 @@ export default function PostRunSummaryScreen(props: UIProps<Record<string, unkno
     </div>
   );
 }
-
