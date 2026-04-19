@@ -31,6 +31,9 @@ import {
   PLAYER_KEYS,
   selectHasIslandRunSave,
 } from '../menu/gameFlow';
+import paradiseBgUrl from '@/assets/ui/title-hub-paradise-bg.png?url';
+
+import './titleHub.css';
 
 export default function TitleHubScreen(_props: UIProps<unknown>) {
   const playerData = useAppStore((s) => s.playerData);
@@ -56,131 +59,186 @@ export default function TitleHubScreen(_props: UIProps<unknown>) {
   };
 
   return (
-    <div className="island-pageBg absolute inset-0 flex flex-col items-center justify-center px-4 text-[var(--island-color-ink)]">
-      <div className="island-hudBottle w-full max-w-xl">
-        <div className="island-hudInner px-6 py-8 text-center">
-          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--island-color-title)]/80">
-            HackKU26
-          </p>
-          <h1 className="island-title mt-2 text-5xl">{GAME_TITLE_PLACEHOLDER}</h1>
-          <p className="island-statusText mx-auto mt-4 max-w-md">
-            A modular WebGL hackathon adventure. Press Play to begin.
-          </p>
+    <div className="th-titleHub text-[var(--island-color-ink)]">
+      <div className="th-decor" aria-hidden>
+        <div
+          className="th-photoBg"
+          style={{ backgroundImage: `url(${paradiseBgUrl})` }}
+        />
+        <div className="th-sky" />
+        <div className="th-godRays" />
+        <div className="th-sunBloom" />
+        <div className="th-sun" />
+        <div className="th-cloudLayer">
+          <div className="th-cloudBlob th-cloudBlob--a" />
+          <div className="th-cloudBlob th-cloudBlob--b" />
+          <div className="th-cloudBlob th-cloudBlob--c" />
+        </div>
+        <div className="th-horizonHaze" />
+        <div className="th-seaDeep" />
+        <div className="th-seaShallow" />
+        <div className="th-waveArc th-waveArc--1" />
+        <div className="th-waveArc th-waveArc--2" />
+        <div className="th-caustic" />
+        <div className="th-foam" />
+        <div className="th-sand" />
+        <div className="th-sandGrain" />
+        <div className="th-island" />
+        <div className="th-birds">
+          <div className="th-bird th-bird--0" />
+          <div className="th-bird th-bird--1" />
+          <div className="th-bird th-bird--2" />
+          <div className="th-bird th-bird--3" />
+          <div className="th-bird th-bird--4" />
+        </div>
+        <div className="th-sparkles">
+          {Array.from({ length: 14 }, (_, i) => (
+            <span key={i} className="th-spark" />
+          ))}
+        </div>
+        <div className="th-vignette" />
+        <div className="th-ambient" />
+      </div>
 
-          <div className="mt-8 flex flex-col gap-3">
-            <button
-              type="button"
-              className="island-btnShell"
-              onClick={() => setPlayOpen(true)}
+      <div className="th-content">
+        <div className="th-heroCard">
+          <div className="island-hudBottle w-full">
+            <div
+              className="island-hudInner island-hudInner--titleHero px-6 py-8 text-center"
+              role="region"
+              aria-labelledby="titleHubTitle"
+              aria-describedby="titleHubTagline"
             >
-              <Play className="size-4" />
-              Play
-            </button>
-            <button
-              type="button"
-              className="island-btnShell"
-              onClick={() =>
-                eventBus.emit('navigate:request', {
-                  to: 'settings',
-                  module: null,
-                })
-              }
-            >
-              <Settings className="size-4" />
-              Settings
-            </button>
+              <h1
+                id="titleHubTitle"
+                className="island-title th-titleGradient text-5xl md:text-[2.85rem]"
+              >
+                {GAME_TITLE_PLACEHOLDER}
+              </h1>
+              <div className="th-titleDivider" role="presentation" />
+              <p className="th-eyebrow">Main menu</p>
+              <p id="titleHubTagline" className="island-statusText th-subtitle mx-auto mt-2 max-w-md">
+                Waves, summer light, no school — just tides and one more roll. Press Play.
+              </p>
+
+              <div className="th-btnRow mt-8 flex flex-col gap-3 sm:gap-3.5">
+                <button
+                  type="button"
+                  className="th-btnPlay"
+                  aria-haspopup="dialog"
+                  aria-expanded={playOpen}
+                  aria-controls="play-mode-dialog"
+                  onClick={() => setPlayOpen(true)}
+                >
+                  <Play className="size-4 shrink-0" aria-hidden />
+                  Play
+                </button>
+                <button
+                  type="button"
+                  className="th-btnSettings"
+                  onClick={() =>
+                    eventBus.emit('navigate:request', {
+                      to: 'settings',
+                      module: null,
+                    })
+                  }
+                >
+                  <Settings className="size-4 shrink-0" aria-hidden />
+                  Settings
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
       {import.meta.env.DEV ? (
-        <details className="mt-6 w-full max-w-xl">
-          <summary className="cursor-pointer text-center text-xs uppercase tracking-[0.22em] text-[var(--island-color-ink-muted)]">
-            Developer shortcuts
-          </summary>
-          <div className="island-hudBottle mt-3">
-            <div className="island-hudInner flex flex-col gap-3 px-6 py-5">
-              <button
-                type="button"
-                className="island-btnShell"
-                onClick={() =>
-                  eventBus.emit('navigate:request', { to: 'budget', module: null })
-                }
-              >
-                <LayoutGrid className="size-4" />
-                The Box (budget)
-              </button>
-              <button
-                type="button"
-                className="island-btnShell"
-                onClick={() => {
-                  mergePlayerData({ 'ui:boxOverlay': true });
-                  eventBus.emit('navigate:request', {
-                    to: 'game',
-                    module: GAME_IDS.islandRun,
-                  });
-                }}
-              >
-                <Layers className="size-4" />
-                The Box over Island Run
-              </button>
-              <button
-                type="button"
-                className="island-btnShell"
-                onClick={() =>
-                  eventBus.emit('navigate:request', {
-                    to: 'game',
-                    module: GAME_IDS.investingBirds,
-                  })
-                }
-              >
-                <Bird className="size-4" />
-                Investing Birds
-              </button>
-              <button
-                type="button"
-                className="island-btnShell"
-                onClick={() => {
-                  mergePlayerData({ 'ui:boxOverlay': false });
-                  eventBus.emit('navigate:request', {
-                    to: 'game',
-                    module: GAME_IDS.islandRun,
-                  });
-                }}
-              >
-                <Palmtree className="size-4" />
-                Island Run
-              </button>
-              <button
-                type="button"
-                className="island-btnShell"
-                onClick={() => {
-                  mergePlayerData({ 'runner.profile': MOCK_BUDGET_PROFILE });
-                  eventBus.emit('navigate:request', {
-                    to: 'briefing',
-                    module: null,
-                  });
-                }}
-              >
-                <Footprints className="size-4" />
-                Debt Runner (test)
-              </button>
+        <details className="th-devDock">
+          <summary>Developer shortcuts</summary>
+          <div className="island-hudBottle th-devDock__panel">
+            <div className="island-hudInner flex flex-col gap-3 px-4 py-4">
+                <button
+                  type="button"
+                  className="island-btnShell"
+                  onClick={() =>
+                    eventBus.emit('navigate:request', { to: 'budget', module: null })
+                  }
+                >
+                  <LayoutGrid className="size-4" />
+                  The Box (budget)
+                </button>
+                <button
+                  type="button"
+                  className="island-btnShell"
+                  onClick={() => {
+                    mergePlayerData({ 'ui:boxOverlay': true });
+                    eventBus.emit('navigate:request', {
+                      to: 'game',
+                      module: GAME_IDS.islandRun,
+                    });
+                  }}
+                >
+                  <Layers className="size-4" />
+                  The Box over Island Run
+                </button>
+                <button
+                  type="button"
+                  className="island-btnShell"
+                  onClick={() =>
+                    eventBus.emit('navigate:request', {
+                      to: 'game',
+                      module: GAME_IDS.investingBirds,
+                    })
+                  }
+                >
+                  <Bird className="size-4" />
+                  Investing Birds
+                </button>
+                <button
+                  type="button"
+                  className="island-btnShell"
+                  onClick={() => {
+                    mergePlayerData({ 'ui:boxOverlay': false });
+                    eventBus.emit('navigate:request', {
+                      to: 'game',
+                      module: GAME_IDS.islandRun,
+                    });
+                  }}
+                >
+                  <Palmtree className="size-4" />
+                  Island Run
+                </button>
+                <button
+                  type="button"
+                  className="island-btnShell"
+                  onClick={() => {
+                    mergePlayerData({ 'runner.profile': MOCK_BUDGET_PROFILE });
+                    eventBus.emit('navigate:request', {
+                      to: 'briefing',
+                      module: null,
+                    });
+                  }}
+                >
+                  <Footprints className="size-4" />
+                  Debt Runner (test)
+                </button>
 
-              <button
-                type="button"
-                className="island-btnShell"
-                onClick={() =>
-                  mergePlayerData({ [PLAYER_KEYS.islandRunHasSave]: true })
-                }
-              >
-                Toggle save flag (debug)
-              </button>
+                <button
+                  type="button"
+                  className="island-btnShell"
+                  onClick={() =>
+                    mergePlayerData({ [PLAYER_KEYS.islandRunHasSave]: true })
+                  }
+                >
+                  Toggle save flag (debug)
+                </button>
+              </div>
             </div>
-          </div>
         </details>
       ) : null}
 
       <PlayModeDialog
+        dialogId="play-mode-dialog"
         open={playOpen}
         hasSave={hasSave}
         onContinue={handleContinue}

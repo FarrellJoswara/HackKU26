@@ -1,0 +1,1085 @@
+/**
+ * Title hub — sunny beach-summer scene (CSS-only layers).
+ * Imported only from TitleHubScreen. Respects prefers-reduced-motion.
+ */
+
+.th-titleHub {
+  /* Island Run–aligned (skydome / sand / lagoon from main.ts) */
+  --th-sky-zenith: #5bb8ff;
+  --th-sky-mid: #47a8f2;
+  --th-horizon-warm: #ff8a55;
+  --th-horizon-pink: #e8a0c8;
+  --th-sea-deep: #0c7aa0;
+  --th-sea-mid: #1a6d8c;
+  --th-lagoon: #4ae8e0;
+  --th-sand-base: #f0d4a5;
+  --th-sand-shadow: rgba(80, 55, 30, 0.22);
+
+  position: absolute;
+  inset: 0;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: max(1rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right))
+    max(2rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
+  overflow: hidden;
+  color: var(--island-color-ink);
+  background: linear-gradient(180deg, var(--th-sky-zenith) 0%, var(--th-sky-mid) 45%, var(--th-sea-deep) 100%);
+}
+
+.th-decor {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/* Full-bleed reference beach (see TitleHubScreen inline backgroundImage) */
+.th-photoBg {
+  position: absolute;
+  inset: -1%;
+  z-index: 0;
+  background-size: cover;
+  background-position: center 38%;
+  background-repeat: no-repeat;
+  transform: scale(1.03);
+}
+
+/* --- 1 Sky --- */
+.th-sky {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  opacity: 0.22;
+  background:
+    radial-gradient(ellipse 120% 70% at 50% -10%, rgba(255, 255, 255, 0.32) 0%, transparent 46%),
+    linear-gradient(
+      180deg,
+      var(--th-sky-zenith) 0%,
+      var(--th-sky-mid) 32%,
+      #5aaee8 52%,
+      var(--th-horizon-pink) 72%,
+      var(--th-horizon-warm) 86%,
+      #ffd8b8 100%
+    );
+}
+
+/* Soft sun shafts (static in reduced-motion via media block) */
+.th-godRays {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background: conic-gradient(
+    from 200deg at 70% 8%,
+    transparent 0deg,
+    rgba(255, 255, 255, 0.07) 28deg,
+    transparent 56deg,
+    rgba(255, 255, 255, 0.05) 88deg,
+    transparent 120deg,
+    rgba(255, 248, 220, 0.06) 150deg,
+    transparent 200deg
+  );
+  opacity: 0.62;
+  pointer-events: none;
+}
+
+/* --- 2–3 Sun + bloom --- */
+.th-sunBloom {
+  position: absolute;
+  top: -12%;
+  left: 50%;
+  z-index: 3;
+  width: min(90vw, 520px);
+  height: min(90vw, 520px);
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 248, 220, 0.55) 0%, rgba(255, 220, 140, 0.2) 35%, transparent 70%);
+  mix-blend-mode: screen;
+  filter: blur(18px);
+  opacity: 0.75;
+  animation: th-sunBloomPulse 12s ease-in-out infinite alternate;
+}
+
+.th-sun {
+  position: absolute;
+  top: 5%;
+  left: 14%;
+  z-index: 4;
+  width: clamp(56px, 11vw, 92px);
+  height: clamp(56px, 11vw, 92px);
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #fffef5 0%, #ffe9a8 40%, #ffc85c 100%);
+  box-shadow:
+    0 0 40px rgba(255, 220, 120, 0.85),
+    0 0 80px rgba(255, 200, 80, 0.35);
+  opacity: 0.95;
+  animation: th-sunGlow 12s ease-in-out infinite alternate;
+}
+
+/* --- 4 Clouds --- */
+.th-cloudLayer {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  overflow: hidden;
+}
+
+.th-cloudBlob {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse at 42% 42%,
+    rgba(255, 255, 255, 0.97) 0%,
+    rgba(255, 255, 255, 0.82) 38%,
+    rgba(230, 245, 255, 0.45) 65%,
+    transparent 78%
+  );
+  box-shadow: 0 16px 48px rgba(100, 140, 180, 0.1);
+  filter: blur(1.5px);
+}
+
+.th-cloudBlob--a {
+  width: min(58vw, 420px);
+  height: min(22vh, 160px);
+  top: 6%;
+  left: -8%;
+  animation: th-driftA 95s linear infinite;
+}
+
+.th-cloudBlob--b {
+  width: min(48vw, 360px);
+  height: min(18vh, 130px);
+  top: 14%;
+  right: -12%;
+  animation: th-driftB 120s linear infinite;
+}
+
+.th-cloudBlob--c {
+  width: min(70vw, 520px);
+  height: min(16vh, 120px);
+  top: 22%;
+  left: 18%;
+  opacity: 0.88;
+  animation: th-driftC 140s linear infinite;
+}
+
+/* --- 5 Horizon haze --- */
+.th-horizonHaze {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 48%;
+  height: 14%;
+  z-index: 6;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(255, 210, 190, 0.28) 45%,
+    rgba(74, 232, 224, 0.12) 100%
+  );
+  pointer-events: none;
+}
+
+/* --- 6–7 Sea --- */
+.th-seaDeep {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 52%;
+  bottom: 0;
+  z-index: 7;
+  background:
+    linear-gradient(105deg, transparent 0%, rgba(255, 255, 255, 0.02) 50%, transparent 100%),
+    linear-gradient(180deg, var(--th-sea-mid) 0%, var(--th-sea-deep) 38%, #0a5a78 100%);
+  background-size:
+    120% 100%,
+    100% 100%;
+}
+
+.th-seaShallow {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 52%;
+  height: 28%;
+  z-index: 8;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--th-lagoon) 50%, transparent) 0%,
+    color-mix(in srgb, var(--tropic-turquoise) 35%, transparent) 55%,
+    transparent 100%
+  );
+  mix-blend-mode: screen;
+  opacity: 0.72;
+}
+
+/* --- 10 Wave arcs --- */
+.th-waveArc {
+  position: absolute;
+  left: 50%;
+  z-index: 9;
+  width: 140%;
+  height: 80px;
+  transform: translateX(-50%);
+  border: 2px solid rgba(255, 255, 255, 0.08);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.th-waveArc--1 {
+  top: 56%;
+  animation: th-waveBreath 14s ease-in-out infinite;
+}
+
+.th-waveArc--2 {
+  top: 60%;
+  opacity: 0.42;
+  animation: th-waveBreath 17s ease-in-out infinite reverse;
+}
+
+/* --- 9 Caustic shimmer --- */
+.th-caustic {
+  position: absolute;
+  left: -25%;
+  right: -25%;
+  top: 54%;
+  height: 34%;
+  z-index: 10;
+  background: linear-gradient(
+    118deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.04) 42%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(255, 255, 255, 0.04) 58%,
+    transparent 100%
+  );
+  background-size: 240% 100%;
+  mix-blend-mode: overlay;
+  animation: th-shimmer 26s ease-in-out infinite;
+  opacity: 0.48;
+}
+
+/* --- 8 Foam --- */
+.th-foam {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 67%;
+  height: 42px;
+  z-index: 11;
+  background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0) 0%,
+      rgba(255, 255, 255, 0.35) 35%,
+      rgba(255, 255, 255, 0.12) 70%,
+      rgba(255, 255, 255, 0) 100%
+    ),
+    repeating-linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.22) 0px,
+      rgba(255, 255, 255, 0.22) 22px,
+      transparent 22px,
+      transparent 44px
+    );
+  mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+  opacity: 0.38;
+  animation: th-foamWash 22s linear infinite;
+}
+
+/* --- 11–12 Sand + grain --- */
+.th-sand {
+  position: absolute;
+  left: -5%;
+  right: -5%;
+  bottom: -2%;
+  height: 38%;
+  z-index: 12;
+  background: linear-gradient(
+    180deg,
+    rgba(240, 212, 165, 0.35) 0%,
+    var(--th-sand-base) 10%,
+    var(--tropic-sand) 28%,
+    var(--tropic-sand-deep) 58%,
+    #c9a86a 100%
+  );
+  clip-path: ellipse(110% 88% at 50% 100%);
+  box-shadow:
+    inset 0 28px 52px rgba(255, 255, 255, 0.22),
+    inset 0 -14px 36px var(--th-sand-shadow);
+}
+
+.th-sandGrain {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 38%;
+  z-index: 13;
+  opacity: 0.12;
+  mix-blend-mode: multiply;
+  background-image: repeating-linear-gradient(
+      -8deg,
+      rgba(80, 60, 30, 0.06) 0px,
+      transparent 1px,
+      transparent 3px
+    ),
+    repeating-linear-gradient(72deg, rgba(120, 90, 50, 0.04) 0px, transparent 2px, transparent 5px);
+  clip-path: ellipse(110% 88% at 50% 100%);
+  pointer-events: none;
+}
+
+/* --- 14 Distant island --- */
+.th-island {
+  position: absolute;
+  right: 10%;
+  top: 47%;
+  z-index: 14;
+  width: min(12vw, 96px);
+  height: 18px;
+  border-radius: 45% 55% 48% 42%;
+  background: linear-gradient(180deg, rgba(60, 90, 85, 0.42), rgba(40, 65, 62, 0.55));
+  filter: blur(1.5px);
+  opacity: 0.85;
+  animation: th-islandDrift 90s ease-in-out infinite alternate;
+}
+
+/* Photo base already shows sea/sand — keep procedural layers as light accents */
+.th-titleHub .th-horizonHaze,
+.th-titleHub .th-seaDeep,
+.th-titleHub .th-seaShallow,
+.th-titleHub .th-waveArc,
+.th-titleHub .th-caustic,
+.th-titleHub .th-foam,
+.th-titleHub .th-sand,
+.th-titleHub .th-sandGrain {
+  opacity: 0.14;
+}
+
+.th-titleHub .th-seaShallow {
+  opacity: 0.09;
+}
+
+/* Photo already includes horizon detail — thin birds / sparkles further */
+.th-titleHub .th-birds {
+  opacity: 0.08;
+}
+
+.th-titleHub .th-island {
+  opacity: 0.04;
+}
+
+.th-titleHub .th-sparkles {
+  opacity: 0.45;
+}
+
+/* --- 15 Birds container --- */
+.th-birds {
+  position: absolute;
+  inset: 0;
+  z-index: 16;
+  pointer-events: none;
+}
+
+.th-bird {
+  position: absolute;
+  width: 14px;
+  height: 8px;
+  border-radius: 50%;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.88);
+  border-left: 2px solid transparent;
+  border-right: 2px solid transparent;
+  opacity: 0.9;
+  filter: drop-shadow(0 1px 1px rgba(0, 40, 80, 0.2));
+}
+
+.th-bird--0 {
+  top: 18%;
+  left: 12%;
+  animation: th-bird0 22s ease-in-out infinite;
+}
+.th-bird--1 {
+  top: 22%;
+  left: 40%;
+  animation: th-bird1 28s ease-in-out infinite;
+  animation-delay: -4s;
+}
+.th-bird--2 {
+  top: 16%;
+  right: 18%;
+  animation: th-bird2 26s ease-in-out infinite;
+  animation-delay: -8s;
+}
+.th-bird--3 {
+  top: 26%;
+  right: 32%;
+  animation: th-bird3 32s ease-in-out infinite;
+  animation-delay: -2s;
+}
+.th-bird--4 {
+  top: 12%;
+  left: 55%;
+  animation: th-bird4 24s ease-in-out infinite;
+  animation-delay: -12s;
+}
+
+/* --- 16 Sparkles --- */
+.th-sparkles {
+  position: absolute;
+  inset: 0;
+  z-index: 17;
+  pointer-events: none;
+}
+
+.th-spark {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.9);
+  opacity: 0;
+  animation: th-sparkle 4.5s ease-in-out infinite;
+}
+
+.th-spark:nth-child(1) {
+  left: 8%;
+  top: 58%;
+  animation-delay: 0s;
+}
+.th-spark:nth-child(2) {
+  left: 22%;
+  top: 72%;
+  animation-delay: 0.6s;
+}
+.th-spark:nth-child(3) {
+  left: 38%;
+  top: 64%;
+  animation-delay: 1.1s;
+}
+.th-spark:nth-child(4) {
+  left: 52%;
+  top: 70%;
+  animation-delay: 0.3s;
+}
+.th-spark:nth-child(5) {
+  left: 68%;
+  top: 62%;
+  animation-delay: 1.8s;
+}
+.th-spark:nth-child(6) {
+  left: 82%;
+  top: 55%;
+  animation-delay: 0.9s;
+}
+.th-spark:nth-child(7) {
+  left: 15%;
+  top: 48%;
+  animation-delay: 2.1s;
+}
+.th-spark:nth-child(8) {
+  left: 44%;
+  top: 52%;
+  animation-delay: 1.4s;
+}
+.th-spark:nth-child(9) {
+  left: 72%;
+  top: 44%;
+  animation-delay: 0.2s;
+}
+.th-spark:nth-child(10) {
+  left: 88%;
+  top: 68%;
+  animation-delay: 2.4s;
+}
+.th-spark:nth-child(11) {
+  left: 6%;
+  top: 38%;
+  animation-delay: 1.7s;
+}
+.th-spark:nth-child(12) {
+  left: 58%;
+  top: 38%;
+  animation-delay: 0.8s;
+}
+.th-spark:nth-child(13) {
+  left: 30%;
+  top: 78%;
+  animation-delay: 2.8s;
+}
+.th-spark:nth-child(14) {
+  left: 92%;
+  top: 42%;
+  animation-delay: 1.2s;
+}
+
+/* --- 17 Vignette --- */
+.th-vignette {
+  position: absolute;
+  inset: 0;
+  z-index: 18;
+  background:
+    radial-gradient(ellipse at 50% 45%, transparent 38%, rgba(15, 50, 70, 0.16) 100%),
+    linear-gradient(180deg, rgba(12, 40, 58, 0.06) 0%, transparent 48%, rgba(8, 28, 42, 0.12) 100%);
+  pointer-events: none;
+}
+
+/* --- 26 Ambient pulse on decor only --- */
+.th-ambient {
+  position: absolute;
+  inset: 0;
+  z-index: 19;
+  background: transparent;
+  animation: th-ambientPulse 24s ease-in-out infinite;
+  pointer-events: none;
+  mix-blend-mode: soft-light;
+}
+
+/* --- Content stack + framed hero --- */
+.th-content {
+  position: relative;
+  z-index: 20;
+  display: flex;
+  width: 100%;
+  max-width: min(88rem, 100%);
+  flex-direction: column;
+  align-items: center;
+  padding: 0 max(0.5rem, env(safe-area-inset-right)) max(0.5rem, env(safe-area-inset-bottom))
+    max(0.5rem, env(safe-area-inset-left));
+  pointer-events: auto;
+}
+
+.th-heroCard {
+  position: relative;
+  width: 100%;
+  max-width: 36rem;
+  animation: th-heroEnter 0.78s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Tiny shell accents (decorative) */
+.th-heroCard::before,
+.th-heroCard::after {
+  content: "";
+  position: absolute;
+  bottom: 0.65rem;
+  width: 10px;
+  height: 7px;
+  border-radius: 50% 50% 45% 45%;
+  background: radial-gradient(ellipse at 30% 20%, #fff6e8, #e8d4bc);
+  opacity: 0.55;
+  pointer-events: none;
+  box-shadow: 0 1px 2px rgba(60, 40, 20, 0.15);
+}
+
+.th-heroCard::before {
+  left: 0.75rem;
+}
+
+.th-heroCard::after {
+  right: 0.75rem;
+}
+
+/* Hero card glass variant */
+.th-titleHub .island-hudBottle {
+  border-radius: calc(var(--island-radius-hud) + 4px);
+}
+
+.th-titleHub .island-hudInner.island-hudInner--titleHero {
+  border-radius: calc(var(--island-radius-inner) + 4px);
+  background:
+    radial-gradient(ellipse 120% 85% at 50% -5%, rgba(255, 255, 255, 0.38) 0%, transparent 55%),
+    linear-gradient(180deg, rgba(255, 253, 248, 0.82) 0%, rgba(248, 238, 220, 0.76) 100%);
+  border: 1px solid color-mix(in srgb, var(--tropic-turquoise-deep) 28%, rgba(140, 110, 70, 0.32));
+  box-shadow:
+    var(--island-shadow-inner-glow),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.42),
+    0 22px 56px rgba(12, 55, 72, 0.2);
+}
+
+@supports ((-webkit-backdrop-filter: blur(8px)) or (backdrop-filter: blur(8px))) {
+  .th-titleHub .island-hudInner.island-hudInner--titleHero {
+    -webkit-backdrop-filter: blur(18px) saturate(1.22);
+    backdrop-filter: blur(18px) saturate(1.22);
+    background:
+      radial-gradient(ellipse 120% 85% at 50% -5%, rgba(255, 255, 255, 0.32) 0%, transparent 52%),
+      linear-gradient(180deg, rgba(255, 253, 248, 0.58) 0%, rgba(248, 236, 216, 0.52) 100%);
+  }
+}
+
+/* Title typography */
+.th-titleHub h1.island-title {
+  letter-spacing: -0.02em;
+  text-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.98),
+    0 2px 10px rgba(26, 120, 140, 0.12),
+    0 0 28px rgba(255, 230, 180, 0.28);
+}
+
+.th-titleHub h1.island-title::after {
+  background: linear-gradient(90deg, transparent, #4ec4c8, #ffd08a, #4ec4c8, transparent);
+  background-size: 200% 100%;
+  opacity: 0.55;
+  animation: th-titleLine 20s ease-in-out infinite;
+}
+
+.th-titleDivider {
+  height: 2px;
+  width: min(15rem, 78%);
+  margin: 0.85rem auto 0;
+  border: 0;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--tropic-turquoise) 55%, transparent),
+    color-mix(in srgb, var(--tropic-coral) 40%, transparent),
+    color-mix(in srgb, var(--tropic-turquoise) 55%, transparent),
+    transparent
+  );
+  opacity: 0.85;
+}
+
+.th-eyebrow {
+  margin: 0.65rem auto 0;
+  max-width: 20rem;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--island-color-title) 72%, #1a4a55);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.75);
+}
+
+.th-titleGradient {
+  color: var(--island-color-title);
+}
+
+.th-subtitle {
+  line-height: 1.68;
+  letter-spacing: 0.018em;
+  color: color-mix(in srgb, var(--island-color-ink) 92%, #0f3540);
+  font-size: 1rem;
+  text-shadow:
+    0 0 12px rgba(255, 252, 245, 0.95),
+    0 1px 0 rgba(255, 255, 255, 0.88);
+}
+
+/* Primary / secondary buttons (logic unchanged in TSX) */
+.th-btnRow .th-btnPlay,
+.th-btnRow .th-btnSettings {
+  width: 100%;
+  min-width: min(100%, 220px);
+}
+
+.th-btnPlay {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 50px;
+  padding: 0.75rem 1.5rem;
+  border-radius: 999px;
+  border: 2px solid color-mix(in srgb, var(--tropic-turquoise-deep) 55%, #0a3d45);
+  cursor: pointer;
+  font-family: var(--island-font-body);
+  font-size: 1.06rem;
+  font-weight: 700;
+  color: #04262c;
+  background: linear-gradient(
+    165deg,
+    color-mix(in srgb, var(--tropic-turquoise) 92%, #fff) 0%,
+    var(--tropic-turquoise) 38%,
+    color-mix(in srgb, var(--tropic-turquoise-deep) 92%, #063038) 100%
+  );
+  box-shadow:
+    0 5px 0 color-mix(in srgb, var(--tropic-turquoise-deep) 78%, #021820),
+    0 12px 28px rgba(8, 70, 88, 0.38),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  transition:
+    transform 0.18s cubic-bezier(0.22, 1, 0.36, 1),
+    filter 0.2s ease,
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.th-btnPlay:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.04) saturate(1.05);
+  border-color: color-mix(in srgb, var(--tropic-coral) 35%, var(--tropic-turquoise-deep));
+  box-shadow:
+    0 6px 0 color-mix(in srgb, var(--tropic-turquoise-deep) 75%, #021820),
+    0 16px 36px rgba(8, 80, 98, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.65);
+}
+
+.th-btnPlay:active {
+  transform: translateY(2px);
+  box-shadow:
+    0 2px 0 #134e58,
+    0 6px 18px rgba(8, 70, 88, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+.th-btnPlay:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.th-btnSettings {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 48px;
+  padding: 0.72rem 1.4rem;
+  border-radius: 999px;
+  border: 2px dashed color-mix(in srgb, var(--tropic-turquoise-deep) 35%, rgba(95, 75, 48, 0.42));
+  cursor: pointer;
+  font-family: var(--island-font-body);
+  font-size: 1rem;
+  font-weight: 600;
+  color: #2a3d40;
+  background:
+    repeating-linear-gradient(
+      -12deg,
+      rgba(255, 255, 255, 0.03) 0 6px,
+      rgba(120, 85, 50, 0.04) 6px 12px
+    ),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.78) 0%, rgba(236, 244, 240, 0.58) 48%, rgba(220, 232, 226, 0.52) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.92),
+    inset 0 -1px 0 rgba(80, 60, 40, 0.06),
+    0 6px 18px rgba(25, 55, 62, 0.1);
+  transition:
+    transform 0.18s cubic-bezier(0.22, 1, 0.36, 1),
+    filter 0.2s ease,
+    background 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.th-btnSettings:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.02);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.88) 0%,
+    rgba(248, 252, 250, 0.72) 50%,
+    rgba(232, 244, 240, 0.65) 100%
+  );
+  border-color: color-mix(in srgb, var(--tropic-turquoise) 40%, rgba(95, 75, 48, 0.35));
+}
+
+.th-btnSettings:active {
+  transform: translateY(1px);
+}
+
+.th-btnPlay:focus-visible {
+  outline: none;
+  box-shadow: var(--island-focus-ring), 0 5px 0 color-mix(in srgb, var(--tropic-turquoise-deep) 78%, #021820),
+    0 12px 28px rgba(8, 70, 88, 0.38);
+}
+
+.th-btnSettings:focus-visible {
+  outline: none;
+  box-shadow: var(--island-focus-ring), 0 6px 18px rgba(25, 55, 62, 0.12);
+}
+
+/* DEV dock — fixed corner so it never covers the hero or beach focal area */
+.th-devDock {
+  position: fixed;
+  z-index: 50;
+  right: max(0.65rem, env(safe-area-inset-right));
+  bottom: max(0.65rem, env(safe-area-inset-bottom));
+  left: auto;
+  top: auto;
+  width: min(19.5rem, calc(100vw - 1.25rem - env(safe-area-inset-left) - env(safe-area-inset-right)));
+  max-height: min(46vh, 26rem);
+  margin: 0;
+  overflow: hidden;
+  border-radius: calc(var(--island-radius-hud) + 4px);
+  padding: 0.35rem 0.4rem 0.4rem;
+  background: rgba(10, 40, 52, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 10px 32px rgba(0, 20, 35, 0.35);
+}
+
+.th-devDock[open] {
+  overflow-y: auto;
+}
+
+.th-devDock summary {
+  cursor: pointer;
+  list-style: none;
+  text-align: left;
+  padding: 0.35rem 0.45rem;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(255, 252, 245, 0.92);
+  text-shadow: 0 1px 2px rgba(0, 30, 50, 0.45);
+}
+
+.th-devDock summary::-webkit-details-marker {
+  display: none;
+}
+
+.th-devDock__panel {
+  margin-top: 0.35rem;
+}
+
+.th-devDock .island-hudBottle {
+  opacity: 0.98;
+}
+
+/* Keyframes */
+@keyframes th-sunBloomPulse {
+  from {
+    opacity: 0.7;
+    filter: blur(16px);
+  }
+  to {
+    opacity: 0.88;
+    filter: blur(22px);
+  }
+}
+
+@keyframes th-sunGlow {
+  from {
+    opacity: 0.9;
+    transform: scale(1);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1.04);
+  }
+}
+
+@keyframes th-driftA {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(8vw);
+  }
+}
+
+@keyframes th-driftB {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-10vw);
+  }
+}
+
+@keyframes th-driftC {
+  from {
+    transform: translateX(0) translateY(0);
+  }
+  to {
+    transform: translateX(6vw) translateY(4px);
+  }
+}
+
+@keyframes th-shimmer {
+  0%,
+  100% {
+    background-position: 0% 50%;
+    opacity: 0.38;
+  }
+  50% {
+    background-position: 100% 50%;
+    opacity: 0.55;
+  }
+}
+
+@keyframes th-foamWash {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-28px);
+  }
+}
+
+@keyframes th-waveBreath {
+  0%,
+  100% {
+    transform: translateX(-50%) scaleX(1) scaleY(1);
+    opacity: 0.22;
+  }
+  50% {
+    transform: translateX(-50%) scaleX(1.02) scaleY(1.05);
+    opacity: 0.36;
+  }
+}
+
+@keyframes th-islandDrift {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-12px);
+  }
+}
+
+@keyframes th-heroEnter {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes th-bird0 {
+  0%,
+  100% {
+    transform: translate(0, 0) scaleX(1);
+  }
+  50% {
+    transform: translate(40px, -6px) scaleX(1);
+  }
+}
+
+@keyframes th-bird1 {
+  0%,
+  100% {
+    transform: translate(0, 0) scaleX(1);
+  }
+  50% {
+    transform: translate(-50px, 4px) scaleX(1);
+  }
+}
+
+@keyframes th-bird2 {
+  0%,
+  100% {
+    transform: translate(0, 0) scaleX(-1);
+  }
+  50% {
+    transform: translate(-35px, -8px) scaleX(-1);
+  }
+}
+
+@keyframes th-bird3 {
+  0%,
+  100% {
+    transform: translate(0, 0) scaleX(1);
+  }
+  50% {
+    transform: translate(28px, 6px) scaleX(1);
+  }
+}
+
+@keyframes th-bird4 {
+  0%,
+  100% {
+    transform: translate(0, 0) scaleX(-1);
+  }
+  50% {
+    transform: translate(55px, -4px) scaleX(-1);
+  }
+}
+
+@keyframes th-sparkle {
+  0%,
+  100% {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  35% {
+    opacity: 0.95;
+    transform: scale(1);
+  }
+  70% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+}
+
+@keyframes th-ambientPulse {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 0.12;
+  }
+}
+
+@keyframes th-titleLine {
+  from {
+    background-position: 0% 50%;
+  }
+  to {
+    background-position: 200% 50%;
+  }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .th-sunBloom,
+  .th-sun,
+  .th-cloudBlob--a,
+  .th-cloudBlob--b,
+  .th-cloudBlob--c,
+  .th-caustic,
+  .th-foam,
+  .th-waveArc--1,
+  .th-waveArc--2,
+  .th-island,
+  .th-heroCard,
+  .th-bird--0,
+  .th-bird--1,
+  .th-bird--2,
+  .th-bird--3,
+  .th-bird--4,
+  .th-spark,
+  .th-ambient,
+  .th-titleHub h1.island-title::after {
+    animation: none !important;
+    opacity: 0.38;
+  }
+
+  .th-heroCard {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .th-btnPlay:hover,
+  .th-btnPlay:active,
+  .th-btnSettings:hover,
+  .th-btnSettings:active {
+    transform: none;
+  }
+
+  .th-sunBloom {
+    opacity: 0.82;
+    filter: blur(18px);
+  }
+
+  .th-sun {
+    opacity: 0.95;
+    transform: scale(1);
+  }
+
+  .th-caustic {
+    opacity: 0.35;
+  }
+
+  .th-foam {
+    transform: none;
+  }
+
+  .th-spark {
+    opacity: 0.35;
+  }
+}

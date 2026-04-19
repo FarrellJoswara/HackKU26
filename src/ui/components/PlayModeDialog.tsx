@@ -9,6 +9,8 @@ import { useEffect, useRef } from 'react';
 import { Play, RotateCw, X } from 'lucide-react';
 
 export interface PlayModeDialogProps {
+  /** Stable id for `aria-controls` from the title hub Play button. */
+  dialogId?: string;
   open: boolean;
   hasSave: boolean;
   onContinue: () => void;
@@ -17,12 +19,14 @@ export interface PlayModeDialogProps {
 }
 
 export function PlayModeDialog({
+  dialogId = 'play-mode-dialog',
   open,
   hasSave,
   onContinue,
   onNewGame,
   onClose,
 }: PlayModeDialogProps) {
+  const continueBtnRef = useRef<HTMLButtonElement>(null);
   const newGameBtnRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -34,23 +38,26 @@ export function PlayModeDialog({
       }
     };
     window.addEventListener('keydown', onKey);
-    // Move focus into the dialog for keyboard users.
-    newGameBtnRef.current?.focus();
+    // Prefer Continue when a save exists; otherwise land on New Game.
+    if (hasSave) continueBtnRef.current?.focus();
+    else newGameBtnRef.current?.focus();
     return () => window.removeEventListener('keydown', onKey);
-  }, [open, onClose]);
+  }, [open, onClose, hasSave]);
 
   if (!open) return null;
 
   return (
     <div
-      className="absolute inset-0 z-30 flex items-center justify-center bg-black/55 backdrop-blur-sm"
+      className="absolute inset-0 z-[60] flex items-center justify-center bg-black/55 backdrop-blur-sm"
       onClick={onClose}
       role="presentation"
     >
       <div
+        id={dialogId}
         role="dialog"
         aria-modal="true"
         aria-labelledby="playModeTitle"
+        aria-describedby="playModeDesc"
         className="island-hudBottle w-[min(92vw,28rem)]"
         onClick={(e) => e.stopPropagation()}
       >
@@ -71,16 +78,18 @@ export function PlayModeDialog({
             Play
           </p>
           <h2 className="island-title mt-1 text-3xl">Choose a mode</h2>
-          <p className="island-statusText mx-auto mt-3 max-w-xs text-sm">
+          <p id="playModeDesc" className="island-statusText mx-auto mt-3 max-w-xs text-sm">
             Pick up where you left off, or start fresh with a new difficulty.
           </p>
 
           <div className="mt-6 flex flex-col gap-3">
             <button
+              ref={continueBtnRef}
               type="button"
               className="island-btnShell"
               disabled={!hasSave}
               onClick={onContinue}
+              aria-label={hasSave ? 'Continue saved Island Run' : 'Continue (no save yet)'}
               title={hasSave ? undefined : 'No saved run yet'}
             >
               <RotateCw className="size-4" />
@@ -90,6 +99,7 @@ export function PlayModeDialog({
               ref={newGameBtnRef}
               type="button"
               className="island-btnShell"
+              aria-label="Start a new game"
               onClick={onNewGame}
             >
               <Play className="size-4" />
@@ -98,6 +108,7 @@ export function PlayModeDialog({
             <button
               type="button"
               className="island-btnShell"
+              aria-label="Close and return to title"
               onClick={onClose}
             >
               Cancel
