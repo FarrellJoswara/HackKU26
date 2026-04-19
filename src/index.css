@@ -59,3 +59,47 @@ body,
 canvas {
   display: block;
 }
+
+/* ------------------------------------------------------------------ */
+/*  Gamified click feedback                                            */
+/*                                                                     */
+/*  These classes are toggled by `src/ui/fx/clickFeedback.ts` (and     */
+/*  applied through the global delegator in `installGlobalClickFx.ts`).*/
+/*  They give every interactive button across every screen a short     */
+/*  satisfying scale pulse + a radial ripple at the cursor — the       */
+/*  visual half of the "gamify everything" pass.                       */
+/*                                                                     */
+/*  The matching audio half lives in `src/audio/uiSfx.ts`.             */
+/* ------------------------------------------------------------------ */
+
+@keyframes tropic-fx-clickPulseKf {
+  0%   { transform: scale(1);    filter: brightness(1); }
+  35%  { transform: scale(0.94); filter: brightness(1.18); }
+  100% { transform: scale(1);    filter: brightness(1); }
+}
+
+.tropic-fx-clickPulse {
+  animation: tropic-fx-clickPulseKf 0.34s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes tropic-fx-clickRippleKf {
+  0%   { transform: translate(-50%, -50%) scale(0.35); opacity: 0.55; }
+  100% { transform: translate(-50%, -50%) scale(2.4);  opacity: 0;    }
+}
+
+.tropic-fx-clickRipple {
+  position: absolute;
+  pointer-events: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  background: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 0.85) 0%,
+    rgba(255, 255, 255, 0.45) 35%,
+    rgba(255, 255, 255, 0) 70%
+  );
+  animation: tropic-fx-clickRippleKf 0.6s ease-out forwards;
+  z-index: 5;
+  mix-blend-mode: screen;
+}

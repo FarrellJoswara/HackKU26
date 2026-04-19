@@ -11,11 +11,18 @@ import { ParadiseWater } from './water/ParadiseWater';
 import { getLandingPayload } from './landingPayload';
 import { SQUARE_LABELS } from './tips';
 import { eventBus } from '@/core/events';
+import type { BudgetCategoryId } from '@/core/budgetTypes';
 import type {
   IslandScenarioBeat,
   IslandScenarioChoiceId,
   IslandScenarioBeatId,
 } from '@/core/scenarios';
+import {
+  playDiceRollSfx,
+  playHopSfx,
+  playNegativeSfx,
+  playPositiveSfx,
+} from '@/audio/uiSfx';
 
 import diceUrl from './assets/models/dice.glb?url';
 import bananaUrl from './assets/models/banana-guy.glb?url';
@@ -230,9 +237,14 @@ export interface IslandRunBootstrapOptions {
    * from the React shell.
    */
   onYearEndAtStart?: (info: { totalHops: number; laps: number }) => void;
+  /**
+   * Optional live budget snapshot for landing tier / SFX (same ratios as the Box).
+   */
+  getFundingRatioByCategory?: () => Partial<Record<BudgetCategoryId, number>> | undefined;
 }
 
 export function bootstrap(opts: IslandRunBootstrapOptions = {}): () => void {
+  const getFundingRatioByCategory = opts.getFundingRatioByCategory;
   const rootEl = document.getElementById('canvas-root');
   const errEl = document.getElementById('webgl-error');
   if (!rootEl) return () => {};
@@ -1074,7 +1086,7 @@ export function bootstrap(opts: IslandRunBootstrapOptions = {}): () => void {
     if (landingSubtitle) landingSubtitle.textContent = 'You landed at';
     // Always re-read player snapshot so a Box edit between rolls is
     // reflected on the *next* landing without remounting the game.
-    const payload = getLandingPayload(square);
+    const payload = getLandingPayload(square, getFundingRatioByCategory?.());
     if (landingTitle) landingTitle.textContent = SQUARE_LABELS[square] ?? 'Finance tip';
     if (payload.kind === 'choice') {
       activeBeat = payload.beat;
@@ -1105,6 +1117,15 @@ export function bootstrap(opts: IslandRunBootstrapOptions = {}): () => void {
     landing?.classList.add('is-open');
     landing?.setAttribute('aria-hidden', 'false');
     if (landingClose) landingClose.textContent = 'Continue';
+
+    // Gamified audio cue: positive arpeggio for `good`/`excellent` tiers,
+    // descending sting for `bad`/`terrible`. Tier matches funding for the
+    // square's primary category (see `landingPayload.ts`).
+    if (payload.tier === 'good' || payload.tier === 'excellent') {
+      playPositiveSfx();
+    } else if (payload.tier === 'bad' || payload.tier === 'terrible') {
+      playNegativeSfx();
+    }
   }
 
   function onChoiceClick(ev: Event) {
@@ -1144,6 +1165,10 @@ export function bootstrap(opts: IslandRunBootstrapOptions = {}): () => void {
     playerIndex = (playerIndex + roll) % NUM_SQUARES;
     if (prevIndex !== playerIndex) {
       bananaTravel = { startI: prevIndex, roll, hopIndex: 0, t: 0 };
+      // First hop's bounce — subsequent hops fire from inside the
+      // travel update loop below, so each individual hop gets exactly
+      // one boing regardless of roll value.
+      playHopSfx();
     }
     const prevTotalHops = totalHops;
     totalHops = prevTotalHops + roll;
@@ -1182,6 +1207,11 @@ export function bootstrap(opts: IslandRunBootstrapOptions = {}): () => void {
       statusEl!.textContent = 'Loading 3D dice... try again in a moment.';
       return;
     }
+    // Gamified rapid-tick "rolling dice" SFX. Layered under the global
+    // click blip from `installGlobalClickFx` so the player gets both the
+    // "I clicked something" feedback AND a sound that matches the
+    // tumbling dice they're about to watch.
+    playDiceRollSfx();
     rolling = true;
     if (rollBtn) rollBtn.disabled = true;
     statusEl?.classList.add('is-rolling');
@@ -1286,6 +1316,11 @@ export function bootstrap(opts: IslandRunBootstrapOptions = {}): () => void {
           if (bt.hopIndex >= bt.roll) {
             bananaTravel = null;
             placeBananaOnSquare();
+          } else {
+            // A new hop is starting (we're not yet at the final
+            // square) — fire one boing so each hop in the travel
+            // sequence gets its own audible bounce.
+            playHopSfx();
           }
         }
       } else {

@@ -28,7 +28,6 @@ import ShorelineDecor from './scene/ShorelineDecor';
 
 const UP = new Vector3(0, 1, 0);
 const TILE_SIZE = 8;
-const TURN_INPUT_BUFFER_SECONDS = 0.5;
 const BASE_SPEED = 10;
 /** Lateral offset for lane -1 / 0 / +1; must match obstacle mesh `obs.lane * LANE_SPACING`. */
 const LANE_SPACING = 2.2;
@@ -107,7 +106,7 @@ interface ActiveSandPuff {
   position: [number, number, number];
 }
 
-function createEmptyHud(maxLives: number): RunnerHudState {
+function createEmptyHud(maxLives: number, chaseDistance: number): RunnerHudState {
   return {
     timerSeconds: 30,
     stamina: 100,
@@ -115,7 +114,7 @@ function createEmptyHud(maxLives: number): RunnerHudState {
     maxLives,
     morale: 55,
     debtPressure: 0.2,
-    chaseDistance: 16,
+    chaseDistance,
     monsterStage: 'manageable',
     collectorPressure01: 0.22,
     debuffs: [],
@@ -124,8 +123,9 @@ function createEmptyHud(maxLives: number): RunnerHudState {
 }
 
 function buildHudForSession(session: ReturnType<typeof resolveBudgetEffects>): RunnerHudState {
-  const base = createEmptyHud(session.effects.startingLives);
+  const base = createEmptyHud(session.effects.startingLives, session.effects.startingChaseDistance);
   base.morale += session.effects.moraleStartBoost;
+  base.timerSeconds = session.durationSeconds;
   return base;
 }
 
@@ -141,8 +141,8 @@ export default function DebtRunnerGame(_props: GameProps) {
   // reference is stable across unrelated store mutations (the HUD pump
   // re-merges `runner.hud` every 120ms, which would otherwise re-render the
   // component and recompute `profile`/`session`/`initialHud` each tick —
-  // resetting `timerSeconds` back to 30 ten times a second and freezing
-  // the visible countdown). Memoizing the parse on the raw input keeps
+  // resetting `timerSeconds` back to the session default every tick and
+  // freezing the visible countdown). Memoizing the parse on the raw input keeps
   // `profile` referentially stable for as long as the store value is.
   const profileInput = useAppStore((s) => s.playerData['runner.profile']);
   const profile = useMemo(
@@ -169,6 +169,36 @@ export default function DebtRunnerGame(_props: GameProps) {
   }, [session.effects]);
 
   const initialHud = useMemo(() => buildHudForSession(session), [session]);
+
+  const deckWear = session.effects.pathVisualWear01;
+  const deckPalette = useMemo(() => {
+    const w = MathUtils.clamp(deckWear, 0, 1);
+    const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+    const warmR = 199;
+    const warmG = 155;
+    const warmB = 98;
+    const dullR = 120;
+    const dullG = 112;
+    const dullB = 102;
+    const r = Math.round(lerp(warmR, dullR, w * 0.72));
+    const g = Math.round(lerp(warmG, dullG, w * 0.72));
+    const b = Math.round(lerp(warmB, dullB, w * 0.72));
+    const plank = `rgb(${r},${g},${b})`;
+    const shR = Math.round(lerp(122, 72, w * 0.65));
+    const shG = Math.round(lerp(79, 68, w * 0.65));
+    const shB = Math.round(lerp(36, 58, w * 0.65));
+    const plankShadow = `rgb(${shR},${shG},${shB})`;
+    const highlightOpacity = lerp(0.42, 0.16, w);
+    const sR = Math.round(lerp(168, 110, w * 0.65));
+    const sG = Math.round(lerp(154, 118, w * 0.65));
+    const sB = Math.round(lerp(118, 108, w * 0.65));
+    const slipperyPlank = `rgb(${sR},${sG},${sB})`;
+    const slipShR = Math.round(lerp(116, 78, w * 0.6));
+    const slipShG = Math.round(lerp(104, 82, w * 0.6));
+    const slipShB = Math.round(lerp(79, 74, w * 0.6));
+    const slipperyShadow = `rgb(${slipShR},${slipShG},${slipShB})`;
+    return { plank, plankShadow, highlightOpacity, slipperyPlank, slipperyShadow };
+  }, [deckWear]);
 
   /**
    * `player` is the OUTER yaw group — owns world position + faces along the path
@@ -204,7 +234,7 @@ export default function DebtRunnerGame(_props: GameProps) {
   const hitFlashRef = useRef(0);
   const cameraKickRef = useRef(0);
   /** Prior-frame chase gap — detects sharp closes for camera punch. */
-  const prevChaseDistanceRef = useRef(16);
+  const prevChaseDistanceRef = useRef(session.effects.startingChaseDistance);
   const lastSfxFootRef = useRef(0);
   const lastSfxRustleRef = useRef(0);
   const lastSfxRingRef = useRef(0);
@@ -228,6 +258,7 @@ export default function DebtRunnerGame(_props: GameProps) {
   useEffect(() => {
     hudRef.current = initialHud;
     setHud(initialHud);
+    prevChaseDistanceRef.current = initialHud.chaseDistance;
   }, [initialHud]);
 
   // Publish session info ONCE on mount / whenever the session resolves. The
@@ -340,7 +371,22 @@ export default function DebtRunnerGame(_props: GameProps) {
       0.2 + (elapsed.current / 60) * session.effects.debtPressureGrowthPerMinute,
     );
     const injuryPenalty = injuryTimer.current > 0 ? 0.72 / session.effects.injurySlowMultiplier : 1;
-    const speed = BASE_SPEED * session.effects.movementResponseMultiplier * injuryPenalty;
+    const runProgress = MathUtils.clamp(
+      elapsed.current / Math.max(0.001, session.durationSeconds),
+      0,
+      1,
+    );
+    let foodPace = 1;
+    if (profile.food === 'bad') {
+      foodPace = Math.max(0.68, 1 - session.effects.foodForwardFatigueMax * runProgress);
+    } else if (profile.food === 'good') {
+      foodPace = 1 + session.effects.foodForwardBoostMax * MathUtils.clamp(h.stamina / 100, 0, 1);
+    }
+    const speed =
+      BASE_SPEED *
+      session.effects.movementResponseMultiplier *
+      injuryPenalty *
+      foodPace;
 
     tileProgress.current += dt * speed;
     while (tileProgress.current >= TILE_SIZE) {
@@ -377,7 +423,8 @@ export default function DebtRunnerGame(_props: GameProps) {
     // Forward path position is exact; lane shifts ease toward their target
     // with frame-rate-independent exponential damping.
     const targetLaneOffset = playerLaneRef.current * LANE_SPACING;
-    const blend = easeOutCubic(damp(LANE_SMOOTH_SPEED, dt));
+    const laneSmoothSpeed = LANE_SMOOTH_SPEED * session.effects.laneSmoothSpeedMultiplier;
+    const blend = easeOutCubic(damp(laneSmoothSpeed, dt));
     laneOffsetRef.current += (targetLaneOffset - laneOffsetRef.current) * blend;
 
     const t = tileProgress.current / TILE_SIZE;
@@ -423,7 +470,7 @@ export default function DebtRunnerGame(_props: GameProps) {
     if (activeTile.turn !== 'straight' && t > 0.64) {
       const turnInput = pendingTurn.current;
       const inputIsFresh =
-        !!turnInput && elapsed.current - turnInput.atSeconds <= TURN_INPUT_BUFFER_SECONDS;
+        !!turnInput && elapsed.current - turnInput.atSeconds <= session.effects.turnWindowSeconds;
       const alreadyResolved = consumedTurnTile.current === activeTile.id;
 
       if (!alreadyResolved) {
@@ -453,7 +500,10 @@ export default function DebtRunnerGame(_props: GameProps) {
       }
     } else if (activeTile.turn === 'straight' && t > 0.92) {
       consumedTurnTile.current = null;
-      if (pendingTurn.current && elapsed.current - pendingTurn.current.atSeconds > TURN_INPUT_BUFFER_SECONDS) {
+      if (
+        pendingTurn.current &&
+        elapsed.current - pendingTurn.current.atSeconds > session.effects.turnWindowSeconds
+      ) {
         pendingTurn.current = null;
       }
     }
@@ -801,8 +851,8 @@ export default function DebtRunnerGame(_props: GameProps) {
         const cornerCapSize = width * 0.68;
         // Slightly weathered driftwood color. Slippery tiles are still cooler
         // (wet plank look) but biased less aqua so the boardwalk reads as wood.
-        const plankColor = tile.slippery ? '#a89a76' : '#c79b62';
-        const plankShadowColor = tile.slippery ? '#74684f' : '#7a4f24';
+        const plankColor = tile.slippery ? deckPalette.slipperyPlank : deckPalette.plank;
+        const plankShadowColor = tile.slippery ? deckPalette.slipperyShadow : deckPalette.plankShadow;
         // Number of cross-plank seams (decorative dark grooves perpendicular to
         // travel) so the surface reads as individual dock boards. Roughly one
         // seam per ~1.1m of length — enough density to feel built without
@@ -848,7 +898,7 @@ export default function DebtRunnerGame(_props: GameProps) {
                 <meshStandardMaterial
                   color="#e9c794"
                   transparent
-                  opacity={0.42}
+                  opacity={deckPalette.highlightOpacity}
                   polygonOffset
                   polygonOffsetFactor={-0.5}
                   polygonOffsetUnits={-0.5}

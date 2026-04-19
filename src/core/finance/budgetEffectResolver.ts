@@ -16,6 +16,8 @@ export interface BudgetEffects {
   staminaRecoveryMultiplier: number;
   movementResponseMultiplier: number;
   turnWindowSeconds: number;
+  /** Multiplier on lane-shift easing speed (transportation). */
+  laneSmoothSpeedMultiplier: number;
   startingLives: number;
   injurySlowMultiplier: number;
   injuryDurationMultiplier: number;
@@ -25,6 +27,20 @@ export interface BudgetEffects {
   stumbleChancePerSecond: number;
   burnoutDrainMultiplier: number;
   moraleStartBoost: number;
+  /**
+   * Rent — how beat-up the boardwalk reads (0 = well-kept, 1 = neglected).
+   * Drives plank visuals in DebtRunner; also nudges narrow/slippery rolls in
+   * {@link generateTrackTiles}.
+   */
+  pathVisualWear01: number;
+  /** Food — max forward slowdown at end of a long run when nutrition is poor (0..~0.26). */
+  foodForwardFatigueMax: number;
+  /** Food — extra forward speed from good fueling, scaled by stamina in-runner (0..~0.12). */
+  foodForwardBoostMax: number;
+  /** Medical — extra slippery / uneven-board chance when health coverage is weak. */
+  medicalTerrainStress: number;
+  /** Emergency fund — starting gap ahead of the Debt Collector (meters). */
+  startingChaseDistance: number;
 }
 
 export interface RunnerSessionConfig {
@@ -55,6 +71,7 @@ export function resolveBudgetEffects(profile: BudgetProfile): RunnerSessionConfi
     staminaRecoveryMultiplier: 1,
     movementResponseMultiplier: 1,
     turnWindowSeconds: 0.65,
+    laneSmoothSpeedMultiplier: 1,
     startingLives: 2,
     injurySlowMultiplier: 1,
     injuryDurationMultiplier: 1,
@@ -64,6 +81,11 @@ export function resolveBudgetEffects(profile: BudgetProfile): RunnerSessionConfi
     stumbleChancePerSecond: 0.015,
     burnoutDrainMultiplier: 1,
     moraleStartBoost: 0,
+    pathVisualWear01: 0.35,
+    foodForwardFatigueMax: 0,
+    foodForwardBoostMax: 0,
+    medicalTerrainStress: 0,
+    startingChaseDistance: 16,
   };
 
   const notes: BudgetEffectNote[] = [];
@@ -72,24 +94,41 @@ export function resolveBudgetEffects(profile: BudgetProfile): RunnerSessionConfi
     effects.pathHazardMultiplier = 1.35;
     effects.pathReadability = 0.8;
     effects.pathNarrowChance = 0.35;
-    notes.push(note('rent', 'bad', 'Rent was BAD: route is rougher with more hazards and tighter layouts.'));
+    effects.pathVisualWear01 = 0.92;
+    notes.push(note('rent', 'bad', 'Rent was BAD: rougher deck, tighter lanes, more hazards, worse footing.'));
   } else if (profile.rent === 'good') {
     effects.pathHazardMultiplier = 0.82;
     effects.pathReadability = 1.2;
     effects.pathNarrowChance = 0.1;
-    notes.push(note('rent', 'good', 'Rent was GOOD: route is cleaner with safer turns.'));
+    effects.pathVisualWear01 = 0.06;
+    notes.push(note('rent', 'good', 'Rent was GOOD: wide, readable route with a well-kept boardwalk.'));
   } else {
+    effects.pathVisualWear01 = 0.38;
     notes.push(note('rent', 'average', 'Rent was AVERAGE: route difficulty stays near baseline.'));
   }
 
   if (profile.food === 'bad') {
     effects.staminaDrainMultiplier = 1.4;
     effects.staminaRecoveryMultiplier = 0.65;
-    notes.push(note('food', 'bad', 'Food was BAD: stamina drains faster and recovery is slower.'));
+    effects.foodForwardFatigueMax = 0.24;
+    notes.push(
+      note(
+        'food',
+        'bad',
+        'Food was BAD: stamina drains faster, recovery is slower, and forward pace tires as the run goes on.',
+      ),
+    );
   } else if (profile.food === 'good') {
     effects.staminaDrainMultiplier = 0.75;
     effects.staminaRecoveryMultiplier = 1.35;
-    notes.push(note('food', 'good', 'Food was GOOD: stronger endurance and recovery.'));
+    effects.foodForwardBoostMax = 0.1;
+    notes.push(
+      note(
+        'food',
+        'good',
+        'Food was GOOD: stronger endurance, faster recovery, and a little extra sprint when energy is high.',
+      ),
+    );
   } else {
     notes.push(note('food', 'average', 'Food was AVERAGE: normal stamina behavior.'));
   }
@@ -97,23 +136,49 @@ export function resolveBudgetEffects(profile: BudgetProfile): RunnerSessionConfi
   if (profile.transportation === 'bad') {
     effects.movementResponseMultiplier = 0.72;
     effects.turnWindowSeconds = 0.52;
+    effects.laneSmoothSpeedMultiplier = 0.74;
     notes.push(
-      note('transportation', 'bad', 'Transportation was BAD: movement and turning feel less responsive.'),
+      note(
+        'transportation',
+        'bad',
+        'Transportation was BAD: slower base pace, sluggish lane changes, and a tighter turn-input window.',
+      ),
     );
   } else if (profile.transportation === 'good') {
     effects.movementResponseMultiplier = 1.28;
     effects.turnWindowSeconds = 0.75;
-    notes.push(note('transportation', 'good', 'Transportation was GOOD: lane shifts and turns are sharper.'));
+    effects.laneSmoothSpeedMultiplier = 1.22;
+    notes.push(
+      note(
+        'transportation',
+        'good',
+        'Transportation was GOOD: snappier movement, smoother lane shifts, and a forgiving turn buffer.',
+      ),
+    );
   } else {
     notes.push(note('transportation', 'average', 'Transportation was AVERAGE: baseline responsiveness.'));
   }
 
   if (profile.emergencyFund === 'bad') {
     effects.startingLives = 1;
-    notes.push(note('emergencyFund', 'bad', 'Emergency Fund was BAD: only one life.'));
+    effects.startingChaseDistance = 13.2;
+    notes.push(
+      note(
+        'emergencyFund',
+        'bad',
+        'Emergency Fund was BAD: one life and the collector starts uncomfortably close.',
+      ),
+    );
   } else if (profile.emergencyFund === 'good') {
     effects.startingLives = 3;
-    notes.push(note('emergencyFund', 'good', 'Emergency Fund was GOOD: extra lives improve forgiveness.'));
+    effects.startingChaseDistance = 18.6;
+    notes.push(
+      note(
+        'emergencyFund',
+        'good',
+        'Emergency Fund was GOOD: extra lives and more breathing room before the chase tightens.',
+      ),
+    );
   } else {
     effects.startingLives = 2;
     notes.push(note('emergencyFund', 'average', 'Emergency Fund was AVERAGE: limited safety net.'));
@@ -122,7 +187,14 @@ export function resolveBudgetEffects(profile: BudgetProfile): RunnerSessionConfi
   if (profile.medical === 'bad') {
     effects.injurySlowMultiplier = 1.5;
     effects.injuryDurationMultiplier = 1.6;
-    notes.push(note('medical', 'bad', 'Medical was BAD: injuries slow you harder for longer.'));
+    effects.medicalTerrainStress = 0.1;
+    notes.push(
+      note(
+        'medical',
+        'bad',
+        'Medical was BAD: injuries slow you harder for longer, and the path stays slicker between hits.',
+      ),
+    );
   } else if (profile.medical === 'good') {
     effects.injurySlowMultiplier = 0.75;
     effects.injuryDurationMultiplier = 0.7;
@@ -153,7 +225,13 @@ export function resolveBudgetEffects(profile: BudgetProfile): RunnerSessionConfi
     effects.stumbleChancePerSecond = 0.04;
     effects.burnoutDrainMultiplier = 1.35;
     effects.stumbleTerrainChance += 0.1;
-    notes.push(note('miscFun', 'bad', 'Misc/Fun was BAD: more stumbling, burnout, and exhausting run feel.'));
+    notes.push(
+      note(
+        'miscFun',
+        'bad',
+        'Misc/Fun was BAD: shorter run timer, more stumbling, burnout, and a bleaker pace.',
+      ),
+    );
   } else if (profile.miscFun === 'good') {
     effects.stumbleChancePerSecond = 0.01;
     effects.burnoutDrainMultiplier = 0.85;
@@ -162,7 +240,7 @@ export function resolveBudgetEffects(profile: BudgetProfile): RunnerSessionConfi
       note(
         'miscFun',
         'good',
-        'Misc/Fun was GOOD: better morale and comfort early, but can trade off against safety categories.',
+        'Misc/Fun was GOOD: longer run timer, better early morale, and a calmer stride.',
       ),
     );
   } else {
@@ -204,10 +282,17 @@ export function resolveBudgetEffects(profile: BudgetProfile): RunnerSessionConfi
     );
   }
 
+  let durationSeconds = 30;
+  if (profile.miscFun === 'bad') {
+    durationSeconds = 22;
+  } else if (profile.miscFun === 'good') {
+    durationSeconds = 40;
+  }
+
   return {
     profile,
     effects,
-    durationSeconds: 30,
+    durationSeconds,
     totalDebtPressureTier,
     notes: notes.map((item) => ({
       ...item,

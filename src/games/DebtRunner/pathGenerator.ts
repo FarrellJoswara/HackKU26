@@ -78,8 +78,13 @@ export function generateTrackTiles(count: number, effects: BudgetEffects): Track
     const canTurn = sinceLastTurn >= 2;
     const turn: TurnDirection =
       canTurn && roll < turnBias ? (rand(seed + 3) > 0.5 ? 'left' : 'right') : 'straight';
-    const narrow = rand(seed + 5) < effects.pathNarrowChance;
-    const slippery = rand(seed + 6) < effects.stumbleTerrainChance;
+    const wear = effects.pathVisualWear01 ?? 0;
+    const medStress = effects.medicalTerrainStress ?? 0;
+    const narrow =
+      rand(seed + 5) < Math.min(0.72, effects.pathNarrowChance + wear * 0.14);
+    const slippery =
+      rand(seed + 6) <
+      Math.min(0.38, effects.stumbleTerrainChance + wear * 0.1 + medStress);
     const hazardChance = Math.min(0.82, (teachPhase ? 0.24 : 0.33) * effects.pathHazardMultiplier);
     const obstacleCount = rand(seed + 7) < hazardChance ? (rand(seed + 8) < 0.65 ? 1 : 2) : 0;
     const obstacles: ObstacleSpec[] = [];

@@ -49,6 +49,7 @@ function effects(over: Partial<BudgetEffects> = {}): BudgetEffects {
     staminaRecoveryMultiplier: 1,
     movementResponseMultiplier: 1,
     turnWindowSeconds: 0.65,
+    laneSmoothSpeedMultiplier: 1,
     startingLives: 2,
     injurySlowMultiplier: 1,
     injuryDurationMultiplier: 1,
@@ -58,6 +59,11 @@ function effects(over: Partial<BudgetEffects> = {}): BudgetEffects {
     stumbleChancePerSecond: 0.05,
     burnoutDrainMultiplier: 1,
     moraleStartBoost: 0,
+    pathVisualWear01: 0.35,
+    foodForwardFatigueMax: 0,
+    foodForwardBoostMax: 0,
+    medicalTerrainStress: 0,
+    startingChaseDistance: 16,
     ...over,
   };
 }

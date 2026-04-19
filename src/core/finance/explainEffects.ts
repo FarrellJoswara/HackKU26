@@ -21,39 +21,39 @@ export function explainBudgetProfileEffects(profile: BudgetProfile): EffectToken
     {
       id: 'rent',
       text: {
-        bad: 'Rent was BAD, which created a more hazardous and less forgiving course.',
+        bad: 'Rent was BAD, so the boardwalk looked rougher, hazards increased, and lanes pinched more often.',
         average: 'Rent was AVERAGE, so path difficulty stayed near baseline.',
-        good: 'Rent was GOOD, making the route cleaner and easier to read.',
+        good: 'Rent was GOOD, so the deck stayed wide, warm, and easier to read with fewer hazards.',
       },
     },
     {
       id: 'food',
       text: {
-        bad: 'Food was BAD, so stamina drained faster and recovery slowed.',
+        bad: 'Food was BAD, so stamina drained faster, recovery slowed, and your sprint pace tired out as the run went on.',
         average: 'Food was AVERAGE, so stamina behavior stayed normal.',
-        good: 'Food was GOOD, giving stronger endurance and faster recovery.',
+        good: 'Food was GOOD, giving stronger endurance, faster recovery, and a little extra speed when energy was high.',
       },
     },
     {
       id: 'transportation',
       text: {
-        bad: 'Transportation was BAD, so turning and lane response were slower.',
+        bad: 'Transportation was BAD, so base running pace dipped, lane shifts felt sluggish, and turn timing was tighter.',
         average: 'Transportation was AVERAGE, so controls were standard.',
-        good: 'Transportation was GOOD, making movement sharper and cleaner.',
+        good: 'Transportation was GOOD, making movement snappier, lane changes smoother, and turn windows more forgiving.',
       },
     },
     {
       id: 'emergencyFund',
       text: {
-        bad: 'Emergency Fund was BAD, so you only had one life.',
+        bad: 'Emergency Fund was BAD, so you only had one life and the Debt Collector started closer behind you.',
         average: 'Emergency Fund was AVERAGE, giving limited forgiveness.',
-        good: 'Emergency Fund was GOOD, giving extra lives/revive protection.',
+        good: 'Emergency Fund was GOOD, giving extra lives and more breathing room before the chase tightened.',
       },
     },
     {
       id: 'medical',
       text: {
-        bad: 'Medical was BAD, so injury slowdown lasted longer and hit harder.',
+        bad: 'Medical was BAD, so injury slowdown lasted longer, hit harder, and slick uneven boards showed up more often.',
         average: 'Medical was AVERAGE, so injury behavior stayed standard.',
         good: 'Medical was GOOD, reducing injury severity and recovery time.',
       },
@@ -69,9 +69,9 @@ export function explainBudgetProfileEffects(profile: BudgetProfile): EffectToken
     {
       id: 'miscFun',
       text: {
-        bad: 'Misc/Fun was BAD, increasing stumbles, burnout, and the exhausting run feel.',
+        bad: 'Misc/Fun was BAD, shortening the survival timer while stumbles and burnout piled on.',
         average: 'Misc/Fun was AVERAGE, so morale/focus stayed near baseline.',
-        good: 'Misc/Fun was GOOD, improving early morale and comfort.',
+        good: 'Misc/Fun was GOOD, stretching the survival timer and lifting early morale.',
       },
     },
   ];

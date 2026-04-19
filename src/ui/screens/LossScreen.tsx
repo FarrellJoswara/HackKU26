@@ -1,9 +1,11 @@
+import { useEffect } from 'react';
 import { Skull, AlertTriangle, RotateCcw, ArrowRight } from 'lucide-react';
 import { eventBus } from '@/core/events';
 import type { UIProps } from '@/core/types';
 import { Button } from '../components/Button';
 import { getStoredLastRun } from '@/core/runner/RunnerResultRouter';
 import { advanceCampaignYear } from '@/core/campaign/yearAdvance';
+import { playLoseSfx } from '@/audio/uiSfx';
 
 function lossTitle(failReason?: string) {
   switch (failReason) {
@@ -20,6 +22,12 @@ function lossTitle(failReason?: string) {
 
 export default function LossScreen(props: UIProps<Record<string, unknown>>) {
   const lastRun = getStoredLastRun(props.data);
+
+  // Sad descending sting on mount. Same fire-and-forget contract as
+  // WinScreen — synthesised, no asset file shipped.
+  useEffect(() => {
+    playLoseSfx();
+  }, []);
 
   return (
     <div className="tropic-bg-storm absolute inset-0 overflow-hidden text-white">

@@ -19,6 +19,7 @@ import {
   emptyAllocations,
   readAllocations,
   readNumber,
+  type BudgetCategoryId,
 } from '@/core/budgetTypes';
 import {
   applyIslandScenarioChoice,
@@ -56,6 +57,17 @@ export default function IslandRun() {
       const { playerData: bootPd } = useAppStore.getState();
       cleanup = bootstrap({
         initialTotalHops: readNumber(bootPd, CAMPAIGN_KEYS.islandTotalHops, 0),
+        getFundingRatioByCategory: () => {
+          const { playerData } = useAppStore.getState();
+          const allocations = readAllocations(playerData) ?? emptyAllocations();
+          const annualSalary = readNumber(playerData, BOX_PLAYER_DATA_KEYS.annualSalary, 0);
+          if (annualSalary <= 0) return undefined;
+          const fundingRatioByCategory: Partial<Record<BudgetCategoryId, number>> = {};
+          (Object.keys(allocations) as BudgetCategoryId[]).forEach((k) => {
+            fundingRatioByCategory[k] = (allocations[k] ?? 0) / annualSalary;
+          });
+          return fundingRatioByCategory;
+        },
         onTotalHopsPersist: ({ totalHops }) => {
           useAppStore.getState().mergePlayerData({
             [CAMPAIGN_KEYS.islandTotalHops]: totalHops,
