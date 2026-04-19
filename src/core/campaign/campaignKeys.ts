@@ -29,6 +29,13 @@ export const CAMPAIGN_KEYS = {
   islandTotalHops: 'campaign.islandTotalHops',
   /** 1-indexed year counter incremented each lap. */
   year: 'campaign.year',
+  /** How many post-debt Investing Birds year-end sessions have completed (0–3). */
+  investingBirdsYearsPlayed: 'campaign.investingBirdsYearsPlayed',
+  /**
+   * True while the player is in an Investing Birds session that was launched
+   * from an Island lap (year-end). Used to route `game:result` back to Island.
+   */
+  yearEndBirdsPending: 'campaign.yearEndBirdsPending',
   /** Designer's "win goal" net invested capital for FI (USD). */
   winGoalUsd: 'campaign.winGoalUsd',
   /** Net invested balance (informational; full Year Controller will own this). */

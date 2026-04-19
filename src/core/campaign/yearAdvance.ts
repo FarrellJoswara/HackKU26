@@ -1,30 +1,14 @@
 /**
- * Closes a Year Loop and routes the player back to The Box for the next
- * year's budget.
+ * Closes a Year Loop after DebtRunner and routes the player onward.
  *
- * Per `GAME_DESIGN.md` §"The Core Game Loop (Per Year)":
+ * Campaign path (HackKU26): DebtRunner **win** trims high-interest debt by
+ * ~20%; **loss** leaves the balance unchanged (no interest penalty). The
+ * player returns to **Island Run** for the next lap instead of mandatory
+ * The Box (they may still open the overlay to edit allocations).
  *
- *   - Each loop = one year. The year-end mini-game (DebtRunner /
- *     Investing Birds) runs **once** at lap-complete.
- *   - When the loop closes, **leftover dollars in the High-Interest Debt
- *     allocation** automatically reduce `highInterestDebtBalance` (capped
- *     at $0).
- *   - The player must then re-open The Box and submit a fresh
- *     zero-based budget for year N+1 before they can roll again — that
- *     is the soft `canEnterMapForCampaign` gate, re-armed by clearing
- *     `boxReadyForYear` here.
+ * `navigateTo: 'budget'` remains for tooling / legacy callers.
  *
- * On a Debt Runner *loss* we apply a small interest penalty (2% of
- * remaining balance after pay-down) so the loop has weight without
- * fully balancing the in-game economy — the full Year Controller will
- * own that math later.
- *
- * Pure with respect to inputs (`playerData` + outcome) and side-effects
- * are restricted to one `mergePlayerData` write + one navigate event.
- * The function returns a structured summary so the calling screen can
- * surface what changed if it ever wants to.
- *
- * AGENTS.md: this module is core-only. No `ui` or `games` imports.
+ * AGENTS.md: core-only. No `ui` or `games` imports.
  */
 
 import { eventBus } from '@/core/events';
@@ -35,33 +19,44 @@ import {
   readNumber,
 } from '@/core/budgetTypes';
 import { CAMPAIGN_KEYS } from './campaignKeys';
+import { GAME_IDS } from '@/games/registry';
 
-const LOSS_INTEREST_PENALTY = 0.02; // 2% of remaining balance on a runner loss
+const DEBT_WIN_MULTIPLIER = 0.8;
 
 export type YearAdvanceOutcome = 'win' | 'loss' | 'skipped';
+
+export type YearAdvanceNavigateTarget = 'island' | 'budget';
+
+export interface AdvanceCampaignYearOptions {
+  /** Where to send the player after merging year + debt state. */
+  navigateTo?: YearAdvanceNavigateTarget;
+}
 
 export interface YearAdvanceSummary {
   /** Year the player just finished. */
   fromYear: number;
-  /** Year the player is now budgeting for. */
+  /** Year the player is now playing. */
   toYear: number;
   /** Debt before any year-end adjustment. */
   debtBeforeUsd: number;
-  /** Dollars pulled from the High-Interest Debt allocation toward payoff. */
-  debtPaidUsd: number;
-  /** Extra interest added because the runner was lost. */
+  /** Debt removed by the win rule (20% of pre-adjustment balance). */
+  debtReductionFromWinUsd: number;
+  /** Legacy field — kept 0 (interest penalty removed for campaign). */
   interestPenaltyUsd: number;
   /** Final running debt balance for next year. */
   debtAfterUsd: number;
 }
 
 /**
- * Apply year-end mechanics and route the player back to The Box.
+ * Apply year-end mechanics after DebtRunner and navigate.
  *
- * @param outcome `win` / `loss` of the year-end mini-game, or `skipped`
- *                when the player bypassed it (debt-free → no DebtRunner).
+ * @param outcome `win` / `loss` of DebtRunner, or `skipped` (unused today).
  */
-export function advanceCampaignYear(outcome: YearAdvanceOutcome): YearAdvanceSummary {
+export function advanceCampaignYear(
+  outcome: YearAdvanceOutcome,
+  opts: AdvanceCampaignYearOptions = {},
+): YearAdvanceSummary {
+  const navigateTo: YearAdvanceNavigateTarget = opts.navigateTo ?? 'island';
   const { playerData, mergePlayerData } = useAppStore.getState();
 
   const fromYear = readNumber(
@@ -77,39 +72,44 @@ export function advanceCampaignYear(outcome: YearAdvanceOutcome): YearAdvanceSum
     BOX_DEFAULTS.highInterestDebtBalance,
   );
 
-  const allocations =
-    (playerData[BOX_PLAYER_DATA_KEYS.boxAllocations] as Record<string, number> | undefined) ?? {};
-  const debtAlloc = Math.max(0, allocations['highInterestDebt'] ?? 0);
-  const debtPaid = Math.min(debtAlloc, debtBefore);
+  let nextDebt = debtBefore;
+  let debtReductionFromWin = 0;
 
-  let nextDebt = Math.max(0, debtBefore - debtPaid);
-
-  let interestPenalty = 0;
-  if (outcome === 'loss' && nextDebt > 0) {
-    interestPenalty = nextDebt * LOSS_INTEREST_PENALTY;
-    nextDebt += interestPenalty;
+  if (outcome === 'win' && debtBefore > 0) {
+    nextDebt = Math.round(debtBefore * DEBT_WIN_MULTIPLIER * 100) / 100;
+    debtReductionFromWin = Math.round((debtBefore - nextDebt) * 100) / 100;
+  } else if (outcome === 'loss') {
+    nextDebt = debtBefore;
+  } else {
+    nextDebt = debtBefore;
   }
+
+  nextDebt = Math.max(0, nextDebt);
+
+  const boxReadyValue = navigateTo === 'island' ? toYear : 0;
 
   mergePlayerData({
     [BOX_PLAYER_DATA_KEYS.currentYear]: toYear,
     [CAMPAIGN_KEYS.year]: toYear,
-    [BOX_PLAYER_DATA_KEYS.highInterestDebtBalance]: Math.round(nextDebt * 100) / 100,
-    // Re-arm the soft Box gate: the player must submit a fresh zero-based
-    // budget for the new year before the map will let them roll.
-    [CAMPAIGN_KEYS.boxReadyForYear]: 0,
+    [BOX_PLAYER_DATA_KEYS.highInterestDebtBalance]: nextDebt,
+    [CAMPAIGN_KEYS.boxReadyForYear]: boxReadyValue,
   });
 
-  // Send them straight to The Box for next year's budget. The Box's own
-  // `box:budget:submit` handler in `initCampaign.ts` will then advance
-  // them to Island Run for the year.
-  eventBus.emit('navigate:request', { to: 'budget', module: null });
+  if (navigateTo === 'island') {
+    eventBus.emit('navigate:request', {
+      to: 'game',
+      module: GAME_IDS.islandRun,
+    });
+  } else {
+    eventBus.emit('navigate:request', { to: 'budget', module: null });
+  }
 
   return {
     fromYear,
     toYear,
     debtBeforeUsd: Math.round(debtBefore * 100) / 100,
-    debtPaidUsd: Math.round(debtPaid * 100) / 100,
-    interestPenaltyUsd: Math.round(interestPenalty * 100) / 100,
+    debtReductionFromWinUsd: debtReductionFromWin,
+    interestPenaltyUsd: 0,
     debtAfterUsd: Math.round(nextDebt * 100) / 100,
   };
 }

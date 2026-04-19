@@ -47,6 +47,8 @@ export default function NewGameDifficultyScreen(
       [CAMPAIGN_KEYS.year]: 1,
       [CAMPAIGN_KEYS.boxReadyForYear]: 0,
       [CAMPAIGN_KEYS.islandTotalHops]: 0,
+      [CAMPAIGN_KEYS.investingBirdsYearsPlayed]: 0,
+      [CAMPAIGN_KEYS.yearEndBirdsPending]: false,
     });
     // The campaign path always goes through The Box first. Soft gate
     // (`canEnterMapForCampaign`) guards Island entry afterwards.

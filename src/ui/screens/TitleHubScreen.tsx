@@ -19,12 +19,14 @@ import {
   Palmtree,
   Play,
   Settings,
+  Sparkles,
 } from 'lucide-react';
 import { eventBus } from '@/core/events';
 import { useAppStore } from '@/core/store';
 import type { UIProps } from '@/core/types';
 import { GAME_IDS } from '@/games/registry';
 import { CAMPAIGN_KEYS } from '@/core/campaign/campaignKeys';
+import { BOX_PLAYER_DATA_KEYS } from '@/core/budgetTypes';
 import { MOCK_BUDGET_PROFILE } from '@/core/finance/mockBudgetProfile';
 import { PlayModeDialog } from '../components/PlayModeDialog';
 import {
@@ -195,6 +197,31 @@ export default function TitleHubScreen(_props: UIProps<unknown>) {
                   }
                 >
                   Toggle save flag (debug)
+                </button>
+
+                <button
+                  type="button"
+                  className="island-btnShell"
+                  onClick={() => {
+                    mergePlayerData({
+                      [BOX_PLAYER_DATA_KEYS.highInterestDebtBalance]: 0,
+                      [BOX_PLAYER_DATA_KEYS.currentYear]: 6,
+                      [BOX_PLAYER_DATA_KEYS.annualSalary]: 72_000,
+                      [BOX_PLAYER_DATA_KEYS.boxAllocations]: {
+                        rent: 20_000,
+                        food: 8_000,
+                        highInterestDebt: 0,
+                        emergencyFund: 12_000,
+                        investments: 32_000,
+                      },
+                      [CAMPAIGN_KEYS.year]: 6,
+                      [CAMPAIGN_KEYS.investingBirdsYearsPlayed]: 3,
+                    });
+                    eventBus.emit('navigate:request', { to: 'finale', module: null });
+                  }}
+                >
+                  <Sparkles className="size-4" />
+                  Campaign finale (dev)
                 </button>
               </div>
             </div>

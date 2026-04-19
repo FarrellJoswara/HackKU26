@@ -218,24 +218,18 @@ function easeInOutCubic(t: number): number {
  *      a torn-down scene.
  */
 export interface IslandRunBootstrapOptions {
+  /** Restores hop counter from persisted campaign state (multiple of 12 = laps). */
+  initialTotalHops?: number;
   /**
-   * Called every time a landing dialog is about to open so funding ratios
-   * passed to `getLandingPayload` reflect the **current** Box allocations,
-   * not a value captured at bootstrap time. Returning `null` falls back to
-   * the seeded demo ratios in `getBoardLandingScenarioBody`.
-   *
-   * Pure read — must not mutate the store.
+   * Persist cumulative hops as soon as a lap boundary is crossed (before
+   * the year-end gate UI).
    */
-  getPlayerSnapshot?: () => {
-    annualSalary: number;
-    fundingRatioByCategory: Partial<Record<string, number>>;
-  } | null;
+  onTotalHopsPersist?: (info: { totalHops: number }) => void;
   /**
-   * Called once per lap (`totalHops % NUM_SQUARES === 0` after a roll).
-   * The shell forwards this to the campaign router via the typed Event
-   * Bus so `core` never imports games. Receives `{ totalHops, laps }`.
+   * Player confirmed the Start-square year gate — emit `island:yearComplete`
+   * from the React shell.
    */
-  onLapComplete?: (info: { totalHops: number; laps: number }) => void;
+  onYearEndAtStart?: (info: { totalHops: number; laps: number }) => void;
 }
 
 export function bootstrap(opts: IslandRunBootstrapOptions = {}): () => void {
@@ -765,7 +759,11 @@ export function bootstrap(opts: IslandRunBootstrapOptions = {}): () => void {
     }
   })();
 
-  let playerIndex = 0;
+  const initialHopsRaw = opts.initialTotalHops ?? 0;
+  const initialHops =
+    Number.isFinite(initialHopsRaw) && initialHopsRaw > 0 ? Math.floor(initialHopsRaw) : 0;
+  let totalHops = initialHops;
+  let playerIndex = initialHops % NUM_SQUARES;
   function angleForSquare(i: number): number {
     return (i / NUM_SQUARES) * tau - Math.PI / 2 + tau / NUM_SQUARES / 2;
   }
@@ -984,13 +982,16 @@ export function bootstrap(opts: IslandRunBootstrapOptions = {}): () => void {
   const positionReadout = document.getElementById('position-readout');
   const diceWrap = document.getElementById('dice-chip-wrap');
   const landing = document.getElementById('landing-overlay');
+  const landingPanel = landing?.querySelector('.landing-panel');
   const landingText = document.getElementById('landing-text');
   const landingTitle = document.getElementById('landing-title');
+  const landingSubtitle = document.getElementById('landing-subtitle');
   const landingClose = document.getElementById('landing-close');
   const landingDismiss = document.getElementById('landing-dismiss');
   const landingChoices = document.getElementById('landing-choices');
   const choiceBtnA = document.getElementById('landing-choice-a') as HTMLButtonElement | null;
   const choiceBtnB = document.getElementById('landing-choice-b') as HTMLButtonElement | null;
+  const choiceBtnC = document.getElementById('landing-choice-c') as HTMLButtonElement | null;
   const segs = Array.from(document.querySelectorAll<HTMLSpanElement>('.progress-seg'));
 
   function updateHud() {
@@ -1007,16 +1008,26 @@ export function bootstrap(opts: IslandRunBootstrapOptions = {}): () => void {
   }
   updateHud();
 
+  let activeYearGateInfo: { totalHops: number; laps: number } | null = null;
+  let yearGatePending: { totalHops: number; laps: number } | null = null;
+  let landingIsYearGate = false;
+
   function closeLanding() {
-    landing?.classList.remove('is-open', 'is-choice');
+    landingIsYearGate = false;
+    activeYearGateInfo = null;
+    landingPanel?.removeAttribute('data-beat-tone');
+    landing?.classList.remove('is-open', 'is-choice', 'is-year-gate');
     landing?.setAttribute('aria-hidden', 'true');
     landingChoices?.classList.remove('is-visible');
     activeBeat = null;
+    choiceBtnC?.classList.add('hidden');
   }
 
   function paintChoiceButton(
     btn: HTMLButtonElement | null,
-    choice: IslandScenarioBeat['optionA'] | IslandScenarioBeat['optionB'],
+    choice: IslandScenarioBeat['optionA'] | IslandScenarioBeat['optionB'] | NonNullable<
+      IslandScenarioBeat['optionC']
+    >,
   ) {
     if (!btn) return;
     const labelEl = btn.querySelector<HTMLElement>('[data-role="label"]');
@@ -1028,28 +1039,72 @@ export function bootstrap(opts: IslandRunBootstrapOptions = {}): () => void {
 
   let activeBeat: IslandScenarioBeat | null = null;
 
+  function confirmYearGate() {
+    if (!activeYearGateInfo) return;
+    try {
+      opts.onYearEndAtStart?.(activeYearGateInfo);
+    } catch (e) {
+      console.error('[IslandRun] onYearEndAtStart handler threw', e);
+    }
+    closeLanding();
+  }
+
+  function openYearGateLanding(info: { totalHops: number; laps: number }) {
+    landingIsYearGate = true;
+    activeYearGateInfo = info;
+    activeBeat = null;
+    if (landingSubtitle) landingSubtitle.textContent = 'Year end';
+    if (landingTitle) landingTitle.textContent = SQUARE_LABELS[0] ?? 'Start';
+    if (landingText) {
+      landingText.textContent =
+        'You completed a lap around the island. One year ends here — continue to your year-end challenge, then you will return to the board.';
+    }
+    landingChoices?.classList.remove('is-visible');
+    landing?.classList.remove('is-choice');
+    landingPanel?.removeAttribute('data-beat-tone');
+    landing?.classList.add('is-year-gate');
+    landing?.classList.add('is-open');
+    landing?.setAttribute('aria-hidden', 'false');
+    if (landingClose) landingClose.textContent = 'Continue to year-end challenge';
+  }
+
   function openLanding(square: number) {
+    landingIsYearGate = false;
+    activeYearGateInfo = null;
+    if (landingSubtitle) landingSubtitle.textContent = 'You landed at';
     // Always re-read player snapshot so a Box edit between rolls is
     // reflected on the *next* landing without remounting the game.
-    const snap = opts.getPlayerSnapshot?.() ?? null;
-    const ratios = snap?.fundingRatioByCategory;
-    const payload = getLandingPayload(square, ratios as never);
+    const payload = getLandingPayload(square);
     if (landingTitle) landingTitle.textContent = SQUARE_LABELS[square] ?? 'Finance tip';
     if (payload.kind === 'choice') {
       activeBeat = payload.beat;
+      if (payload.beat.tone) {
+        landingPanel?.setAttribute('data-beat-tone', payload.beat.tone);
+      } else {
+        landingPanel?.removeAttribute('data-beat-tone');
+      }
       if (landingText) landingText.textContent = payload.beat.setup;
       paintChoiceButton(choiceBtnA, payload.beat.optionA);
       paintChoiceButton(choiceBtnB, payload.beat.optionB);
+      if (payload.beat.optionC) {
+        paintChoiceButton(choiceBtnC, payload.beat.optionC);
+        choiceBtnC?.classList.remove('hidden');
+      } else {
+        choiceBtnC?.classList.add('hidden');
+      }
       landingChoices?.classList.add('is-visible');
       landing?.classList.add('is-choice');
     } else {
       activeBeat = null;
+      landingPanel?.removeAttribute('data-beat-tone');
       if (landingText) landingText.textContent = payload.body;
       landingChoices?.classList.remove('is-visible');
       landing?.classList.remove('is-choice');
+      choiceBtnC?.classList.add('hidden');
     }
     landing?.classList.add('is-open');
     landing?.setAttribute('aria-hidden', 'false');
+    if (landingClose) landingClose.textContent = 'Continue';
   }
 
   function onChoiceClick(ev: Event) {
@@ -1062,18 +1117,25 @@ export function bootstrap(opts: IslandRunBootstrapOptions = {}): () => void {
     closeLanding();
   }
 
-  landingClose?.addEventListener('click', closeLanding);
-  landingDismiss?.addEventListener('click', closeLanding);
+  function handleLandingCloseClick() {
+    if (landingIsYearGate) {
+      confirmYearGate();
+    } else {
+      closeLanding();
+    }
+  }
+
+  landingClose?.addEventListener('click', handleLandingCloseClick);
+  landingDismiss?.addEventListener('click', handleLandingCloseClick);
   choiceBtnA?.addEventListener('click', onChoiceClick);
   choiceBtnB?.addEventListener('click', onChoiceClick);
+  choiceBtnC?.addEventListener('click', onChoiceClick);
 
   let rolling = false;
   // Single-source lap counter — the rule
   // (`totalHops > 0 && totalHops % NUM_SQUARES === 0`) is implemented in
   // `src/core/campaign/lapCounter.ts` and referenced in GAME_DESIGN.md.
-  // We increment in exactly ONE place (after the dice settles) so a lap
-  // can never fire twice or get lost across re-mounts of the React shell.
-  let totalHops = 0;
+
   function finishRollAfterAnimation(roll: number) {
     diceWrap?.classList.remove('dice-rolling');
     diceWrap?.classList.add('dice-roll-pop');
@@ -1088,11 +1150,11 @@ export function bootstrap(opts: IslandRunBootstrapOptions = {}): () => void {
     const prevLaps = Math.floor(prevTotalHops / NUM_SQUARES);
     const laps = Math.floor(totalHops / NUM_SQUARES);
     if (laps > prevLaps) {
-      // Fire once — the React shell forwards to `island:yearComplete`.
+      yearGatePending = { totalHops, laps };
       try {
-        opts.onLapComplete?.({ totalHops, laps });
+        opts.onTotalHopsPersist?.({ totalHops });
       } catch (e) {
-        console.error('[IslandRun] onLapComplete handler threw', e);
+        console.error('[IslandRun] onTotalHopsPersist handler threw', e);
       }
     }
     statusEl!.textContent = `You rolled ${roll}. Landed on ${SQUARE_LABELS[playerIndex]}.`;
@@ -1102,7 +1164,13 @@ export function bootstrap(opts: IslandRunBootstrapOptions = {}): () => void {
       prevIndex !== playerIndex ? roll * BANANA_HOP_SEC * 1000 + LANDING_AFTER_BANANA_MS : 220;
     window.setTimeout(() => {
       if (disposed) return;
-      openLanding(playerIndex);
+      if (yearGatePending) {
+        const gate = yearGatePending;
+        yearGatePending = null;
+        openYearGateLanding(gate);
+      } else {
+        openLanding(playerIndex);
+      }
       rolling = false;
       if (rollBtn) rollBtn.disabled = false;
     }, moveDelayMs);
@@ -1253,10 +1321,11 @@ export function bootstrap(opts: IslandRunBootstrapOptions = {}): () => void {
     window.removeEventListener('resize', onResize);
     rollBtn?.removeEventListener('click', onRollClick);
     qToggle?.removeEventListener('change', onQualityChange);
-    landingClose?.removeEventListener('click', closeLanding);
-    landingDismiss?.removeEventListener('click', closeLanding);
+    landingClose?.removeEventListener('click', handleLandingCloseClick);
+    landingDismiss?.removeEventListener('click', handleLandingCloseClick);
     choiceBtnA?.removeEventListener('click', onChoiceClick);
     choiceBtnB?.removeEventListener('click', onChoiceClick);
+    choiceBtnC?.removeEventListener('click', onChoiceClick);
     controls.dispose();
     renderer.dispose();
     renderer.forceContextLoss();

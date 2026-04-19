@@ -44,6 +44,7 @@ const SCREENS: Record<AppState, ScreenComp | null> = {
   win: lazy(() => import('./screens/WinScreen')),
   loss: lazy(() => import('./screens/LossScreen')),
   summary: lazy(() => import('./screens/PostRunSummaryScreen')),
+  finale: lazy(() => import('./screens/CampaignFinaleScreen')),
   // Active game module is rendered via MODULE_SCREENS / GameRegistry.
   game: null,
   // Transition is owned by `TransitionManager`, which masks the screen.
@@ -63,6 +64,7 @@ function pickScreen(state: AppState): ScreenComp | null {
     case 'win':
     case 'loss':
     case 'summary':
+    case 'finale':
     case 'game':
     case 'transition':
       return SCREENS[state];

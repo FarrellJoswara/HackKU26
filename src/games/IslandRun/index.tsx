@@ -19,13 +19,13 @@ import {
   emptyAllocations,
   readAllocations,
   readNumber,
-  type BudgetCategoryId,
 } from '@/core/budgetTypes';
 import {
   applyIslandScenarioChoice,
   isIslandScenarioChoicePayload,
 } from '@/core/scenarios';
 import { CAMPAIGN_KEYS } from '@/core/campaign/campaignKeys';
+import { IslandHudYear } from './IslandHudYear';
 
 const FONTS_HREF =
   'https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Outfit:wght@400;500;600&display=swap';
@@ -53,30 +53,16 @@ export default function IslandRun() {
 
     let cleanup: () => void = () => {};
     try {
+      const { playerData: bootPd } = useAppStore.getState();
       cleanup = bootstrap({
-        // Always re-read the store so a Box edit between rolls flows
-        // into the next landing's tier copy.
-        getPlayerSnapshot: () => {
-          const { playerData } = useAppStore.getState();
-          const allocations = readAllocations(playerData) ?? emptyAllocations();
-          const annualSalary = readNumber(
-            playerData,
-            BOX_PLAYER_DATA_KEYS.annualSalary,
-            0,
-          );
-          const fundingRatioByCategory: Partial<Record<BudgetCategoryId, number>> = {};
-          if (annualSalary > 0) {
-            (Object.keys(allocations) as BudgetCategoryId[]).forEach((k) => {
-              fundingRatioByCategory[k] = (allocations[k] ?? 0) / annualSalary;
-            });
-          }
-          return { annualSalary, fundingRatioByCategory };
+        initialTotalHops: readNumber(bootPd, CAMPAIGN_KEYS.islandTotalHops, 0),
+        onTotalHopsPersist: ({ totalHops }) => {
+          useAppStore.getState().mergePlayerData({
+            [CAMPAIGN_KEYS.islandTotalHops]: totalHops,
+          });
         },
-        // Persist hop counter + emit campaign event. Bumping `campaign.year`
-        // is the campaign router's job (`initCampaign.ts`).
-        onLapComplete: ({ totalHops, laps }) => {
-          const { mergePlayerData } = useAppStore.getState();
-          mergePlayerData({
+        onYearEndAtStart: ({ totalHops, laps }) => {
+          useAppStore.getState().mergePlayerData({
             [CAMPAIGN_KEYS.islandTotalHops]: totalHops,
           });
           eventBus.emit('island:yearComplete', { year: laps + 1, totalHops });
@@ -141,7 +127,10 @@ export default function IslandRun() {
 
       <div id="hud" className="hud-bottle">
         <div className="hud-inner">
-          <h1 className="hud-title">Island Run</h1>
+          <div className="hud-title-row">
+            <h1 className="hud-title">Island Run</h1>
+            <IslandHudYear />
+          </div>
           <button id="roll-btn" type="button" className="btn-shell">
             <svg
               className="btn-icon"
@@ -271,6 +260,15 @@ export default function IslandRun() {
               id="landing-choice-b"
               className="btn-choice"
               data-choice="b"
+            >
+              <span className="btn-choice-label" data-role="label" />
+              <span className="btn-choice-outcome" data-role="outcome" />
+            </button>
+            <button
+              type="button"
+              id="landing-choice-c"
+              className="btn-choice hidden"
+              data-choice="c"
             >
               <span className="btn-choice-label" data-role="label" />
               <span className="btn-choice-outcome" data-role="outcome" />
