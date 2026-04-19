@@ -43,9 +43,25 @@ export default function TitleHubScreen(_props: UIProps<unknown>) {
 
   const handleContinue = () => {
     setPlayOpen(false);
+    // Land on the Box (budget) screen rather than jumping straight into
+    // Island Run. Why:
+    //
+    //   1. The Box visibly displays everything the persisted save
+    //      restores — current year, annual salary, high-interest debt,
+    //      every category allocation. That's the most convincing "your
+    //      previous game is back" UX, exactly what the user asked for.
+    //   2. The campaign router (`core/campaign/initCampaign.onBoxSubmit`)
+    //      already auto-routes Box → Island Run when the player
+    //      re-confirms, so resuming the active session from here is one
+    //      click away.
+    //   3. The soft `canEnterMapForCampaign` gate requires
+    //      `boxReadyForYear >= currentYear`. Going through the Box
+    //      satisfies that gate naturally; jumping straight to Island Run
+    //      would skip it and could leave the player on a stale gate
+    //      state in production builds.
     eventBus.emit('navigate:request', {
-      to: 'game',
-      module: GAME_IDS.islandRun,
+      to: 'budget',
+      module: null,
     });
   };
 
@@ -82,7 +98,8 @@ export default function TitleHubScreen(_props: UIProps<unknown>) {
               <div className="th-titleDivider" role="presentation" />
               <p className="th-eyebrow">Main menu</p>
               <p id="titleHubTagline" className="island-statusText th-subtitle mx-auto mt-2 max-w-md">
-                Waves, summer light, no school — just tides and one more roll. Press Play.
+                Balance the Box, roll the island path, and see how your budget survives the year.
+                Press Play.
               </p>
 
               <div className="th-btnRow mt-8 flex flex-col gap-3 sm:gap-3.5">

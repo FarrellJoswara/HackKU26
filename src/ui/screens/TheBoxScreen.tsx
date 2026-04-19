@@ -86,6 +86,7 @@ import { TitleHubDecor } from '@/ui/components/TitleHubDecor';
 import { useBoxValidation } from '@/ui/hooks/useBoxValidation';
 import {
   DEFAULT_DIFFICULTY,
+  PLAYER_KEYS,
   selectIslandRunDifficulty,
 } from '@/ui/menu/gameFlow';
 
@@ -273,6 +274,14 @@ export default function TheBoxScreen({ data }: UIProps<Record<string, unknown>>)
       [BOX_PLAYER_DATA_KEYS.boxAllocations]: payload.allocations,
       [BOX_PLAYER_DATA_KEYS.pendingCashToAllocate]: 0,
       boxBudgetSubmittedAt: Date.now(),
+      // Belt-and-suspenders: any successful Box submit means there is
+      // definitely a save in progress. Setting this here covers older
+      // saves that predate the `NewGameDifficultyScreen` fix and any
+      // future entry path that bypasses the difficulty picker (dev
+      // shortcuts, deep links, debug toggles). Once true, the next time
+      // the user opens the site the title hub's Continue button is
+      // enabled and resumes from this exact persisted state.
+      [PLAYER_KEYS.islandRunHasSave]: true,
     });
     validation.reset();
   };
