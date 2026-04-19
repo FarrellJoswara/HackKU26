@@ -22,8 +22,14 @@ export type AppState =
   | 'menu'
   /** Financial Freedom — "The Box" zero-based budgeting UI (GDD). */
   | 'budget'
+  /** DebtRunner — pre-run consequence briefing screen. */
+  | 'briefing'
   | 'game'
-  | 'transition';
+  | 'transition'
+  /** DebtRunner — endgame screens. */
+  | 'win'
+  | 'loss'
+  | 'summary';
 
 /**
  * Branded string used as a registry key. Modules (games & UI screens)
@@ -114,6 +120,13 @@ export interface EventMap {
    * Logic listens here; UI may also `mergePlayerData` for optimistic UX.
    */
   'box:budget:submit': BoxBudgetSubmitPayload;
+
+  /**
+   * Endless-runner style game finished. Emitted by the game module,
+   * consumed by `RunnerResultRouter` which stores a snapshot and routes
+   * to the win/loss screens.
+   */
+  'runner:finished': import('./runner/runnerTypes').RunnerFinishedPayload;
 }
 
 export type EventKey = keyof EventMap;

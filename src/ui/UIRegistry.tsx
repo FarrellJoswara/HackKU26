@@ -30,6 +30,12 @@ const SCREENS: Partial<Record<AppState, ScreenComp>> = {
   menu: lazy(() => import('./screens/MainMenu')),
   /** Financial Freedom — zero-based budgeting (GAME_DESIGN.md). */
   budget: lazy(() => import('./screens/TheBoxScreen')),
+  /** DebtRunner — pre-run consequences briefing. */
+  briefing: lazy(() => import('./screens/BudgetBriefingScreen')),
+  /** DebtRunner — endgame screens. */
+  win: lazy(() => import('./screens/WinScreen')),
+  loss: lazy(() => import('./screens/LossScreen')),
+  summary: lazy(() => import('./screens/PostRunSummaryScreen')),
 };
 
 /**

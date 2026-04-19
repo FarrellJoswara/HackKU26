@@ -5,11 +5,12 @@
  * TODO: design the real menu. Add settings, leaderboard, credits, etc.
  */
 
-import { Box, LayoutGrid, Layers, Palmtree } from 'lucide-react';
+import { Box, LayoutGrid, Layers, Palmtree, Footprints } from 'lucide-react';
 import { eventBus } from '@/core/events';
 import { GAME_IDS } from '@/games/registry';
 import { useAppStore } from '@/core/store';
 import type { UIProps } from '@/core/types';
+import { MOCK_BUDGET_PROFILE } from '@/core/finance/mockBudgetProfile';
 
 export default function MainMenu(_props: UIProps<unknown>) {
   const mergePlayerData = useAppStore((s) => s.mergePlayerData);
@@ -71,6 +72,16 @@ export default function MainMenu(_props: UIProps<unknown>) {
             >
               <Palmtree className="size-4" />
               Island Run
+            </button>
+            <button
+              className="island-btnShell"
+              onClick={() => {
+                mergePlayerData({ 'runner.profile': MOCK_BUDGET_PROFILE });
+                eventBus.emit('navigate:request', { to: 'briefing', module: null });
+              }}
+            >
+              <Footprints className="size-4" />
+              Debt Runner (test)
             </button>
           </div>
 
