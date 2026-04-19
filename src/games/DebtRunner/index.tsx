@@ -18,7 +18,8 @@ const RIGHT = new Vector3(1, 0, 0);
 const TILE_SIZE = 8;
 const TURN_INPUT_BUFFER_SECONDS = 0.5;
 const BASE_SPEED = 10;
-const PLAYER_LANE: -1 | 0 | 1 = 0;
+/** Lateral offset for lane -1 / 0 / +1; must match obstacle mesh `obs.lane * LANE_SPACING`. */
+const LANE_SPACING = 2.2;
 
 function createEmptyHud(maxLives: number): RunnerHudState {
   return {
@@ -68,6 +69,8 @@ export default function DebtRunnerGame(_props: GameProps) {
   const pendingTurn = useRef<{ direction: 'left' | 'right'; atSeconds: number } | null>(null);
   const consumedTurnTile = useRef<string | null>(null);
   const wrongTurnPenaltyTileId = useRef<string | null>(null);
+  const playerLaneRef = useRef<-1 | 0 | 1>(0);
+  const jumpingRef = useRef(false);
 
   useEffect(() => {
     hudRef.current = initialHud;
@@ -94,24 +97,41 @@ export default function DebtRunnerGame(_props: GameProps) {
       }
       if (pauseRef.current) return;
 
-      if (event.key === 'ArrowLeft') {
+      const goLeft = () => {
+        if (!event.repeat) {
+          playerLaneRef.current = Math.max(-1, playerLaneRef.current - 1) as -1 | 0 | 1;
+        }
         pendingTurn.current = { direction: 'left', atSeconds: elapsed.current };
-      }
-      if (event.key === 'ArrowRight') {
+      };
+      const goRight = () => {
+        if (!event.repeat) {
+          playerLaneRef.current = Math.min(1, playerLaneRef.current + 1) as -1 | 0 | 1;
+        }
         pendingTurn.current = { direction: 'right', atSeconds: elapsed.current };
-      }
-      if (event.code === 'Space') {
+      };
+
+      if (event.code === 'ArrowLeft' || event.code === 'KeyD') {
         event.preventDefault();
-        if (!jumping) {
+        goLeft();
+      } else if (event.code === 'ArrowRight' || event.code === 'KeyA') {
+        event.preventDefault();
+        goRight();
+      } else if (event.code === 'Space') {
+        event.preventDefault();
+        if (!jumpingRef.current) {
+          jumpingRef.current = true;
           setJumping(true);
-          setTimeout(() => setJumping(false), 460);
+          window.setTimeout(() => {
+            jumpingRef.current = false;
+            setJumping(false);
+          }, 460);
         }
       }
     };
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [jumping]);
+  }, []);
 
   const finishRun = (payload: Omit<RunnerFinishedPayload, 'moduleId'>) => {
     if (finishedRef.current) return;
@@ -159,7 +179,7 @@ export default function DebtRunnerGame(_props: GameProps) {
     const offset = RIGHT.clone()
       .crossVectors(new Vector3(0, 1, 0), forward)
       .normalize()
-      .multiplyScalar(0);
+      .multiplyScalar(playerLaneRef.current * LANE_SPACING);
     const t = tileProgress.current / TILE_SIZE;
     const pos = new Vector3(
       activeTile.x + (nextTile.x - activeTile.x) * t + offset.x,
@@ -215,7 +235,7 @@ export default function DebtRunnerGame(_props: GameProps) {
     // Obstacle collision checks.
     if (t > 0.35 && t < 0.7 && hitLock.current <= 0) {
       for (const obstacle of activeTile.obstacles) {
-        if (obstacle.lane !== PLAYER_LANE) continue;
+        if (obstacle.lane !== playerLaneRef.current) continue;
         const blockedLow = obstacle.kind === 'low' && !jumping;
         const blockedHigh = obstacle.kind === 'high' && !jumping;
         const blockedSolid = obstacle.kind === 'block' || obstacle.kind === 'hazard';
@@ -396,7 +416,7 @@ export default function DebtRunnerGame(_props: GameProps) {
               <meshStandardMaterial color="#9a6b3f" roughness={0.8} />
             </mesh>
             {tile.obstacles.map((obs, index) => (
-              <mesh key={`${tile.id}-${obs.label}-${index}`} position={[obs.lane * 2.2, 0.8, 0]}>
+              <mesh key={`${tile.id}-${obs.label}-${index}`} position={[obs.lane * LANE_SPACING, 0.8, 0]}>
                 <boxGeometry args={[1.2, obs.kind === 'low' ? 0.7 : 1.7, 1.2]} />
                 <meshStandardMaterial color={obstacleColor} />
               </mesh>

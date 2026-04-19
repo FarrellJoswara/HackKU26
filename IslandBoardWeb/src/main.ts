@@ -21,9 +21,15 @@ const TILE_Y = 0.1;
 const BANANA_HOP_SEC = 0.42;
 /** Extra pause after the last hop before the tip dialog opens (ms). */
 const LANDING_AFTER_BANANA_MS = 480;
-/** HUD dice tumble before showing result (ms). */
-const DICE_TUMBLE_MS = 520;
 const DICE_SNAP_SEC = 0.38;
+/** Mario-Party style center dice block: pop in, tumble, snap, dwell, pop out. */
+const DICE_POP_IN_SEC = 0.28;
+const DICE_CENTER_TUMBLE_SEC = 1.0;
+const DICE_CENTER_DWELL_SEC = 0.6;
+const DICE_POP_OUT_SEC = 0.32;
+/** Camera-space placement + size of the center dice block. */
+const DICE_CENTER_POS = new THREE.Vector3(0, -0.35, -7.5);
+const DICE_CENTER_SCALE = 1.35;
 /** World die on sand: toss from banana toward the lagoon, then snap to the roll. */
 const WORLD_DICE_TUMBLE_SEC = 1.02;
 const WORLD_DICE_SNAP_SEC = 0.48;
@@ -239,8 +245,9 @@ function main() {
 
   const diceViewRoot = new THREE.Group();
   camera.add(diceViewRoot);
-  diceViewRoot.position.set(5.5, -3.7, -14.2);
-  diceViewRoot.scale.setScalar(0.42);
+  diceViewRoot.position.copy(DICE_CENTER_POS);
+  diceViewRoot.scale.setScalar(0);
+  diceViewRoot.visible = false;
   let diceModel: THREE.Group | null = null;
   let dicePendingFace: number | null = null;
   let diceMode: 'idle' | 'tumble' | 'snap' = 'idle';
@@ -248,12 +255,14 @@ function main() {
   const diceQA = new THREE.Quaternion();
   const diceQB = new THREE.Quaternion();
   const diceEu = new THREE.Euler(0, 0, 0, 'XYZ');
+  /** 0 = hidden, 1 = fully popped in. Drives scale/visibility of the center dice. */
+  let dicePopT = 0;
+  let dicePopTarget = 0;
 
   const worldDiceGroup = new THREE.Group();
   worldDiceGroup.renderOrder = 5;
   scene.add(worldDiceGroup);
   let worldDiceModel: THREE.Group | null = null;
-  let useWorldDice = false;
   let worldDiceReady = false;
   let worldDiceLandY = 0.12;
   let worldDiceStartX = 0;
@@ -302,17 +311,30 @@ function main() {
     diceSnapT0 = clock.elapsedTime;
   }
   function diceUpdate(dt: number, elapsed: number) {
-    if (!diceModel) return;
-    if (diceMode === 'tumble') {
-      diceModel.rotation.x += dt * (10 + Math.sin(elapsed * 31) * 4);
-      diceModel.rotation.y += dt * 14;
-      diceModel.rotation.z += dt * (8 + Math.cos(elapsed * 19) * 3);
-    } else if (diceMode === 'snap') {
-      const u = Math.min(1, (elapsed - diceSnapT0) / DICE_SNAP_SEC);
-      const k = easeOutCubic(u);
-      diceModel.quaternion.copy(diceQA).slerp(diceQB, k);
-      if (u >= 1) diceMode = 'idle';
+    if (diceModel) {
+      if (diceMode === 'tumble') {
+        diceModel.rotation.x += dt * (10 + Math.sin(elapsed * 31) * 4);
+        diceModel.rotation.y += dt * 14;
+        diceModel.rotation.z += dt * (8 + Math.cos(elapsed * 19) * 3);
+      } else if (diceMode === 'snap') {
+        const u = Math.min(1, (elapsed - diceSnapT0) / DICE_SNAP_SEC);
+        const k = easeOutCubic(u);
+        diceModel.quaternion.copy(diceQA).slerp(diceQB, k);
+        if (u >= 1) diceMode = 'idle';
+      }
     }
+    // Mario-Party center pop: tween dicePopT toward target, derive scale + bob.
+    const popDur = dicePopTarget > dicePopT ? DICE_POP_IN_SEC : DICE_POP_OUT_SEC;
+    const step = dt / Math.max(0.0001, popDur);
+    if (dicePopTarget > dicePopT) dicePopT = Math.min(dicePopTarget, dicePopT + step);
+    else if (dicePopTarget < dicePopT) dicePopT = Math.max(dicePopTarget, dicePopT - step);
+    const k = easeOutCubic(dicePopT);
+    diceViewRoot.scale.setScalar(DICE_CENTER_SCALE * k);
+    diceViewRoot.visible = k > 0.001;
+    // Subtle hover + slow spin around Y while visible — feels like a floating block.
+    diceViewRoot.position.x = DICE_CENTER_POS.x;
+    diceViewRoot.position.y = DICE_CENTER_POS.y + Math.sin(elapsed * 2.4) * 0.06 * k;
+    diceViewRoot.position.z = DICE_CENTER_POS.z;
   }
 
   void (async () => {
@@ -352,7 +374,6 @@ function main() {
       worldDiceLandY = 0.04 + scaledH * 0.5 + 0.03;
       worldDiceGroup.position.set(0, worldDiceLandY, 0);
       worldDiceGroup.visible = false;
-      useWorldDice = true;
       worldDiceReady = true;
     } catch (e) {
       console.warn('[Island] dice model failed', e);
@@ -703,6 +724,9 @@ function main() {
   }
   highlightSquare();
 
+  // Kept available for future use (e.g. landing-celebration toss). The Mario-Party
+  // style center pop in `rollBtn`'s handler intentionally does not call it.
+  void worldDiceBeginRoll;
   function worldDiceBeginRoll(roll: number) {
     if (!worldDiceModel || !worldDiceReady) return;
     worldDiceRollValue = roll;
@@ -919,7 +943,7 @@ function main() {
 
   rollBtn?.addEventListener('click', () => {
     if (rolling) return;
-    if (!worldDiceReady) {
+    if (!diceModel) {
       statusEl!.textContent = 'Loading 3D dice... try again in a moment.';
       return;
     }
@@ -929,28 +953,28 @@ function main() {
     diceWrap?.classList.add('dice-rolling');
     const roll = 1 + Math.floor(Math.random() * 6);
 
-    if (useWorldDice && worldDiceReady) {
-      diceBeginTumble();
-      worldDiceBeginRoll(roll);
-      window.setTimeout(() => {
-        diceFace!.textContent = String(roll);
-        diceReadout!.textContent = `Last roll: ${roll}`;
-        diceSettleToFace(roll);
-      }, WORLD_DICE_TUMBLE_SEC * 1000);
-      const totalMs =
-        (WORLD_DICE_TUMBLE_SEC + WORLD_DICE_SNAP_SEC + WORLD_DICE_DWELL_SEC) * 1000;
-      window.setTimeout(() => {
-        finishRollAfterAnimation(roll);
-      }, totalMs);
-    } else {
-      diceBeginTumble();
-      window.setTimeout(() => {
-        diceFace!.textContent = String(roll);
-        diceReadout!.textContent = `Last roll: ${roll}`;
-        diceSettleToFace(roll);
-        finishRollAfterAnimation(roll);
-      }, DICE_TUMBLE_MS);
-    }
+    // Mario-Party style: center dice block pops in, tumbles, snaps to a face,
+    // dwells so the player can read it, then pops out.
+    dicePopTarget = 1;
+    diceBeginTumble();
+
+    const tumbleMs = DICE_CENTER_TUMBLE_SEC * 1000;
+    const snapMs = DICE_SNAP_SEC * 1000;
+    const dwellMs = DICE_CENTER_DWELL_SEC * 1000;
+
+    window.setTimeout(() => {
+      diceFace!.textContent = String(roll);
+      diceReadout!.textContent = `Last roll: ${roll}`;
+      diceSettleToFace(roll);
+    }, tumbleMs);
+
+    window.setTimeout(() => {
+      dicePopTarget = 0;
+    }, tumbleMs + snapMs + dwellMs);
+
+    window.setTimeout(() => {
+      finishRollAfterAnimation(roll);
+    }, tumbleMs + snapMs + dwellMs + DICE_POP_OUT_SEC * 1000);
   });
 
   const qToggle = document.getElementById('quality-toggle') as HTMLInputElement | null;
