@@ -18,10 +18,12 @@ export const GAME_IDS = {
   template: moduleId('template'),
   /** Island Run — static build in `public/island-board/`, mounted via `IslandRunShell`. */
   islandRun: moduleId('islandRun'),
+  investingBirds: moduleId('investingBirds'),
 } as const;
 
 export const GAME_MODULES: Record<ModuleId, LazyGame> = {
   [GAME_IDS.template]: lazy(() => import('./TemplateGame')),
+  [GAME_IDS.investingBirds]: lazy(() => import('./InvestingBirds')),
   // TODO: add your lazy imports here
   // [GAME_IDS.catRun]: lazy(() => import('./CatRun')),
 };

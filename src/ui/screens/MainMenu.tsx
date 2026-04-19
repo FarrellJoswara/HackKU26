@@ -5,7 +5,7 @@
  * TODO: design the real menu. Add settings, leaderboard, credits, etc.
  */
 
-import { Box, Palmtree } from 'lucide-react';
+import { Box, Palmtree, Target } from 'lucide-react';
 import { Button } from '../components/Button';
 import { eventBus } from '@/core/events';
 import { GAME_IDS } from '@/games/registry';
@@ -41,6 +41,17 @@ export default function MainMenu(_props: UIProps<unknown>) {
           }
         >
           Island Run
+        </Button>
+        <Button
+          leadingIcon={<Target className="size-4" />}
+          onClick={() =>
+            eventBus.emit('navigate:request', {
+              to: 'game',
+              module: GAME_IDS.investingBirds,
+            })
+          }
+        >
+          Investing Birds (MVP)
         </Button>
       </div>
 
