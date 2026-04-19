@@ -102,8 +102,7 @@ I learned how to structure shared game state and progression systems so player d
 I learned how to think about blockchain integration in a much more practical way because even a simple idea like posting the game results to Solana allows you to have proof of ownership of your progress in building your financial literacy. I also got to learn how a blockchain ecosystem like Solana could support progression, persistence, or ownership without feeling forced. It was also a learning experience because I got to figure out where Web3 ideas actually add value to a game instead of just being added on.
 
 ### Sneha
-**I learned how to handle 3D asset integration and scene composition, from bringing in models and textures to arranging props in a way that made the world feel cohesive and readable. This was challenging because it was not just about dropping assets into the scene, it was also about learning how composition, spacing, and visual balance affect the environment and if the in game physics actually make sense for something that looks as simple as angry birds.
-**---
+I learned how to handle 3D asset integration and scene composition, from bringing in models and textures to arranging props in a way that made the world feel cohesive and readable. This was challenging because it was not just about dropping assets into the scene, it was also about learning how composition, spacing, and visual balance affect the environment and if the in game physics actually make sense for something that looks as simple as angry birds.
 
 ## 🚀 Setup
 
