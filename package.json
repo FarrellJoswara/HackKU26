@@ -15,6 +15,7 @@
     "@react-three/fiber": "^8.17.10",
     "howler": "^2.2.4",
     "lucide-react": "^0.460.0",
+    "planck": "^1.4.2",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "three": "^0.169.0",

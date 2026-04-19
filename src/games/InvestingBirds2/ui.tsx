@@ -6,14 +6,12 @@ import {
   HelpCircle,
   Pause,
   Play,
-  RotateCcw,
   Settings2,
   Shield,
   Sparkles,
   Star,
   Target,
   TrendingUp,
-  Trophy,
   X,
   Zap,
 } from 'lucide-react';
@@ -23,9 +21,14 @@ import {
   categoryAccent,
   categoryLabel,
   CATEGORY_META,
-  multiplierFromShare,
+  multiplierForType,
+  NOTIONAL_PORTFOLIO_BASE,
+  portfolioReturnPct,
   shareOf,
+  SLICE_RETURN_BOUNDS,
+  sliceReturnRangeLabel,
   sumAllocation,
+  sumPortfolioValue,
   towerHeightFromShare,
 } from './config';
 import type {
@@ -52,7 +55,7 @@ interface InvestingBirdsOverlayProps {
   score: number;
   scoreByType: Record<LevelType, number>;
   outcome: 'win' | 'loss' | null;
-  roundOutcome: 'cleared' | 'survived' | null;
+  roundOutcome: 'cleared' | 'failed' | null;
   elapsedSec: number;
   scoreFloaters: ScoreFloater[];
   damageFloaters: DamageFloater[];
@@ -63,7 +66,14 @@ interface InvestingBirdsOverlayProps {
   paused: boolean;
   settingsOpen: boolean;
   settings: Settings;
-  bestScore: number | null;
+  initialPortfolioTotal: number;
+  investmentValueByType: Record<LevelType, number>;
+  lastRoundAppliedReturnPct: number | null;
+  roundStartBlockCount: number;
+  /** Same source as `ROUND_END` payload: `sim.scoredBlocks.size` (portfolio return fraction). */
+  simScoredBlockCount: number;
+  /** Sum of max HP at tower spawn — keeps the bar from jumping when blocks are removed. */
+  roundStartTotalMaxHealth: number;
   blocks: Block[];
   pullRatio: number;
   showAimHint: boolean;
@@ -73,7 +83,8 @@ interface InvestingBirdsOverlayProps {
   onTogglePause: () => void;
   onOpenSettings: (open: boolean) => void;
   onUpdateSettings: (patch: Partial<Settings>) => void;
-  onRetryRound: () => void;
+  /** V2: convert world coords to CSS (left, top) strings for floaters. */
+  projectWorld: (worldX: number, worldY: number) => { leftPx: number; topPx: number };
 }
 
 const btnPrimary =
@@ -404,16 +415,45 @@ function computeStars(birdsRemaining: number, birdsForRound: number): 0 | 1 | 2 
   return 1;
 }
 
-/** Letter grade from final score vs a par value (G12). */
-function computeLetterGrade(score: number, levels: LevelDef[]): string {
-  if (levels.length === 0) return 'F';
-  const par = levels.reduce((acc, l) => acc + 1200 * l.multiplier, 0);
-  const ratio = score / par;
-  if (ratio >= 1.3) return 'S';
-  if (ratio >= 1.0) return 'A';
-  if (ratio >= 0.7) return 'B';
-  if (ratio >= 0.4) return 'C';
+/** Letter grade from final portfolio vs starting notional (G12). */
+function computeLetterGrade(score: number, initialPortfolio: number): string {
+  if (initialPortfolio <= 0) return 'F';
+  const ratio = score / initialPortfolio;
+  if (ratio >= 1.12) return 'S';
+  if (ratio >= 1.05) return 'A';
+  if (ratio >= 1.0) return 'B';
+  if (ratio >= 0.95) return 'C';
   return 'D';
+}
+
+function normalizeAngle(rad: number): number {
+  let r = rad % (Math.PI * 2);
+  if (r > Math.PI) r -= Math.PI * 2;
+  if (r < -Math.PI) r += Math.PI * 2;
+  return r;
+}
+
+function isSettledGroundDebris(b: Block): boolean {
+  const bottom = b.position.y - b.height / 2;
+  const grounded = bottom <= 0.08;
+  const settled = b.velocity.lengthSq() < 0.08 && !b.falling;
+  const visiblyFallen =
+    Math.abs(normalizeAngle(b.rotation)) > 0.45 ||
+    b.initialY - b.position.y > b.height * 0.28;
+  return grounded && settled && visiblyFallen;
+}
+
+function riskLabel(type: LevelType): string {
+  switch (type) {
+    case 'bonds':
+      return 'stable';
+    case 'etfs':
+      return 'steady';
+    case 'stocks':
+      return 'high risk';
+    case 'crypto':
+      return 'volatile';
+  }
 }
 
 export function InvestingBirdsOverlay(props: InvestingBirdsOverlayProps) {
@@ -439,7 +479,12 @@ export function InvestingBirdsOverlay(props: InvestingBirdsOverlayProps) {
     paused,
     settingsOpen,
     settings,
-    bestScore,
+    initialPortfolioTotal,
+    investmentValueByType,
+    lastRoundAppliedReturnPct,
+    roundStartBlockCount,
+    simScoredBlockCount,
+    roundStartTotalMaxHealth,
     blocks,
     pullRatio,
     showAimHint,
@@ -449,13 +494,11 @@ export function InvestingBirdsOverlay(props: InvestingBirdsOverlayProps) {
     onTogglePause,
     onOpenSettings,
     onUpdateSettings,
-    onRetryRound,
   } = props;
 
   const totalAllocation = sumAllocation(allocation);
   const accent = currentLevel ? categoryAccent(currentLevel.type) : '#6366f1';
   const accentSoft = accent + '22';
-  const tweenedScore = useTweenedNumber(score);
 
   const [viewportW, setViewportW] = useState(() =>
     typeof window !== 'undefined' ? window.innerWidth : 1024,
@@ -485,36 +528,37 @@ export function InvestingBirdsOverlay(props: InvestingBirdsOverlayProps) {
 
   const previewRows = useMemo(() => {
     const types: LevelType[] = ['stocks', 'etfs', 'bonds', 'crypto'];
+    let roundIndex = 0;
     return types
       .map((t) => ({ type: t, share: shareOf(allocation, t) }))
       .filter((r) => r.share > 0)
       .map((r) => ({
         ...r,
-        multiplier: multiplierFromShare(r.share),
+        multiplier: multiplierForType(r.type, roundIndex++, r.share),
         birds: birdsFromShare(r.share),
         height: towerHeightFromShare(r.share),
         label: categoryLabel(r.type),
       }));
   }, [allocation]);
 
-  // Tower readouts — toppled|knockedOff|shattered count toward "cleared" (C8).
+  // Tower readouts: settled ground debris also counts as cleared so players
+  // don't need to clean up flat rubble to finish a tower.
   const totalBlocks = blocks.length;
   const clearedBlocks = blocks.filter(
-    (b) => b.knockedOff || b.toppled || b.shattered,
+    (b) => b.knockedOff || b.toppled || b.shattered || isSettledGroundDebris(b),
   ).length;
-  const healthPct = totalBlocks > 0 ? 1 - clearedBlocks / totalBlocks : 1;
-  // U17: true HP% across still-standing blocks (includes chip damage).
-  const standingHpPct = useMemo(() => {
-    if (totalBlocks === 0) return 1;
-    let sum = 0;
-    let max = 0;
+  const activeBlocks = Math.max(0, totalBlocks - clearedBlocks);
+  // U17: HP bar uses round-start total max as denominator so removing a damaged
+  // block never makes the *percentage* go up (only down as damage/removals accrue).
+  const towerHpPct = useMemo(() => {
+    if (roundStartTotalMaxHealth <= 0) return 1;
+    let remainingHp = 0;
     for (const b of blocks) {
-      if (b.knockedOff || b.toppled || b.shattered) continue;
-      sum += Math.max(0, b.health);
-      max += b.maxHealth;
+      if (b.knockedOff || b.toppled || b.shattered || isSettledGroundDebris(b)) continue;
+      remainingHp += Math.max(0, b.health);
     }
-    return max > 0 ? sum / max : 0;
-  }, [blocks, totalBlocks]);
+    return Math.max(0, Math.min(1, remainingHp / roundStartTotalMaxHealth));
+  }, [blocks, roundStartTotalMaxHealth]);
 
   const vignetteAge =
     lastHeavyHitAtSec != null ? elapsedSec - lastHeavyHitAtSec : 999;
@@ -605,6 +649,43 @@ export function InvestingBirdsOverlay(props: InvestingBirdsOverlayProps) {
   }
 
   const cbAttr = settings.colorblind ? { 'data-cb': '1' } : {};
+  const towerBlockDenom = roundStartBlockCount > 0 ? roundStartBlockCount : totalBlocks;
+
+  const livePortfolioReturnPct = useMemo(() => {
+    if (initialPortfolioTotal <= 0) return 0;
+    if (state === 'PLAYING' && currentLevel && towerBlockDenom > 0) {
+      // Must match `ROUND_END` in fsm + SimDriver: `min(roundStart, sim.scoredBlocks.size) / roundStart`.
+      // Do not use `clearedBlocks` here — scored blocks stay counted after pruned shards leave `blocks[]`.
+      const clearedForReturn = Math.min(towerBlockDenom, simScoredBlockCount);
+      const frac =
+        towerBlockDenom > 0 ? Math.min(1, Math.max(0, clearedForReturn / towerBlockDenom)) : 0;
+      const { low, high } = SLICE_RETURN_BOUNDS[currentLevel.type];
+      const appliedReturnPct = portfolioReturnPct(frac, low, high);
+      const nextInv = { ...investmentValueByType };
+      nextInv[currentLevel.type] *= 1 + appliedReturnPct;
+      return (sumPortfolioValue(nextInv) / initialPortfolioTotal - 1) * 100;
+    }
+    return (score / initialPortfolioTotal - 1) * 100;
+  }, [
+    state,
+    currentLevel,
+    towerBlockDenom,
+    simScoredBlockCount,
+    investmentValueByType,
+    initialPortfolioTotal,
+    score,
+  ]);
+
+  const returnColor =
+    livePortfolioReturnPct > 0.01
+      ? 'text-emerald-300'
+      : livePortfolioReturnPct < -0.01
+        ? 'text-rose-300'
+        : 'text-white/80';
+
+  const projectedGainDollars = Math.round(
+    (initialPortfolioTotal * livePortfolioReturnPct) / 100,
+  );
 
   return (
     <div
@@ -661,45 +742,77 @@ export function InvestingBirdsOverlay(props: InvestingBirdsOverlayProps) {
           Rotate your phone sideways for the best experience.
         </div>
       ) : null}
+      {state === 'PLAYING' && birdsRemaining === 0 ? (
+        <div className="pointer-events-none absolute inset-x-4 top-24 z-40 rounded-2xl border border-rose-300/55 bg-rose-500/25 px-4 py-2 text-center text-sm font-semibold text-rose-50 backdrop-blur">
+          Out of birds. Resolving tower state...
+        </div>
+      ) : null}
 
       {/* ===== Unified Top Bar (C6 / C7) ===== */}
       {state !== 'ALLOCATE' ? (
         <div
-          className="pointer-events-none absolute left-0 right-0 top-0 z-30 flex items-start gap-2 px-3 pt-3"
+          className="pointer-events-none absolute left-0 right-0 top-0 z-30 flex w-full min-w-0 max-w-full items-start gap-2 px-4 pt-5 sm:gap-3"
           style={{
-            paddingLeft: 'max(10px, env(safe-area-inset-left, 0px))',
-            paddingRight: 'max(10px, env(safe-area-inset-right, 0px))',
+            paddingLeft: 'max(16px, env(safe-area-inset-left, 0px))',
+            paddingRight: 'max(16px, env(safe-area-inset-right, 0px))',
           }}
         >
-          {/* Left group: score + birds + combo */}
+          {/* Left group: portfolio + birds + combo */}
           <div className="pointer-events-auto flex min-w-0 shrink items-center gap-2">
             <div
-              className="flex items-center gap-2 rounded-2xl border border-white/25 px-3 py-1.5 shadow-lg backdrop-blur-md"
+              className="flex min-w-0 flex-col gap-0.5 rounded-2xl border border-white/25 px-3.5 py-2 shadow-lg backdrop-blur-md"
               style={{
                 background: `linear-gradient(90deg, ${accentSoft}, rgba(15,23,42,0.85))`,
               }}
             >
-              <Trophy className="size-5 shrink-0 text-amber-300" />
-              <span
-                className="font-extrabold tabular-nums leading-none tracking-tight"
-                style={{
-                  fontSize: isMobile ? '1.1rem' : 'clamp(1.15rem, 2.2vw, 1.7rem)',
-                }}
-              >
-                {tweenedScore.toLocaleString()}
-              </span>
-              {bestScore != null && !isMobile ? (
-                <span className="ml-1 rounded bg-black/30 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white/75">
-                  Best {bestScore.toLocaleString()}
+              <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0">
+                <span className="text-[10px] font-bold uppercase tracking-wide text-white/65">
+                  Invested
                 </span>
-              ) : null}
+                <span
+                  className="font-extrabold tabular-nums leading-none tracking-tight text-white"
+                  style={{
+                    fontSize: isMobile ? '1.1rem' : 'clamp(1.15rem, 2vw, 1.55rem)',
+                  }}
+                >
+                  ${initialPortfolioTotal.toLocaleString()}
+                </span>
+              </div>
+              <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0">
+                <span className="text-[10px] font-bold uppercase tracking-wide text-white/65">
+                  Return
+                </span>
+                <span
+                  className={`font-extrabold tabular-nums leading-none tracking-tight ${returnColor}`}
+                  style={{
+                    fontSize: isMobile ? '1rem' : 'clamp(1.05rem, 1.7vw, 1.35rem)',
+                  }}
+                >
+                  {livePortfolioReturnPct >= 0 ? '+' : ''}
+                  {livePortfolioReturnPct.toFixed(2)}%
+                </span>
+              </div>
+              <div className="mt-0.5 flex flex-wrap items-baseline gap-x-2 gap-y-0 border-t border-white/10 pt-1">
+                <span className="text-[10px] font-bold uppercase tracking-wide text-white/65">
+                  Projected
+                </span>
+                <span
+                  className={`font-extrabold tabular-nums leading-none tracking-tight ${returnColor}`}
+                  style={{
+                    fontSize: isMobile ? '0.95rem' : 'clamp(1rem, 1.5vw, 1.2rem)',
+                  }}
+                >
+                  {projectedGainDollars < 0 ? '-' : '+'}$
+                  {Math.abs(projectedGainDollars).toLocaleString()}
+                </span>
+              </div>
             </div>
 
             {/* Birds */}
-            <div className="flex items-center gap-1 rounded-2xl border border-white/25 bg-slate-950/80 px-2.5 py-1.5 shadow backdrop-blur-md">
-              <Heart className="size-4 fill-red-500 text-red-500" />
+            <div className="flex items-center gap-1.5 rounded-2xl border border-white/25 bg-slate-950/80 px-3 py-2 shadow backdrop-blur-md">
+              <Heart className="size-4.5 fill-red-500 text-red-500" />
               {isMobile ? (
-                <span className="text-xs font-bold tabular-nums">{birdsRemaining}</span>
+                <span className="text-sm font-bold tabular-nums">{birdsRemaining}</span>
               ) : (
                 <div className="flex items-center gap-0.5">
                   {Array.from({ length: Math.min(birdsRemaining, 8) }).map((_, i) => (
@@ -743,37 +856,47 @@ export function InvestingBirdsOverlay(props: InvestingBirdsOverlayProps) {
             ) : null}
           </div>
 
-          {/* Center group: tower HP — takes remaining space. */}
+          {/* Center group: tower HP — takes remaining space (min-w-0 so flex can shrink). */}
           {state === 'PLAYING' && totalBlocks > 0 ? (
-            <div
-              className="pointer-events-none mx-1 flex min-w-0 flex-1 flex-col items-center rounded-full border border-white/25 bg-slate-950/75 p-1 shadow-lg backdrop-blur-md"
-              style={{ maxWidth: 560 }}
-            >
-              <div className="relative h-2.5 w-full overflow-hidden rounded-full bg-black/40">
-                <div
-                  className="absolute inset-y-0 left-0 rounded-full transition-[width] duration-200 ease-out"
-                  style={{
-                    width: `${Math.max(0, Math.min(1, healthPct)) * 100}%`,
-                    background: `linear-gradient(90deg, ${accent}, #ffffff)`,
-                    boxShadow: `0 0 12px ${accent}aa`,
-                  }}
-                />
-              </div>
-              <div className="mt-0.5 flex w-full items-center justify-between gap-2 px-1 text-[10px] font-semibold uppercase tracking-wide text-white/85">
-                <span className="inline-flex items-center gap-1 truncate">
-                  <CategoryIcon type={currentLevel?.type ?? 'stocks'} className="size-3" />
-                  Tower
-                </span>
-                <span className="tabular-nums">
-                  {clearedBlocks}/{totalBlocks} cleared
-                  <span className="ml-1.5 rounded bg-black/40 px-1 py-0.5 text-[9px] font-bold">
-                    HP {Math.round(standingHpPct * 100)}%
+            <div className="min-w-0 flex-1 overflow-hidden">
+              <div
+                className="pointer-events-none mx-auto flex w-full min-w-0 max-w-full flex-col rounded-2xl border border-white/25 bg-slate-950/75 px-2 py-1.5 shadow-lg backdrop-blur-md sm:max-w-[min(100%,42rem)]"
+              >
+                <div className="relative h-2.5 w-full min-w-0 max-w-full overflow-hidden rounded-full bg-black/40 sm:h-3">
+                  <div
+                    className="absolute inset-y-0 left-0 max-w-full rounded-full transition-[width] duration-200 ease-out"
+                    style={{
+                      width: `${towerHpPct * 100}%`,
+                      background: `linear-gradient(90deg, ${accent}, #ffffff)`,
+                      boxShadow: `0 0 10px ${accent}99`,
+                    }}
+                  />
+                </div>
+                <div className="mt-1.5 flex w-full min-w-0 flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
+                  <span className="inline-flex min-w-0 shrink items-center gap-1 truncate text-[10px] font-semibold uppercase tracking-wide text-white/90 sm:text-[11px]">
+                    <CategoryIcon type={currentLevel?.type ?? 'stocks'} className="size-3 shrink-0" />
+                    Tower
                   </span>
-                </span>
+                  <span className="shrink-0 text-right text-[10px] font-semibold tabular-nums tracking-wide text-white/90 sm:text-[11px]">
+                    {activeBlocks} active · {clearedBlocks}/{totalBlocks}
+                    <span className="ml-1.5 inline-block rounded bg-black/40 px-1.5 py-0.5 text-[9px] font-bold sm:text-[10px]">
+                      HP {Math.round(towerHpPct * 100)}%
+                    </span>
+                  </span>
+                </div>
+                    <div className="mt-1 line-clamp-2 text-center text-[9px] font-medium leading-snug tracking-wide text-white/75 sm:text-left sm:text-[10px]">
+                      Return range (this slice):{' '}
+                      <span className="tabular-nums text-white/95">
+                        {currentLevel ? sliceReturnRangeLabel(currentLevel.type) : '—'}
+                      </span>
+                  {isMobile ? null : (
+                    <span className="text-white/60"> — scales with blocks cleared</span>
+                  )}
+                </div>
               </div>
             </div>
           ) : (
-            <div className="flex-1" />
+            <div className="min-w-0 flex-1" />
           )}
 
           {/* Right group: round + pause */}
@@ -781,7 +904,7 @@ export function InvestingBirdsOverlay(props: InvestingBirdsOverlayProps) {
             <div className="pointer-events-auto flex shrink-0 items-center gap-2">
               <div
                 className={
-                  'flex items-center gap-2 rounded-2xl border border-white/25 px-3 py-1.5 shadow-lg backdrop-blur-md ' +
+                  'pointer-events-auto flex shrink-0 items-center gap-2 rounded-2xl border border-white/25 px-3 py-1.5 shadow-lg backdrop-blur-md ' +
                   (isMobile ? 'text-xs' : 'text-sm')
                 }
                 style={{
@@ -813,7 +936,7 @@ export function InvestingBirdsOverlay(props: InvestingBirdsOverlayProps) {
                 ) : isTablet ? (
                   <div className="flex flex-col leading-tight">
                     <span className="text-[10px] font-medium uppercase tracking-wide text-white/75">
-                      {`${props.currentLevelIndex + 1}/${levels.length}`}
+                      {props.currentLevelIndex + 1}/{levels.length}
                     </span>
                     <span
                       className="text-sm font-black tabular-nums"
@@ -847,10 +970,15 @@ export function InvestingBirdsOverlay(props: InvestingBirdsOverlayProps) {
                     </div>
                   </>
                 )}
+                {!isMobile ? (
+                  <span className="rounded-full bg-black/35 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white/80">
+                    {riskLabel(currentLevel.type)}
+                  </span>
+                ) : null}
               </div>
               <button
                 type="button"
-                className="pointer-events-auto inline-flex size-9 items-center justify-center rounded-2xl border border-white/25 bg-slate-950/85 text-white shadow-lg backdrop-blur-md transition-colors hover:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-300/80"
+                className="pointer-events-auto inline-flex size-10 items-center justify-center rounded-2xl border border-white/25 bg-slate-950/85 text-white shadow-lg backdrop-blur-md transition-colors hover:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-300/80"
                 onClick={onTogglePause}
                 aria-label={paused ? 'Resume' : 'Pause'}
               >
@@ -893,8 +1021,9 @@ export function InvestingBirdsOverlay(props: InvestingBirdsOverlayProps) {
         const age = elapsedSec - f.atSec;
         if (age > 1.2) return null;
         const dither = ((i * 37) % 5) * 0.03;
-        const pxLeft = `${(f.ndcX + 1) * 50}%`;
-        const pxTop = `${(1 - (f.ndcY + 1) / 2) * 100 - dither * 100}%`;
+        const proj = props.projectWorld(f.worldX, f.worldY);
+        const pxLeft = `${proj.leftPx}px`;
+        const pxTop = `${proj.topPx - dither * 80}px`;
         const tint = f.levelType ? categoryAccent(f.levelType) : '#22c55e';
         // U29: small glyph per category so floaters carry context at a glance.
         const icon = !f.levelType
@@ -927,8 +1056,9 @@ export function InvestingBirdsOverlay(props: InvestingBirdsOverlayProps) {
       {damageFloaters.map((f) => {
         const age = elapsedSec - f.atSec;
         if (age > 0.9) return null;
-        const pxLeft = `${(f.ndcX + 1) * 50}%`;
-        const pxTop = `${(1 - (f.ndcY + 1) / 2) * 100}%`;
+        const proj = props.projectWorld(f.worldX, f.worldY);
+        const pxLeft = `${proj.leftPx}px`;
+        const pxTop = `${proj.topPx}px`;
         return (
           <div
             key={`dmg-${f.id}`}
@@ -948,8 +1078,9 @@ export function InvestingBirdsOverlay(props: InvestingBirdsOverlayProps) {
       {dustPuffs.map((p) => {
         const age = elapsedSec - p.atSec;
         if (age > 0.7) return null;
-        const pxLeft = `${(p.ndcX + 1) * 50}%`;
-        const pxTop = `${(1 - (p.ndcY + 1) / 2) * 100}%`;
+        const proj = props.projectWorld(p.worldX, p.worldY);
+        const pxLeft = `${proj.leftPx}px`;
+        const pxTop = `${proj.topPx}px`;
         const tint = p.tint ?? '#d8d1c4';
         return (
           <span
@@ -1018,9 +1149,6 @@ export function InvestingBirdsOverlay(props: InvestingBirdsOverlayProps) {
             <div className="mt-5 flex flex-col gap-2.5">
               <button type="button" className={btnPrimary} onClick={onTogglePause}>
                 <Play className="size-4" /> Resume
-              </button>
-              <button type="button" className={btnGhost} onClick={onRetryRound}>
-                <RotateCcw className="size-4" /> Retry round
               </button>
               <button
                 type="button"
@@ -1163,6 +1291,21 @@ export function InvestingBirdsOverlay(props: InvestingBirdsOverlayProps) {
                 {p.label}
               </button>
             ))}
+          </div>
+          <div className="mt-2 text-[11px] text-white/70">
+            Score model:{' '}
+            <span className="font-semibold text-white">
+              each tower interpolates that slice’s return from the downside (no blocks cleared) to the
+              upside (full clear): bonds {sliceReturnRangeLabel('bonds')}, ETFs {sliceReturnRangeLabel('etfs')}
+              , stocks {sliceReturnRangeLabel('stocks')}, crypto {sliceReturnRangeLabel('crypto')} — based
+              on share of blocks cleared
+            </span>
+            . Starting notional:{' '}
+            <span className="font-semibold text-white">
+              ${NOTIONAL_PORTFOLIO_BASE.toLocaleString()}
+            </span>
+            .
+            Bonds are fixed at 1.0x, ETFs vary around 1.5x, Individual Stocks around 2.0x, and Crypto is intentionally volatile.
           </div>
 
           <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-[1fr_auto]">
@@ -1324,7 +1467,7 @@ export function InvestingBirdsOverlay(props: InvestingBirdsOverlayProps) {
               className="text-5xl font-black tracking-tight text-white drop-shadow-[0_4px_16px_rgba(0,0,0,0.6)] sm:text-6xl"
               style={{ animation: 'ibPopIn 0.35s ease-out' }}
             >
-              {roundOutcome === 'cleared' ? 'Tower Cleared!' : 'Tower Still Standing'}
+              {roundOutcome === 'cleared' ? 'Tower Cleared!' : 'You Lose'}
             </h1>
             {/* P1: stars */}
             {roundOutcome === 'cleared' ? (
@@ -1353,7 +1496,7 @@ export function InvestingBirdsOverlay(props: InvestingBirdsOverlayProps) {
                 style={{ animation: 'ibPopIn 0.5s ease-out 0.1s both' }}
               >
                 <Flame className="size-4" />
-                Perfect Clear · +500 bonus
+                Perfect clear — birds to spare
               </div>
             ) : null}
 
@@ -1364,13 +1507,23 @@ export function InvestingBirdsOverlay(props: InvestingBirdsOverlayProps) {
                 style={{ animation: 'ibPopIn 0.55s ease-out 0.2s both' }}
               >
                 <div className="flex items-center justify-between gap-8">
-                  <span className="text-white/80">Cleared blocks</span>
-                  <span className="tabular-nums">{clearedBlocks}</span>
+                  <span className="text-white/80">Blocks cleared</span>
+                  <span className="tabular-nums">
+                    {clearedBlocks}/{towerBlockDenom || '—'}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between gap-8">
-                  <span className="text-white/80">Multiplier</span>
+                  <span className="text-white/80">Tower risk multiplier</span>
                   <span className="tabular-nums">
                     {currentLevel.multiplier.toFixed(2)}x
+                  </span>
+                </div>
+                <div className="flex items-center justify-between gap-8">
+                  <span className="text-white/80">This slice return</span>
+                  <span className="tabular-nums">
+                    {lastRoundAppliedReturnPct != null
+                      ? `${(lastRoundAppliedReturnPct * 100).toFixed(2)}%`
+                      : '—'}
                   </span>
                 </div>
                 <div className="flex items-center justify-between gap-8">
@@ -1378,31 +1531,21 @@ export function InvestingBirdsOverlay(props: InvestingBirdsOverlayProps) {
                   <span className="tabular-nums">{birdsRemaining}</span>
                 </div>
                 <div className="mt-1 flex items-center justify-between gap-8 border-t border-white/20 pt-1 text-base">
-                  <span>Score</span>
+                  <span>Portfolio</span>
                   <span className="tabular-nums">
-                    {tweenedEndScore.toLocaleString()}
+                    ${tweenedEndScore.toLocaleString()}
                   </span>
                 </div>
               </div>
             ) : null}
 
             <p className="text-xs text-white/75">
-              {roundOutcome === 'survived'
-                ? 'Press Space to retry'
-                : 'Press Space to continue'}
+              {nextLevel
+                ? 'Moving on to the next tower…'
+                : 'Wrapping up your run…'}
             </p>
 
-            {roundOutcome === 'survived' ? (
-              <button
-                type="button"
-                className="pointer-events-auto mt-3 rounded-2xl border border-white/35 bg-white/10 px-5 py-2 text-sm font-semibold text-white shadow-lg transition-colors hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-indigo-300/80"
-                onClick={onRetryRound}
-              >
-                Retry Level
-              </button>
-            ) : null}
-
-            {roundOutcome === 'cleared' && nextLevel ? (
+            {nextLevel ? (
               <div
                 className="mt-4 flex items-center gap-3 rounded-2xl border border-white/35 bg-black/60 px-5 py-3 text-base font-semibold text-white shadow-2xl backdrop-blur-md"
                 style={{ animation: 'ibSlideIn 0.6s ease-out 0.25s both' }}
@@ -1435,7 +1578,7 @@ export function InvestingBirdsOverlay(props: InvestingBirdsOverlayProps) {
             </h2>
             <p className="mt-2 text-sm text-white/80">
               {outcome === 'loss'
-                ? "Some towers still stand. Tweak your allocation and take another swing."
+                ? 'Your portfolio ended below where you started (negative total return). Try a different allocation or cleaner clears.'
                 : 'Solid investing, sharpshooter. Bump up the risk for a bigger payout?'}
             </p>
             {/* G12: grade + per-category bar chart */}
@@ -1453,7 +1596,7 @@ export function InvestingBirdsOverlay(props: InvestingBirdsOverlayProps) {
                         : '#f87171',
                   }}
                 >
-                  {computeLetterGrade(score, levels)}
+                  {computeLetterGrade(score, initialPortfolioTotal)}
                 </span>
               </div>
               <div className="flex-1 space-y-1.5">
@@ -1488,11 +1631,13 @@ export function InvestingBirdsOverlay(props: InvestingBirdsOverlayProps) {
               </div>
             </div>
 
-            {bestScore != null ? (
-              <p className="mt-3 text-xs font-semibold uppercase tracking-wider text-white/70">
-                Best (this allocation): {bestScore.toLocaleString()}
-              </p>
-            ) : null}
+            <p className="mt-3 text-xs font-semibold uppercase tracking-wider">
+              <span className="text-white/70">Projected gain (at current return): </span>
+              <span className={returnColor}>
+                {projectedGainDollars < 0 ? '-' : '+'}$
+                {Math.abs(projectedGainDollars).toLocaleString()}
+              </span>
+            </p>
 
             <div className="mt-6 flex flex-wrap justify-center gap-3">
               <button type="button" className={btnPrimary} onClick={onReturnMenu}>

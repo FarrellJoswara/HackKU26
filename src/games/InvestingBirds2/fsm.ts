@@ -1,4 +1,12 @@
-import { GAME_CONFIG, makeEmptyAllocation } from './config';
+import {
+  SLICE_RETURN_BOUNDS,
+  GAME_CONFIG,
+  initialInvestmentByAllocation,
+  makeEmptyAllocation,
+  portfolioReturnPct,
+  scoreByTypeFromInvestment,
+  sumPortfolioValue,
+} from './config';
 import type {
   DamageFloater,
   DustPuff,
@@ -55,7 +63,12 @@ export function getInitialRunState(seed: number): RunState {
     paused: false,
     settingsOpen: false,
     settings: getDefaultSettings(),
-    bestScore: null,
+    investmentValueByType: { ...EMPTY_SCORE_BY_TYPE },
+    initialPortfolioTotal: 0,
+    roundStartBlockCount: 0,
+    simScoredBlockCount: 0,
+    roundStartTotalMaxHealth: 0,
+    lastRoundAppliedReturnPct: null,
   };
 }
 
@@ -91,19 +104,29 @@ export function runReducer(state: RunState, action: InvestingBirdsAction): RunSt
         warnInvalidTransition(state.state, action.type);
         return state;
       }
-      return {
-        ...state,
-        levels: action.payload.levels,
-        rngSeed: action.payload.seed,
-        state: 'PLAYING',
-        birdsRemaining: action.payload.levels[0]?.birds ?? 0,
-        birdsForRound: action.payload.levels[0]?.birds ?? 0,
-        currentLevelIndex: 0,
-        score: 0,
-        scoreByType: { ...EMPTY_SCORE_BY_TYPE },
-        roundOutcome: null,
-        roundEndedAtSec: null,
-      };
+      {
+        const inv = initialInvestmentByAllocation(state.allocation);
+        const initSum = sumPortfolioValue(inv);
+        return {
+          ...state,
+          levels: action.payload.levels,
+          rngSeed: action.payload.seed,
+          state: 'PLAYING',
+          birdsRemaining: action.payload.levels[0]?.birds ?? 0,
+          birdsForRound: action.payload.levels[0]?.birds ?? 0,
+          currentLevelIndex: 0,
+          investmentValueByType: inv,
+          initialPortfolioTotal: initSum,
+          score: Math.round(initSum),
+          scoreByType: scoreByTypeFromInvestment(inv),
+          roundOutcome: null,
+          roundEndedAtSec: null,
+          roundStartBlockCount: 0,
+          simScoredBlockCount: 0,
+          roundStartTotalMaxHealth: 0,
+          lastRoundAppliedReturnPct: null,
+        };
+      }
     case 'SET_ROUND':
       if (state.state !== 'PLAYING') {
         warnInvalidTransition(state.state, action.type);
@@ -118,19 +141,48 @@ export function runReducer(state: RunState, action: InvestingBirdsAction): RunSt
         dragStart: null,
         dragEnd: null,
         roundOutcome: null,
+        roundStartBlockCount: action.payload.blocks.length,
+        simScoredBlockCount: 0,
+        roundStartTotalMaxHealth: action.payload.blocks.reduce(
+          (s, b) => s + b.maxHealth,
+          0,
+        ),
+        lastRoundAppliedReturnPct: null,
         scoreFloaters: [],
+        damageFloaters: [],
+        dustPuffs: [],
+        lastHeavyHitAtSec: null,
       };
     case 'ROUND_END':
       if (state.state !== 'PLAYING') {
         warnInvalidTransition(state.state, action.type);
         return state;
       }
-      return {
-        ...state,
-        state: 'ROUND_END',
-        roundOutcome: action.payload.outcome,
-        roundEndedAtSec: action.payload.endedAtSec,
-      };
+      {
+        const level = state.levels[state.currentLevelIndex];
+        if (!level) {
+          warnInvalidTransition(state.state, 'ROUND_END(no level)');
+          return state;
+        }
+        const total = state.roundStartBlockCount;
+        const cleared = action.payload.blocksCleared;
+        const frac = total > 0 ? Math.min(1, Math.max(0, cleared / total)) : 0;
+        const { low, high } = SLICE_RETURN_BOUNDS[level.type];
+        const appliedReturnPct = portfolioReturnPct(frac, low, high);
+        const nextInv = { ...state.investmentValueByType };
+        nextInv[level.type] *= 1 + appliedReturnPct;
+        const scoreNext = Math.round(sumPortfolioValue(nextInv));
+        return {
+          ...state,
+          state: 'ROUND_END',
+          roundOutcome: action.payload.outcome,
+          roundEndedAtSec: action.payload.endedAtSec,
+          investmentValueByType: nextInv,
+          score: scoreNext,
+          scoreByType: scoreByTypeFromInvestment(nextInv),
+          lastRoundAppliedReturnPct: appliedReturnPct,
+        };
+      }
     case 'ROUND_ADVANCE':
       if (state.state !== 'ROUND_END') {
         warnInvalidTransition(state.state, action.type);
@@ -142,34 +194,8 @@ export function runReducer(state: RunState, action: InvestingBirdsAction): RunSt
         currentLevelIndex: state.currentLevelIndex + 1,
         roundEndedAtSec: null,
         roundOutcome: null,
+        lastRoundAppliedReturnPct: null,
       };
-    case 'RETRY_ROUND':
-      // Resetting `blocks` + `birdsRemaining` happens from the driver via SET_ROUND.
-      return {
-        ...state,
-        state: 'PLAYING',
-        paused: false,
-        roundOutcome: null,
-        roundEndedAtSec: null,
-        combo: 0,
-        lastComboAtSec: null,
-      };
-    case 'RESET_LEVEL_SCORE': {
-      // Called when retrying a round — zeroes that level's contribution so
-      // the player isn't credited for blocks they knocked down on a failed
-      // attempt. `score` is our running total; subtract the prior amount.
-      const prev = state.scoreByType[action.payload.levelType] ?? 0;
-      return {
-        ...state,
-        score: Math.max(0, state.score - prev),
-        scoreByType: {
-          ...state.scoreByType,
-          [action.payload.levelType]: 0,
-        },
-        combo: 0,
-        lastComboAtSec: null,
-      };
-    }
     case 'LOSE_GAME':
       return { ...state, state: 'GAME_END', outcome: 'loss' };
     case 'WIN_GAME':
@@ -191,7 +217,11 @@ export function runReducer(state: RunState, action: InvestingBirdsAction): RunSt
     case 'SET_BIRD':
       return { ...state, currentBird: action.payload };
     case 'SET_BLOCKS':
-      return { ...state, blocks: action.payload };
+      return {
+        ...state,
+        blocks: action.payload.blocks,
+        simScoredBlockCount: action.payload.scoredBlockCount,
+      };
     case 'SET_ELAPSED':
       return { ...state, elapsedSec: action.payload };
     case 'PUSH_FLOATER': {
@@ -238,8 +268,6 @@ export function runReducer(state: RunState, action: InvestingBirdsAction): RunSt
       return { ...state, settingsOpen: action.payload };
     case 'UPDATE_SETTINGS':
       return { ...state, settings: { ...state.settings, ...action.payload } };
-    case 'SET_BEST_SCORE':
-      return { ...state, bestScore: action.payload };
     default:
       return state;
   }

@@ -14,6 +14,7 @@ import { useState } from 'react';
 import {
   Bird,
   Box,
+  Feather,
   Footprints,
   Layers,
   LayoutGrid,
@@ -90,6 +91,19 @@ export default function TitleHubScreen(_props: UIProps<unknown>) {
               <Settings className="size-4" />
               Settings
             </button>
+            <button
+              type="button"
+              className="island-btnShell"
+              onClick={() =>
+                eventBus.emit('navigate:request', {
+                  to: 'game',
+                  module: GAME_IDS.investingBirds2,
+                })
+              }
+            >
+              <Feather className="size-4" />
+              Investing Birds 2
+            </button>
           </div>
         </div>
       </div>
@@ -144,12 +158,12 @@ export default function TitleHubScreen(_props: UIProps<unknown>) {
                 onClick={() =>
                   eventBus.emit('navigate:request', {
                     to: 'game',
-                    module: GAME_IDS.investingBirds,
+                    module: GAME_IDS.investingBirds3,
                   })
                 }
               >
                 <Bird className="size-4" />
-                Investing Birds
+                Investing Birds 3
               </button>
               <button
                 type="button"

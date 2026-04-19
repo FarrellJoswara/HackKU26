@@ -22,6 +22,12 @@ export const GAME_IDS = {
   islandRun: moduleId('islandRun'),
   /** Angry-Birds–style towers with portfolio allocation (R3F, self-contained). */
   investingBirds: moduleId('investingBirds'),
+  /** V2 rebuild of Investing Birds. Renders outside the shared `<Canvas>` (see
+   *  App.tsx) for complete isolation — no layout inheritance, no per-frame
+   *  camera drift, no overlay grey-strip bug. */
+  investingBirds2: moduleId('investingBirds2'),
+  /** Angry-Birds asset reskin + portfolio rounds (isolated Canvas, Planck.js). */
+  investingBirds3: moduleId('investingBirds3'),
 } as const;
 
 export const GAME_MODULES: Record<ModuleId, LazyGame> = {

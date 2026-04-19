@@ -27,7 +27,6 @@ export function createBird(variant: LevelType = 'stocks'): Bird {
     active: true,
     settledMs: 0,
     variant,
-    abilityUsed: false,
     launchedAtSec: 0,
   };
 }
@@ -155,13 +154,19 @@ export function resolveCollisions(bird: Bird, blocks: Block[]): CollisionResult 
   const impactVel = nextBird.velocity.clone();
   const impactSpeed = impactVel.length();
   const impactForce = impactSpeed * GAME_CONFIG.birdMassFactor;
-  if (impactForce < 0.4) return { bird: nextBird, blocks: nextBlocks, hits };
+  // Hit-consistency: convert light grazing contacts into minimum feedback so
+  // players never see a visually-valid hit that does nothing.
+  if (impactSpeed < 0.08) return { bird: nextBird, blocks: nextBlocks, hits };
+  const minEffectImpact = 0.4;
+  const effectiveImpact = Math.max(impactForce, minEffectImpact);
+  const grazing = impactForce < minEffectImpact;
 
-  block.hitFlashMs = 140;
+  block.hitFlashMs = Math.max(block.hitFlashMs, grazing ? 80 : 140);
   block.damagePulse = Math.min(0.4, block.damagePulse + 0.22);
   block.awake = true;
 
-  const damage = impactForce / Math.max(0.6, block.mass);
+  const damage =
+    (effectiveImpact / Math.max(0.6, block.mass)) * (grazing ? 0.35 : 1);
   block.health = Math.max(0, block.health - damage);
   if (block.health <= block.maxHealth * 0.7) {
     block.cracked = true;
@@ -169,16 +174,22 @@ export function resolveCollisions(bird: Bird, blocks: Block[]): CollisionResult 
   const shattered = block.health <= 0 && !block.shattered;
   if (shattered) {
     block.shattered = true;
-    block.falling = true;
+    // Destruction semantics: shattered blocks are immediately out of play.
+    // They should not remain as obstacles or collision participants.
+    block.knockedOff = true;
+    block.falling = false;
+    block.velocity.set(0, 0);
+    block.rotationVel = 0;
+    block.opacity = 0;
     // PH7: strong burst impulse so shattered ice/wood visibly bursts.
     const burstDir = overlap.normal.clone().multiplyScalar(-1);
-    block.velocity.x += burstDir.x * 5 + impactVel.x * 0.4;
-    block.velocity.y += 3 + Math.abs(impactVel.y) * 0.2;
+    block.velocity.x += burstDir.x * 0.2;
+    block.velocity.y += 0.2;
     // G5: TNT barrels blast adjacent blocks on shatter (radial impulse + HP).
     if (block.isTnt) {
       const blastRadius = 2.2;
       for (const other of nextBlocks) {
-        if (other === block || other.knockedOff) continue;
+        if (other === block || other.knockedOff || other.shattered) continue;
         const dx = other.position.x - block.position.x;
         const dy = other.position.y - block.position.y;
         const d2 = dx * dx + dy * dy;
@@ -199,7 +210,10 @@ export function resolveCollisions(bird: Bird, blocks: Block[]): CollisionResult 
     block.falling = true;
   }
 
-  const transfer = Math.min(2.8, (impactForce / Math.max(0.6, block.mass)) * 0.5);
+  const transfer = Math.min(
+    2.8,
+    (effectiveImpact / Math.max(0.6, block.mass)) * 0.5,
+  );
   block.velocity.x += impactVel.x * 0.55 + overlap.normal.x * transfer * 0.9;
   block.velocity.y += Math.max(0, impactVel.y * 0.35) + transfer * 0.9;
 
@@ -220,7 +234,9 @@ export function resolveCollisions(bird: Bird, blocks: Block[]): CollisionResult 
   // it turned heavy hits into accelerations and produced the weird
   // speed-up/slow-down the player reported. A hard cap below keeps post-impact
   // speed from exceeding the pre-impact speed regardless of mass or angle.
-  const forward = nextBird.velocity.clone().multiplyScalar(GAME_CONFIG.bounceDamping);
+  const forward = nextBird.velocity
+    .clone()
+    .multiplyScalar(grazing ? 0.7 : GAME_CONFIG.bounceDamping);
   nextBird.velocity.copy(forward);
   const maxPostImpact = Math.min(GAME_CONFIG.maxBirdSpeed, impactSpeed);
   const postSpeed = nextBird.velocity.length();
@@ -230,8 +246,8 @@ export function resolveCollisions(bird: Bird, blocks: Block[]): CollisionResult 
 
   hits.push({
     blockId: block.id,
-    impactForce,
-    heavy: impactForce >= GAME_CONFIG.heavyHitForce,
+    impactForce: effectiveImpact,
+    heavy: !grazing && impactForce >= GAME_CONFIG.heavyHitForce,
     contact,
     shatter: shattered,
   });
@@ -249,10 +265,12 @@ function blocksIntersect(a: Block, b: Block): boolean {
 /** Velocity + rotation clamps to prevent pinwheeling explosions (C4). */
 const MAX_BLOCK_SPEED = GAME_CONFIG.maxBlockSpeed;
 const MAX_BLOCK_ROT = 2.2;
-/** Chain-transfer coefficient (C4: was 0.55, way too loud). */
-const CHAIN_TRANSFER = 0.18;
-/** Minimum frames a block must fail support before going airborne (M8/PH11). */
-const UNSUPPORT_FRAMES = 3;
+/** Chain-transfer coefficient. V2: reduced from 0.18 so a hot block
+ *  doesn't drag its entire column with it. */
+const CHAIN_TRANSFER = 0.08;
+/** Minimum frames a block must fail support before going airborne.
+ *  V2: raised from 3 → 8 so partial hits don't trigger immediate cascades. */
+const UNSUPPORT_FRAMES = 8;
 
 function clampBlock(b: Block): void {
   if (b.velocity.x > MAX_BLOCK_SPEED) b.velocity.x = MAX_BLOCK_SPEED;
@@ -280,7 +298,7 @@ export function stepBlocks(blocks: Block[], dt: number): Block[] {
   // footprint (M8). Also counts 3 consecutive frames of no support before
   // flipping to `falling` (PH11).
   for (const b of next) {
-    if (b.knockedOff || b.falling) continue;
+    if (b.knockedOff || b.shattered || b.falling) continue;
     const bBottom = b.position.y - b.height / 2;
     const restingOnGround = bBottom <= 0.06;
     if (restingOnGround) {
@@ -288,10 +306,12 @@ export function stepBlocks(blocks: Block[], dt: number): Block[] {
       continue;
     }
     const supported = next.some((other) => {
-      if (other === b || other.knockedOff) return false;
+      if (other === b || other.knockedOff || other.shattered) return false;
       const hOverlap =
         (b.width + other.width) / 2 - Math.abs(other.position.x - b.position.x);
-      if (hOverlap <= b.width * 0.35) return false;
+      // V2: raised from 0.35 → 0.45 so a slightly-shifted block still counts
+      // as supported by its neighbour and doesn't fall unnecessarily.
+      if (hOverlap <= b.width * 0.45) return false;
       const gap = bBottom - (other.position.y + other.height / 2);
       return gap > -0.12 && gap < 0.18;
     });
@@ -307,7 +327,7 @@ export function stepBlocks(blocks: Block[], dt: number): Block[] {
   }
 
   for (const b of next) {
-    if (b.knockedOff) continue;
+    if (b.knockedOff || b.shattered) continue;
     if (!b.falling) {
       b.velocity.x *= 0.78;
       if (Math.abs(b.velocity.x) < 0.02) b.velocity.x = 0;
@@ -353,10 +373,10 @@ export function stepBlocks(blocks: Block[], dt: number): Block[] {
   // so chain-transfer doesn't compound into explosive speeds (C4 / PH6).
   for (let i = 0; i < next.length; i += 1) {
     const a = next[i]!;
-    if (a.knockedOff) continue;
+    if (a.knockedOff || a.shattered) continue;
     for (let j = i + 1; j < next.length; j += 1) {
       const b = next[j]!;
-      if (b.knockedOff) continue;
+      if (b.knockedOff || b.shattered) continue;
       if (!blocksIntersect(a, b)) continue;
       const dx = b.position.x - a.position.x;
       const dy = b.position.y - a.position.y;
@@ -421,7 +441,7 @@ export function stepBlocks(blocks: Block[], dt: number): Block[] {
   // original slot by half a block or more, OR rotated past ~35 degrees from
   // upright. This is what makes the tower count as cleared when it falls.
   for (const b of next) {
-    if (b.knockedOff || b.toppled || b.shattered) continue;
+    if (b.knockedOff || b.shattered || b.toppled) continue;
     const fellFromOrigin = b.initialY - b.position.y > b.height * 0.55;
     const rotated = Math.abs(normalizeAngle(b.rotation)) > 0.6;
     if (fellFromOrigin || rotated) {
@@ -429,6 +449,25 @@ export function stepBlocks(blocks: Block[], dt: number): Block[] {
       // Small speed threshold so airborne pieces don't tick in-flight.
       if (b.velocity.lengthSq() < 1.0 || b.position.y <= b.height) {
         b.toppled = true;
+      }
+    }
+  }
+
+  // Final hard floor clamp after pairwise separation/topple updates.
+  // Pairwise push-out can move blocks slightly below y=0 after the main floor
+  // clamp above; this pass guarantees nothing finishes a frame under ground.
+  for (const b of next) {
+    if (b.knockedOff || b.shattered) continue;
+    const halfH = b.height / 2;
+    const minY = halfH;
+    if (b.position.y < minY) {
+      b.position.y = minY;
+      if (b.velocity.y < 0) b.velocity.y = 0;
+      if (Math.abs(b.velocity.x) < 0.15 && b.velocity.lengthSq() < 0.08) {
+        b.velocity.set(0, 0);
+        b.rotationVel = 0;
+        if (!b.toppled) b.toppled = true;
+        b.falling = false;
       }
     }
   }
@@ -452,6 +491,12 @@ export function updateBlockVisuals(blocks: Block[], dt: number): Block[] {
     if (next.knockedOff || next.shattered) {
       const rate = next.shattered ? 2.2 : 1.6;
       next.opacity = Math.max(0, next.opacity - dt * rate);
+    } else if (next.toppled) {
+      // Debris remains visible for readability, but clearly de-emphasized.
+      next.opacity = Math.max(0.28, next.opacity - dt * 0.9);
+    } else {
+      // Active structure blocks recover to full opacity.
+      next.opacity = Math.min(1, next.opacity + dt * 1.2);
     }
     return next;
   });
@@ -486,26 +531,31 @@ export function resolveGroundCollision(bird: Bird): Bird {
   return bird;
 }
 
+/**
+ * Ballistic trajectory preview using the reference Angry Birds formula:
+ * `p(t) = p0 + v0*t + 0.5*g*t^2`. This matches `SlingShooter.DisplayTrajectory`
+ * in the reference Unity project and the motion that planck will actually
+ * integrate under constant gravity.
+ */
 export function sampleTrajectoryDots(
   startPos: Vector2,
   initialVelocity: Vector2,
   opts?: { maxSteps?: number; maxTime?: number; stopX?: number },
 ): Vector2[] {
-  const maxSteps = opts?.maxSteps ?? 90;
-  const maxTime = opts?.maxTime ?? 2.2;
+  const maxSteps = opts?.maxSteps ?? 64;
+  const maxTime = opts?.maxTime ?? 2.4;
   const stopX = opts?.stopX;
-  const pos = startPos.clone();
-  const vel = initialVelocity.clone();
+  const gY = -GAME_CONFIG.gravity;
   const dots: Vector2[] = [];
-  let t = 0;
-  for (let i = 0; i < maxSteps && t < maxTime; i += 1) {
-    applyGravityAndDrag(vel, GAME_CONFIG.fixedStep);
-    pos.addScaledVector(vel, GAME_CONFIG.fixedStep);
-    t += GAME_CONFIG.fixedStep;
-    if (i % 3 === 0) dots.push(pos.clone());
-    if (pos.y < -2) break;
-    if (pos.x > GAME_CONFIG.worldBounds.maxX + 2) break;
-    if (stopX != null && pos.x >= stopX) break;
+  const dt = maxTime / maxSteps;
+  for (let i = 1; i <= maxSteps; i += 1) {
+    const t = i * dt;
+    const x = startPos.x + initialVelocity.x * t;
+    const y = startPos.y + initialVelocity.y * t + 0.5 * gY * t * t;
+    if (y < -2) break;
+    if (x > GAME_CONFIG.worldBounds.maxX + 2) break;
+    if (stopX != null && x >= stopX) break;
+    dots.push(new Vector2(x, y));
   }
   return dots;
 }

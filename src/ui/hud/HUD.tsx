@@ -135,6 +135,23 @@ export function HUD() {
     );
   }
 
+  // Investing Birds ships its own full HUD (score, birds, pause, settings…)
+  // in src/games/InvestingBirds/ui.tsx. Skipping the generic HUD here prevents
+  // a duplicate ♥ / pause / volume bar from stacking on top of it.
+  if (activeModule === GAME_IDS.investingBirds) {
+    return null;
+  }
+  // InvestingBirds v2 is a fully isolated module that owns its own overlay
+  // (src/games/InvestingBirds2/Overlay.tsx). Skipping the generic HUD keeps
+  // the isolation contract — nothing outside ib2-root is allowed to paint
+  // over the game.
+  if (activeModule === GAME_IDS.investingBirds2) {
+    return null;
+  }
+  if (activeModule === GAME_IDS.investingBirds3) {
+    return null;
+  }
+
   return (
     <div className="pointer-events-none absolute inset-0 flex flex-col justify-between p-6 text-white">
       <div className="flex items-center justify-between">

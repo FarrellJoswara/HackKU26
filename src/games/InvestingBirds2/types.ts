@@ -36,7 +36,7 @@ export interface LevelDef {
   type: LevelType;
   /** Normalized share of portfolio 0..1 */
   share: number;
-  /** Per-tower score multiplier: 1 + share * 3 */
+  /** Per-tower score multiplier from risk profile (type-based, may vary). */
   multiplier: number;
   /** Birds (shots) allocated for this round: max(2, round(share * 10)) */
   birds: number;
@@ -51,10 +51,8 @@ export interface Bird {
   launched: boolean;
   active: boolean;
   settledMs: number;
-  /** Bird variant = category of the current round (drives abilities). */
+  /** Bird variant = category of the current round (visuals / tuning). */
   variant: LevelType;
-  /** When set, the bird has activated its mid-air ability. */
-  abilityUsed: boolean;
   /** `elapsedSec` when launch happened (for streak / grace window). */
   launchedAtSec: number;
 }
@@ -109,9 +107,9 @@ export interface ScoreFloater {
   id: number;
   delta: number;
   atSec: number;
-  /** Overlay-local NDC [-1..1] for positioning the floater. */
-  ndcX: number;
-  ndcY: number;
+  /** World coords of the block/event. Overlay projects via `worldToScreen`. */
+  worldX: number;
+  worldY: number;
   /** Category for tinted floaters. */
   levelType?: LevelType;
 }
@@ -119,8 +117,8 @@ export interface ScoreFloater {
 export interface DustPuff {
   id: number;
   atSec: number;
-  ndcX: number;
-  ndcY: number;
+  worldX: number;
+  worldY: number;
   size: number;
   /** Tint for the dust (per category). */
   tint?: string;
@@ -130,8 +128,8 @@ export interface DamageFloater {
   id: number;
   delta: number;
   atSec: number;
-  ndcX: number;
-  ndcY: number;
+  worldX: number;
+  worldY: number;
 }
 
 export interface Settings {
@@ -161,8 +159,8 @@ export interface RunState {
   rngSeed: number;
   elapsedSec: number;
   outcome: 'win' | 'loss' | null;
-  /** Set to `'cleared' | 'survived'` after a round ends; drives transition overlay. */
-  roundOutcome: 'cleared' | 'survived' | null;
+  /** Set after a round ends; drives transition overlay. */
+  roundOutcome: 'cleared' | 'failed' | null;
   roundEndedAtSec: number | null;
   /** Floating score popups (max a handful kept at a time). */
   scoreFloaters: ScoreFloater[];
@@ -182,8 +180,21 @@ export interface RunState {
   settingsOpen: boolean;
   /** Settings persisted across rounds. */
   settings: Settings;
-  /** Best score recorded for the current allocation hash, if any. */
-  bestScore: number | null;
+  /** Notional $ in each asset class; tower returns multiply the slice for that type. */
+  investmentValueByType: Record<LevelType, number>;
+  /** Sum of `investmentValueByType` at run start — used for win vs loss on final tower. */
+  initialPortfolioTotal: number;
+  /** Blocks in the tower when the current round began (for clear fraction). */
+  roundStartBlockCount: number;
+  /**
+   * Mirrors `sim.scoredBlocks.size` — blocks that count toward portfolio return
+   * this round (may exceed visible `blocks.length` after destroyed blocks are pruned).
+   */
+  simScoredBlockCount: number;
+  /** Sum of maxHealth for all blocks at round start — fixed HP bar denominator. */
+  roundStartTotalMaxHealth: number;
+  /** Return applied to the current category when the last round ended (−max..+max as decimal). */
+  lastRoundAppliedReturnPct: number | null;
 }
 
 export type InvestingBirdsAction =
@@ -196,18 +207,21 @@ export type InvestingBirdsAction =
     }
   | {
       type: 'ROUND_END';
-      payload: { outcome: 'cleared' | 'survived'; endedAtSec: number };
+      payload: {
+        outcome: 'cleared' | 'failed';
+        endedAtSec: number;
+        /** Blocks knocked out / scored this round (for portfolio return). */
+        blocksCleared: number;
+      };
     }
   | { type: 'ROUND_ADVANCE' }
-  | { type: 'RETRY_ROUND' }
-  | { type: 'RESET_LEVEL_SCORE'; payload: { levelType: LevelType } }
   | { type: 'LOSE_GAME' }
   | { type: 'WIN_GAME' }
   | { type: 'UPDATE_SCORE'; payload: { delta: number; levelType: LevelType } }
   | { type: 'CONSUME_BIRD' }
   | { type: 'SET_DRAG'; payload: { start: Vector2 | null; end: Vector2 | null } }
   | { type: 'SET_BIRD'; payload: Bird | null }
-  | { type: 'SET_BLOCKS'; payload: Block[] }
+  | { type: 'SET_BLOCKS'; payload: { blocks: Block[]; scoredBlockCount: number } }
   | { type: 'SET_ELAPSED'; payload: number }
   | { type: 'PUSH_FLOATER'; payload: ScoreFloater }
   | { type: 'PUSH_DAMAGE'; payload: DamageFloater }
@@ -218,5 +232,4 @@ export type InvestingBirdsAction =
   | { type: 'COMBO_RESET' }
   | { type: 'SET_PAUSED'; payload: boolean }
   | { type: 'OPEN_SETTINGS'; payload: boolean }
-  | { type: 'UPDATE_SETTINGS'; payload: Partial<Settings> }
-  | { type: 'SET_BEST_SCORE'; payload: number };
+  | { type: 'UPDATE_SETTINGS'; payload: Partial<Settings> };

@@ -5,7 +5,15 @@
  * TODO: design the real menu. Add settings, leaderboard, credits, etc.
  */
 
-import { Box, LayoutGrid, Layers, Palmtree, Footprints, Target } from 'lucide-react';
+import {
+  Bird,
+  Box,
+  LayoutGrid,
+  Layers,
+  Palmtree,
+  Footprints,
+  Target,
+} from 'lucide-react';
 import { eventBus } from '@/core/events';
 import { GAME_IDS } from '@/games/registry';
 import { useAppStore } from '@/core/store';
@@ -88,12 +96,24 @@ export default function MainMenu(_props: UIProps<unknown>) {
               onClick={() =>
                 eventBus.emit('navigate:request', {
                   to: 'game',
-                  module: GAME_IDS.investingBirds,
+                  module: GAME_IDS.investingBirds2,
+                })
+              }
+            >
+              <Bird className="size-4" />
+              Investing Birds 2
+            </button>
+            <button
+              className="island-btnShell"
+              onClick={() =>
+                eventBus.emit('navigate:request', {
+                  to: 'game',
+                  module: GAME_IDS.investingBirds3,
                 })
               }
             >
               <Target className="size-4" />
-              Investing Birds (MVP)
+              Investing Birds 3
             </button>
           </div>
 

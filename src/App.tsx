@@ -22,12 +22,22 @@ import { GAME_IDS } from './games/registry';
 import { RunnerResultRouter } from './core/runner/RunnerResultRouter';
 
 const IslandRun = lazy(() => import('./games/IslandRun'));
+const InvestingBirds2 = lazy(() => import('./games/InvestingBirds2'));
+const InvestingBirds3 = lazy(() => import('./games/InvestingBirds3'));
 
 export default function App() {
   const appState = useAppStore((s) => s.appState);
   const activeModule = useAppStore((s) => s.activeModule);
   const islandRun =
     appState === 'game' && activeModule === GAME_IDS.islandRun;
+  // InvestingBirds v2 owns its own full-screen Canvas + DOM overlay in a
+  // fixed-position isolated root, so (like IslandRun) we mount it OUTSIDE
+  // the shared R3F `<Canvas>`. No layout, style, or camera in this App shell
+  // can reach it.
+  const investingBirds2 =
+    appState === 'game' && activeModule === GAME_IDS.investingBirds2;
+  const investingBirds3 =
+    appState === 'game' && activeModule === GAME_IDS.investingBirds3;
 
   return (
     <TransitionManager>
@@ -36,6 +46,14 @@ export default function App() {
         {islandRun ? (
           <Suspense fallback={null}>
             <IslandRun />
+          </Suspense>
+        ) : investingBirds2 ? (
+          <Suspense fallback={null}>
+            <InvestingBirds2 inputs={{}} />
+          </Suspense>
+        ) : investingBirds3 ? (
+          <Suspense fallback={null}>
+            <InvestingBirds3 inputs={{}} />
           </Suspense>
         ) : (
           <Canvas

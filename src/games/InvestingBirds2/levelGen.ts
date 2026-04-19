@@ -3,7 +3,7 @@ import {
   birdsFromShare,
   categoryLabel,
   MATERIAL_META,
-  multiplierFromShare,
+  multiplierForType,
   ORDERED_LEVEL_TYPES,
   shareOf,
   towerHeightFromShare,
@@ -59,16 +59,18 @@ function createBlock(args: {
 
 export function buildLevels(allocation: Allocation): LevelDef[] {
   const levels: LevelDef[] = [];
+  let roundIndex = 0;
   for (const type of ORDERED_LEVEL_TYPES) {
     const share = shareOf(allocation, type);
     if (share <= 0) continue;
     levels.push({
       type,
       share,
-      multiplier: multiplierFromShare(share),
+      multiplier: multiplierForType(type, roundIndex, share),
       birds: birdsFromShare(share),
       label: categoryLabel(type),
     });
+    roundIndex += 1;
   }
   return levels;
 }
@@ -93,9 +95,24 @@ function materialForRow(
     case 'etfs':
       return row % 2 === 0 ? 'stone' : 'wood';
     case 'bonds':
-      return bottomHalf ? 'stone' : 'wood';
+      // Bonds are low-risk and intentionally easier/predictable.
+      return bottomHalf ? 'wood' : 'wood';
     case 'crypto':
       return topThird ? 'ice' : 'wood';
+  }
+}
+
+function durabilityScale(type: LevelType): { hp: number; mass: number } {
+  switch (type) {
+    case 'stocks':
+      // Hardest standard tower, but still winnable.
+      return { hp: 1.08, mass: 1.05 };
+    case 'etfs':
+      return { hp: 0.96, mass: 0.95 };
+    case 'bonds':
+      return { hp: 0.86, mass: 0.9 };
+    case 'crypto':
+      return { hp: 1.0, mass: 0.95 };
   }
 }
 
@@ -187,8 +204,10 @@ function buildMiniTower(
 }
 
 /**
- * For each tower (blocks sharing an id-prefix), mark the top-center block
- * as the bonus target. Detects tower groupings by `id.split('-')[0]` prefix.
+ * Per-tower post processing.
+ * V2 clarity pass: removed "target coin" markers and target-bonus blocks
+ * because they read as noisy/unclear in dense towers. TNT remains as the
+ * only special block type.
  */
 function markTargets(blocks: Block[]): Block[] {
   const groups = new Map<string, Block[]>();
@@ -200,13 +219,8 @@ function markTargets(blocks: Block[]): Block[] {
   }
   for (const arr of groups.values()) {
     if (arr.length === 0) continue;
-    // Top row = highest row index; center column = median of columns at that row.
     let topRow = -Infinity;
     for (const b of arr) if (b.row > topRow) topRow = b.row;
-    const topRowBlocks = arr.filter((b) => b.row === topRow);
-    topRowBlocks.sort((a, b) => a.column - b.column);
-    const center = topRowBlocks[Math.floor(topRowBlocks.length / 2)]!;
-    center.isTarget = true;
 
     // G5: promote one mid-tower block per tower to TNT when the tower is
     // tall enough (>= 4 rows). Deterministic by tower prefix so the same
@@ -217,7 +231,7 @@ function markTargets(blocks: Block[]): Block[] {
       if (midRowBlocks.length > 0) {
         midRowBlocks.sort((a, b) => a.column - b.column);
         const pick = midRowBlocks[Math.floor(midRowBlocks.length / 2)]!;
-        if (!pick.isTarget) pick.isTnt = true;
+        pick.isTnt = true;
       }
     }
   }
@@ -226,8 +240,14 @@ function markTargets(blocks: Block[]): Block[] {
 
 export function generateBlocksForLevel(level: LevelDef): Block[] {
   const height = towerHeightFromShare(level.share);
-  const hp = Math.round(10 + level.share * 12);
-  const mass = 0.7 + level.share * 0.5;
+  // V2: baseline HP raised from (10 + share*12) to (22 + share*20). Combined
+  // with birdMassFactor=1.0 this gives wood blocks ~2 hits and base stone
+  // ~3 hits per block — a full tower needs 2–3 well-placed birds.
+  const baseHp = Math.round(22 + level.share * 20);
+  const baseMass = 0.7 + level.share * 0.5;
+  const scale = durabilityScale(level.type);
+  const hp = Math.round(baseHp * scale.hp);
+  const mass = baseMass * scale.mass;
 
   if (level.type === 'etfs') {
     const clusterCount = Math.max(3, Math.min(6, Math.round(3 + level.share * 4)));
