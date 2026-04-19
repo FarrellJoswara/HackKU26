@@ -1,6 +1,6 @@
 # 🏝️ Island Adventure
 
-> **Financial freedom should be a journey you can actually survive — not a lesson you tune out.**
+> **Financial freedom should be a journey you can actually survive, not a lesson you tune out.**
 
 Island Adventure is a stylized 3D financial literacy game that turns life after graduation into an interactive survival journey. Instead of learning through lectures, spreadsheets, or static calculators, players learn through consequences: budgeting decisions, debt, savings, risk, and long-term planning all shape the path ahead.
 
