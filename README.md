@@ -89,6 +89,20 @@ We chose this stack because we needed something that could support both:
 
 while still being fast enough to build and iterate on during a hackathon.
 
+
+## 📚 What We Learned (New Skills!)
+
+### Nischay
+I learned how to use React Three Fiber and Three.js to build the island-based 3D world and create the game’s visual atmosphere. This was challenging because I had to go beyond just getting objects on the screen and really learn how to structure a 3D scene, place assets intentionally, and make the environment feel polished and immersive for actual 3D gameplay.
+
+### Emma
+I learned how to structure shared game state and progression systems so player decisions, resources, and outcomes could flow cleanly across the experience. This made me think much more carefully about how everything in the game connects, since even small choices had to carry through events, minigames, and later consequences without breaking the overall experience.
+
+### Farrell
+I learned how to think about blockchain integration in a much more practical way because even a simple idea like posting the game results to Solana allows you to have proof of ownership of your progress in building your financial literacy. I also got to learn how a blockchain ecosystem like Solana could support progression, persistence, or ownership without feeling forced. It was also a learning experience because I got to figure out where Web3 ideas actually add value to a game instead of just being added on.
+
+### Sneha
+I learned how to handle 3D asset integration and scene composition, from bringing in models and textures to arranging props in a way that made the world feel cohesive and readable. This was challenging because it was not just about dropping assets into the scene, it was also about learning how composition, spacing, and visual balance affect the environment and if the in game physics actually make sense for something that looks as simple as angry birds.
 ---
 
 ## 🚀 Setup
