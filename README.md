@@ -18,22 +18,27 @@ npm install
 npm run dev
 ```
 
-From the main menu you can open **Cube demo (template)** (React Three Fiber) or **Island Run** (the separate Three.js island board game).
+From the main menu you can open **Cube demo (template)** (React Three Fiber) or **Island Run** (a Three.js island board game).
 
-### Island Run (`/island-board/`)
+### Island Run
 
-Island Run is built from the **IslandBoardWeb** Vite app and copied into `public/island-board/`. The host app embeds it full-screen in an iframe (`src/games/IslandRun/IslandRunShell.tsx`) so it does not share the R3F `<Canvas>` with the template cube.
+Island Run lives entirely inside [`src/games/IslandRun/`](src/games/IslandRun/):
 
-After changing IslandBoardWeb, refresh the static files:
-
-```bash
-# from this repo; uses ./IslandBoardWeb (or ../IslandBoardWeb if present)
-npm run sync:island
+```
+src/games/IslandRun/
+  index.tsx                 # React shell: mounts HUD DOM, injects scoped CSS/fonts, calls bootstrap()
+  main.ts                   # imperative Three.js bootstrap() — owns its own WebGLRenderer
+  tips.ts                   # square labels + finance tips
+  post/ParadiseGradeShader.ts
+  skydome/ParadiseSkydome.ts
+  water/ParadiseWater.ts
+  style.css                 # scoped game CSS (imported via `?inline`)
+  assets/                   # every .glb / .jpg the game needs (Vite `?url` imports)
 ```
 
-Commit `public/island-board/` so GitHub Pages / previews work without running the sync step.
+Because `main.ts` creates its own `WebGLRenderer`, the game is mounted OUTSIDE the host R3F `<Canvas>` (see [`src/App.tsx`](src/App.tsx)) — it is a sibling to `UIRegistry`, not a child of `GameRegistry`. Everything the game needs (source, shaders, models, textures, CSS) is self-contained in this one folder: no iframe, no separate Vite project, no `public/` output, no build sync step.
 
-Other scripts:
+Scripts:
 
 - `npm run build` — typecheck + production build
 - `npm run preview` — preview the production build

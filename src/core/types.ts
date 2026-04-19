@@ -11,11 +11,30 @@
  *      Add an entry here and the whole codebase becomes type-safe for it.
  */
 
+import type { BoxBudgetSubmitPayload } from './budgetTypes';
+import type { IslandScenarioChoicePayload } from './scenarios/islandChoiceApply';
+
 /* -------------------------------------------------------------------------- */
 /*  App lifecycle                                                             */
 /* -------------------------------------------------------------------------- */
 
-export type AppState = 'boot' | 'menu' | 'game' | 'transition';
+export type AppState =
+  | 'boot'
+  | 'menu'
+  /** Settings hub — audio, controls, etc. */
+  | 'settings'
+  /** Difficulty picker shown when starting a new game. */
+  | 'newGameDifficulty'
+  /** Financial Freedom — "The Box" zero-based budgeting UI (GDD). */
+  | 'budget'
+  /** DebtRunner — pre-run consequence briefing screen. */
+  | 'briefing'
+  | 'game'
+  | 'transition'
+  /** DebtRunner — endgame screens. */
+  | 'win'
+  | 'loss'
+  | 'summary';
 
 /**
  * Branded string used as a registry key. Modules (games & UI screens)
@@ -83,6 +102,7 @@ export interface UIEvent<TPayload = unknown> {
  * TODO: developers — add domain-specific events here (e.g. 'player:hit',
  *       'inventory:add', 'audio:duck') so emitters/listeners stay typed.
  */
+
 export interface EventMap {
   /** Fired by `TransitionManager` when a navigation request begins. */
   'navigate:request': { to: AppState; module?: ModuleId | null };
@@ -99,6 +119,26 @@ export interface EventMap {
 
   /** Audio control. Listen in `AudioManager` if you wire audio reactions. */
   'audio:play': { id: string; channel: 'bgm' | 'sfx' };
+
+  /**
+   * The Box — player confirmed a zero-based budget for the year.
+   * Logic listens here; UI may also `mergePlayerData` for optimistic UX.
+   */
+  'box:budget:submit': BoxBudgetSubmitPayload;
+
+  /**
+   * Island Run — player picked option A/B on an interactive landing.
+   * The IslandRun React shell resolves the payload through
+   * `applyIslandScenarioChoice` and merges into `playerData`.
+   */
+  'island:scenarioChoice': IslandScenarioChoicePayload;
+
+  /**
+   * Endless-runner style game finished. Emitted by the game module,
+   * consumed by `RunnerResultRouter` which stores a snapshot and routes
+   * to the win/loss screens.
+   */
+  'runner:finished': import('./runner/runnerTypes').RunnerFinishedPayload;
 }
 
 export type EventKey = keyof EventMap;

@@ -4,21 +4,24 @@
  *   [DOM   ] UIRegistry    — Tailwind-only React, never imports R3F
  *   [WebGL ] GameRegistry  — R3F scene tree, never imports DOM UI
  *
- * Island Run is the exception: it ships as a static build in
- * `public/island-board/` and mounts full-screen in an iframe (see
- * `IslandRunShell`) so we do not nest a second WebGL context inside R3F.
+ * Island Run is the exception: it owns its own `WebGLRenderer` (see
+ * `src/games/IslandRun/main.ts`), so we mount it OUTSIDE the host R3F
+ * `<Canvas>` instead of nesting a second WebGL context inside R3F.
  *
  * Both are wrapped by `TransitionManager`, which intercepts navigation
  * requests and runs the active visual hand-off.
  */
 
+import { lazy, Suspense } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { TransitionManager } from './transitions/TransitionManager';
 import { GameRegistry } from './games/GameRegistry';
 import { UIRegistry } from './ui/UIRegistry';
 import { useAppStore } from './core/store';
 import { GAME_IDS } from './games/registry';
-import { IslandRunShell } from './games/IslandRun/IslandRunShell';
+import { RunnerResultRouter } from './core/runner/RunnerResultRouter';
+
+const IslandRun = lazy(() => import('./games/IslandRun'));
 
 export default function App() {
   const appState = useAppStore((s) => s.appState);
@@ -28,9 +31,12 @@ export default function App() {
 
   return (
     <TransitionManager>
+      <RunnerResultRouter />
       <div className="absolute inset-0">
         {islandRun ? (
-          <IslandRunShell />
+          <Suspense fallback={null}>
+            <IslandRun />
+          </Suspense>
         ) : (
           <Canvas
             camera={{ position: [0, 0, 4], fov: 50 }}
