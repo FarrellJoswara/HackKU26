@@ -29,6 +29,20 @@ export const CAMPAIGN_KEYS = {
   islandTotalHops: 'campaign.islandTotalHops',
   /** 1-indexed year counter incremented each lap. */
   year: 'campaign.year',
+  /** How many post-debt Investing Birds year-end sessions have completed (0–3). */
+  investingBirdsYearsPlayed: 'campaign.investingBirdsYearsPlayed',
+  /**
+   * True while the player is in an Investing Birds session that was launched
+   * from an Island lap (year-end). Used to route `game:result` back to Island.
+   */
+  yearEndBirdsPending: 'campaign.yearEndBirdsPending',
+  /**
+   * High-interest debt balance at campaign start (difficulty seed). Used so
+   * each DebtRunner **win** can pay down a fixed slice — one quarter of this
+   * amount per win (capped at remaining balance), which feels predictable vs
+   * a percentage of the shrinking balance.
+   */
+  initialHighInterestDebt: 'campaign.initialHighInterestDebt',
   /** Designer's "win goal" net invested capital for FI (USD). */
   winGoalUsd: 'campaign.winGoalUsd',
   /** Net invested balance (informational; full Year Controller will own this). */

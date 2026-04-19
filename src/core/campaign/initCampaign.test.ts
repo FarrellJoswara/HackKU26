@@ -106,12 +106,13 @@ describe('initCampaign', () => {
     expect(requests).toEqual(['briefing']);
   });
 
-  it('routes to InvestingBirds when debt is cleared', () => {
+  it('routes to InvestingBirds when debt is cleared and Birds seasons remain', () => {
     initCampaign();
     useAppStore.setState((s) => ({
       playerData: {
         ...s.playerData,
         [BOX_PLAYER_DATA_KEYS.highInterestDebtBalance]: 0,
+        [CAMPAIGN_KEYS.investingBirdsYearsPlayed]: 0,
       },
     }));
     const captured: Array<{ to: string; module: unknown }> = [];
@@ -122,6 +123,46 @@ describe('initCampaign', () => {
     expect(captured).toHaveLength(1);
     expect(captured[0]!.to).toBe('game');
     expect(captured[0]!.module).toBe(GAME_IDS.investingBirds);
+  });
+
+  it('routes to finale when debt-free and Investing Birds seasons are exhausted', () => {
+    initCampaign();
+    useAppStore.setState((s) => ({
+      playerData: {
+        ...s.playerData,
+        [BOX_PLAYER_DATA_KEYS.highInterestDebtBalance]: 0,
+        [CAMPAIGN_KEYS.investingBirdsYearsPlayed]: 3,
+      },
+    }));
+    const requests: string[] = [];
+    eventBus.on('navigate:request', (p) => requests.push(p.to));
+    eventBus.emit('island:yearComplete', { year: 5, totalHops: 60 });
+    expect(requests).toEqual(['finale']);
+  });
+
+  it('returns to Island and increments Birds counter after year-end Birds result', () => {
+    initCampaign();
+    useAppStore.setState({
+      playerData: {
+        [CAMPAIGN_KEYS.yearEndBirdsPending]: true,
+        [CAMPAIGN_KEYS.investingBirdsYearsPlayed]: 0,
+        [BOX_PLAYER_DATA_KEYS.currentYear]: 2,
+      },
+    });
+    const navs: Array<{ to: string; module: unknown }> = [];
+    eventBus.on('navigate:request', (p) => navs.push({ to: p.to, module: p.module }));
+
+    const scoreByType = { stocks: 1, etfs: 0, bonds: 0, crypto: 0 };
+    eventBus.emit('game:result', {
+      kind: 'result',
+      payload: { outcome: 'win', score: 10, levelsCleared: 3, scoreByType },
+    });
+
+    expect(navs).toEqual([{ to: 'game', module: GAME_IDS.islandRun }]);
+    const st = useAppStore.getState();
+    expect(st.playerData[CAMPAIGN_KEYS.yearEndBirdsPending]).toBe(false);
+    expect(st.playerData[CAMPAIGN_KEYS.investingBirdsYearsPlayed]).toBe(1);
+    expect(st.playerData[BOX_PLAYER_DATA_KEYS.currentYear]).toBe(3);
   });
 
   it('ignores re-entrant year-complete emits in the same tick', () => {

@@ -5,6 +5,7 @@ import { useAppStore } from '@/core/store';
 import { BOX_PLAYER_DATA_KEYS } from '@/core/budgetTypes';
 import { CAMPAIGN_KEYS } from './campaignKeys';
 import { advanceCampaignYear } from './yearAdvance';
+import { GAME_IDS } from '@/games/registry';
 
 function freshStore(seed: Record<string, unknown> = {}) {
   useAppStore.setState({
@@ -23,59 +24,75 @@ describe('advanceCampaignYear', () => {
     eventBus.clear();
   });
 
-  it('navigates to The Box for the next year and re-arms the soft gate', () => {
+  it('default path navigates to Island, bumps year, applies quarter-of-initial debt cut on win, keeps box gate satisfied', () => {
     freshStore({
       [BOX_PLAYER_DATA_KEYS.currentYear]: 2,
       [BOX_PLAYER_DATA_KEYS.highInterestDebtBalance]: 6000,
       [BOX_PLAYER_DATA_KEYS.boxAllocations]: { highInterestDebt: 1500 },
       [CAMPAIGN_KEYS.boxReadyForYear]: 2,
+      [CAMPAIGN_KEYS.initialHighInterestDebt]: 12_000,
     });
-    const navs: Array<{ to: string }> = [];
-    eventBus.on('navigate:request', (p) => navs.push({ to: p.to }));
+    const navs: Array<{ to: string; module: unknown }> = [];
+    eventBus.on('navigate:request', (p) => navs.push({ to: p.to, module: p.module }));
 
     const summary = advanceCampaignYear('win');
 
     const store = useAppStore.getState();
-    expect(navs).toEqual([{ to: 'budget' }]);
+    expect(navs).toEqual([{ to: 'game', module: GAME_IDS.islandRun }]);
     expect(store.playerData[BOX_PLAYER_DATA_KEYS.currentYear]).toBe(3);
     expect(store.playerData[CAMPAIGN_KEYS.year]).toBe(3);
-    // Gate must reset so player can't roll the map without re-budgeting.
-    expect(store.playerData[CAMPAIGN_KEYS.boxReadyForYear]).toBe(0);
+    expect(store.playerData[CAMPAIGN_KEYS.boxReadyForYear]).toBe(3);
     expect(summary.fromYear).toBe(2);
     expect(summary.toYear).toBe(3);
-    expect(summary.debtPaidUsd).toBe(1500);
-    expect(summary.debtAfterUsd).toBe(4500);
+    expect(summary.debtReductionFromWinUsd).toBe(3000);
+    expect(summary.debtAfterUsd).toBe(3000);
     expect(summary.interestPenaltyUsd).toBe(0);
   });
 
-  it('caps debt pay-down at the current debt balance', () => {
+  it('navigates to The Box when navigateTo is budget and clears the soft gate', () => {
     freshStore({
-      [BOX_PLAYER_DATA_KEYS.highInterestDebtBalance]: 800,
-      [BOX_PLAYER_DATA_KEYS.boxAllocations]: { highInterestDebt: 5000 },
+      [BOX_PLAYER_DATA_KEYS.currentYear]: 1,
+      [BOX_PLAYER_DATA_KEYS.highInterestDebtBalance]: 5000,
     });
+    const navs: Array<{ to: string }> = [];
+    eventBus.on('navigate:request', (p) => navs.push({ to: p.to }));
 
-    const summary = advanceCampaignYear('win');
+    advanceCampaignYear('win', { navigateTo: 'budget' });
 
-    expect(summary.debtPaidUsd).toBe(800);
-    expect(summary.debtAfterUsd).toBe(0);
+    const store = useAppStore.getState();
+    expect(navs).toEqual([{ to: 'budget' }]);
+    expect(store.playerData[CAMPAIGN_KEYS.boxReadyForYear]).toBe(0);
   });
 
-  it('applies a 2% interest penalty on a runner loss when debt remains', () => {
+  it('loss leaves debt unchanged and still advances year to Island', () => {
     freshStore({
       [BOX_PLAYER_DATA_KEYS.highInterestDebtBalance]: 10_000,
       [BOX_PLAYER_DATA_KEYS.boxAllocations]: { highInterestDebt: 0 },
+      [BOX_PLAYER_DATA_KEYS.currentYear]: 1,
     });
 
     const summary = advanceCampaignYear('loss');
 
-    expect(summary.debtPaidUsd).toBe(0);
-    expect(summary.interestPenaltyUsd).toBe(200);
-    expect(summary.debtAfterUsd).toBe(10_200);
+    expect(summary.debtReductionFromWinUsd).toBe(0);
+    expect(summary.interestPenaltyUsd).toBe(0);
+    expect(summary.debtAfterUsd).toBe(10_000);
   });
 
-  it('does not penalize interest when debt is already zero on loss', () => {
+  it('caps win reduction at remaining balance when less than a quarter of initial', () => {
+    freshStore({
+      [BOX_PLAYER_DATA_KEYS.highInterestDebtBalance]: 1800,
+      [CAMPAIGN_KEYS.initialHighInterestDebt]: 10_000,
+      [BOX_PLAYER_DATA_KEYS.currentYear]: 1,
+    });
+    const summary = advanceCampaignYear('win');
+    expect(summary.debtReductionFromWinUsd).toBe(1800);
+    expect(summary.debtAfterUsd).toBe(0);
+  });
+
+  it('does not change debt when balance is already zero on loss', () => {
     freshStore({
       [BOX_PLAYER_DATA_KEYS.highInterestDebtBalance]: 0,
+      [BOX_PLAYER_DATA_KEYS.currentYear]: 3,
     });
 
     const summary = advanceCampaignYear('loss');

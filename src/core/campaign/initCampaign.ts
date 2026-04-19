@@ -6,16 +6,13 @@
  *    Island map for the year.
  *  - `island:yearComplete` — routes the player to the right year-end
  *    mini-game (DebtRunner if `highInterestDebtBalance > 0`, else
- *    Investing Birds). One-time DebtRunner tutorial flag is checked here.
+ *    Investing Birds up to three times, else campaign finale).
+ *  - `game:result` — when Investing Birds was launched from a lap,
+ *    closes the year and returns to Island.
  *
- * Why module-level instead of a React `useEffect`?
- *  - StrictMode mounts effects twice in dev — that would register the
- *    subscriber twice and double every navigation / write. The bus only
- *    de-duplicates by exact handler reference, so we keep one stable
- *    handler in module scope and call `initCampaign()` exactly once
- *    from `main.tsx`. Subsequent calls are no-ops.
- *  - An in-flight flag guards against re-entrant `island:yearComplete`
- *    emits while a transition animation is mid-flight.
+ * Year counters (`currentYear`, `campaign.year`) advance in
+ * `advanceCampaignYear` / the Birds result handler, not on
+ * `island:yearComplete` emit.
  */
 
 import { eventBus } from '@/core/events';
@@ -26,7 +23,7 @@ import {
   readNumber,
 } from '@/core/budgetTypes';
 import type { BoxBudgetSubmitPayload } from '@/core/budgetTypes';
-import type { EventMap } from '@/core/types';
+import type { EventMap, GameEvent } from '@/core/types';
 import { allocationsToBudgetProfile } from '@/core/finance/allocationsToBudgetProfile';
 import { CAMPAIGN_KEYS, DEBT_RUNNER_KEYS } from './campaignKeys';
 import { GAME_IDS } from '@/games/registry';
@@ -40,6 +37,7 @@ export function initCampaign(): void {
 
   eventBus.on('box:budget:submit', onBoxSubmit);
   eventBus.on('island:yearComplete', onYearComplete);
+  eventBus.on('game:result', onGameResult);
 }
 
 /** Test-only reset. Not exported from `index.ts`. */
@@ -49,24 +47,26 @@ export function __resetCampaignForTests(): void {
 }
 
 function onBoxSubmit(payload: BoxBudgetSubmitPayload): void {
-  // Derived profile so DebtRunner / Briefing read from real Box data.
   const profile = allocationsToBudgetProfile({
     allocations: payload.allocations,
     annualSalary: payload.annualSalary,
   });
-  const { appState, mergePlayerData } = useAppStore.getState();
+  const { appState, mergePlayerData, playerData } = useAppStore.getState();
+  const initialDebtSnap = playerData[CAMPAIGN_KEYS.initialHighInterestDebt];
   mergePlayerData({
     'runner.profile': profile,
     [CAMPAIGN_KEYS.boxReadyForYear]: payload.year,
     [CAMPAIGN_KEYS.boxSubmittedAtMs]: Date.now(),
-    // Submit consumed any pending one-shot cash; mirror the UI write so
-    // a future logic refactor that drops the UI-side merge still works.
     [BOX_PLAYER_DATA_KEYS.pendingCashToAllocate]: 0,
+    ...(initialDebtSnap === undefined || initialDebtSnap === null
+      ? {
+          [CAMPAIGN_KEYS.initialHighInterestDebt]: Math.max(
+            0,
+            payload.highInterestDebtBalanceAtSubmit,
+          ),
+        }
+      : {}),
   });
-  // Auto-advance to the Island map when the player submitted from the
-  // standalone Box screen (campaign path). When submitted from the
-  // overlay above an existing Island session, no navigation needed —
-  // the player is already on the map.
   if (appState === 'budget') {
     eventBus.emit('navigate:request', {
       to: 'game',
@@ -75,7 +75,48 @@ function onBoxSubmit(payload: BoxBudgetSubmitPayload): void {
   }
 }
 
-function onYearComplete(payload: EventMap['island:yearComplete']): void {
+function isInvestingBirdsResultPayload(p: unknown): boolean {
+  if (!p || typeof p !== 'object') return false;
+  const o = p as Record<string, unknown>;
+  return (
+    (o.outcome === 'win' || o.outcome === 'loss') &&
+    typeof o.score === 'number' &&
+    typeof o.levelsCleared === 'number' &&
+    o.scoreByType !== null &&
+    typeof o.scoreByType === 'object'
+  );
+}
+
+function onGameResult(evt: GameEvent<unknown>): void {
+  if (evt.kind !== 'result') return;
+  if (!isInvestingBirdsResultPayload(evt.payload)) return;
+
+  const { playerData, mergePlayerData } = useAppStore.getState();
+  if (playerData[CAMPAIGN_KEYS.yearEndBirdsPending] !== true) return;
+
+  const played = readNumber(playerData, CAMPAIGN_KEYS.investingBirdsYearsPlayed, 0);
+  const fromYear = readNumber(
+    playerData,
+    BOX_PLAYER_DATA_KEYS.currentYear,
+    BOX_DEFAULTS.currentYear,
+  );
+  const toYear = fromYear + 1;
+
+  mergePlayerData({
+    [CAMPAIGN_KEYS.yearEndBirdsPending]: false,
+    [CAMPAIGN_KEYS.investingBirdsYearsPlayed]: Math.min(3, played + 1),
+    [BOX_PLAYER_DATA_KEYS.currentYear]: toYear,
+    [CAMPAIGN_KEYS.year]: toYear,
+    [CAMPAIGN_KEYS.boxReadyForYear]: toYear,
+  });
+
+  eventBus.emit('navigate:request', {
+    to: 'game',
+    module: GAME_IDS.islandRun,
+  });
+}
+
+function onYearComplete(_payload: EventMap['island:yearComplete']): void {
   if (yearEndInFlight) return;
   yearEndInFlight = true;
 
@@ -86,25 +127,42 @@ function onYearComplete(payload: EventMap['island:yearComplete']): void {
     BOX_DEFAULTS.highInterestDebtBalance,
   );
 
-  // Bump campaign year ledger.
-  mergePlayerData({ [CAMPAIGN_KEYS.year]: payload.year });
+  const investingPlayed = readNumber(playerData, CAMPAIGN_KEYS.investingBirdsYearsPlayed, 0);
 
   if (debtBalance > 0.01) {
+    mergePlayerData({ [CAMPAIGN_KEYS.yearEndBirdsPending]: false });
     const tutorialSeen = playerData[DEBT_RUNNER_KEYS.tutorialSeen] === true;
     eventBus.emit('navigate:request', {
       to: tutorialSeen ? 'briefing' : 'debtRunnerTutorial',
       module: null,
     });
+  } else if (investingPlayed >= 3) {
+    const fromYear = readNumber(
+      playerData,
+      BOX_PLAYER_DATA_KEYS.currentYear,
+      BOX_DEFAULTS.currentYear,
+    );
+    const toYear = fromYear + 1;
+    mergePlayerData({
+      [CAMPAIGN_KEYS.yearEndBirdsPending]: false,
+      [BOX_PLAYER_DATA_KEYS.currentYear]: toYear,
+      [CAMPAIGN_KEYS.year]: toYear,
+      [CAMPAIGN_KEYS.boxReadyForYear]: toYear,
+    });
+    eventBus.emit('navigate:request', {
+      to: 'finale',
+      module: null,
+    });
   } else {
+    mergePlayerData({
+      [CAMPAIGN_KEYS.yearEndBirdsPending]: true,
+    });
     eventBus.emit('navigate:request', {
       to: 'game',
       module: GAME_IDS.investingBirds,
     });
   }
 
-  // Release the in-flight latch on the next tick so a subsequent
-  // genuine `island:yearComplete` (e.g. after returning to the map)
-  // can re-arm. Re-entrant emits in the *same* tick are still ignored.
   queueMicrotask(() => {
     yearEndInFlight = false;
   });

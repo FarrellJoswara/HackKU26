@@ -15,7 +15,7 @@ export const SQUARE_TIPS: readonly string[] = [
 ] as const;
 
 export const SQUARE_LABELS: readonly string[] = [
-  'Shore Fund',
+  'Start / Shore',
   'Budget Cove',
   'Debt Reef',
   'Auto Tide',
