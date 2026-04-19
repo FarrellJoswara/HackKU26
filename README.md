@@ -97,8 +97,8 @@ while still being fast enough to build and iterate on during a hackathon.
 
 Follow these steps to run **Island Adventure** locally.
 
-### 1. Clone the repository
 ```bash
+1. Clone the repository
 git clone <your-repo-url>
 
 2. Move into the project folder
