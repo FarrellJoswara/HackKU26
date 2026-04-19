@@ -42,6 +42,8 @@ export interface ApplyIslandChoiceArgs {
   allocations: Record<BudgetCategoryId, number>;
   annualSalary?: number;
   debtBalance?: number;
+  /** Outstanding cash awaiting re-allocation; passed through to finalizer. */
+  pendingCashToAllocate?: number;
   payload: IslandScenarioChoicePayload;
 }
 
@@ -54,6 +56,7 @@ export function applyIslandScenarioChoice({
   allocations,
   annualSalary,
   debtBalance,
+  pendingCashToAllocate,
   payload,
 }: ApplyIslandChoiceArgs): ApplyIslandChoiceResult {
   const deltas = ISLAND_CHOICE_DELTAS[payload.choiceId] ?? {};
@@ -69,6 +72,7 @@ export function applyIslandScenarioChoice({
       allocations: next,
       annualSalary,
       debtBalance,
+      pendingCashToAllocate,
     }),
     appliedDeltas: deltas,
   };

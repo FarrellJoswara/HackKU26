@@ -6,28 +6,41 @@
  *
  * Rules:
  *   1. clamp all categories to >= 0
- *   2. zero `investments` while high-interest debt remains (>= EPS)
- *   3. when `annualSalary` is supplied, absorb tiny float drift on `miscFun`
+ *   2. while high-interest debt remains (>= EPS), zero the legacy
+ *      `investments` aggregate AND every investment subcategory
+ *   3. keep `investments` consistent with the sum of investment
+ *      subcategories (legacy aggregate is derived, not authored)
+ *   4. when `annualSalary` is supplied, absorb tiny float drift on `miscFun`
  *      so the zero-based total still equals salary
+ *      (zero-based total **excludes** the legacy `investments` aggregate
+ *      to avoid double-counting the subcategories).
  */
-import type { BudgetCategoryId } from '../budgetTypes';
+import {
+  INVESTMENT_SUBCATEGORIES,
+  sumInvestmentSubcategories,
+  sumZeroBasedAllocations,
+  type BudgetCategoryId,
+} from '../budgetTypes';
 
 export interface FinalizeBoxAllocationsArgs {
   allocations: Record<BudgetCategoryId, number>;
   annualSalary?: number;
   debtBalance?: number;
+  /**
+   * Cash pending re-allocation (e.g. liquidation leftover). When provided,
+   * the zero-based drift target becomes `salary + pendingCashToAllocate`.
+   * Default: 0.
+   */
+  pendingCashToAllocate?: number;
 }
 
 const EPS = 0.01;
-
-function sumAllocations(a: Record<BudgetCategoryId, number>): number {
-  return (Object.keys(a) as BudgetCategoryId[]).reduce((s, k) => s + (a[k] ?? 0), 0);
-}
 
 export function finalizeBoxAllocations({
   allocations,
   annualSalary,
   debtBalance,
+  pendingCashToAllocate,
 }: FinalizeBoxAllocationsArgs): Record<BudgetCategoryId, number> {
   const next = { ...allocations };
 
@@ -38,10 +51,18 @@ export function finalizeBoxAllocations({
 
   if (typeof debtBalance === 'number' && debtBalance > EPS) {
     next.investments = 0;
+    for (const id of INVESTMENT_SUBCATEGORIES) next[id] = 0;
+  } else {
+    next.investments = sumInvestmentSubcategories(next);
   }
 
   if (typeof annualSalary === 'number' && Number.isFinite(annualSalary) && annualSalary > 0) {
-    const drift = annualSalary - sumAllocations(next);
+    const pending =
+      typeof pendingCashToAllocate === 'number' && Number.isFinite(pendingCashToAllocate)
+        ? Math.max(0, pendingCashToAllocate)
+        : 0;
+    const target = annualSalary + pending;
+    const drift = target - sumZeroBasedAllocations(next);
     if (Math.abs(drift) > EPS) {
       next.miscFun = Math.max(0, (next.miscFun ?? 0) + drift);
     }
