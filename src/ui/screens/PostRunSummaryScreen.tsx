@@ -5,6 +5,7 @@ import { Button } from '../components/Button';
 import { CATEGORY_LABELS, type BudgetCategoryId } from '@/core/finance/budgetTypes';
 import { explainBudgetProfileEffects } from '@/core/finance/explainEffects';
 import { getStoredLastRun } from '@/core/runner/RunnerResultRouter';
+import { GAME_IDS } from '@/games/registry';
 
 export default function PostRunSummaryScreen(props: UIProps<Record<string, unknown>>) {
   const lastRun = getStoredLastRun(props.data);
@@ -89,7 +90,18 @@ export default function PostRunSummaryScreen(props: UIProps<Record<string, unkno
             <Button
               variant="coral"
               leadingIcon={<RotateCcw className="size-4" />}
-              onClick={() => eventBus.emit('navigate:request', { to: 'menu', module: null })}
+              onClick={() =>
+                // Replay the runner directly using the same budget profile
+                // that's already in `playerData['runner.profile']` (set on
+                // the briefing screen and preserved across the run). The
+                // game module reads it on mount so no extra setup is
+                // needed — this lands the player straight back into the
+                // dock and starts a fresh attempt with identical settings.
+                eventBus.emit('navigate:request', {
+                  to: 'game',
+                  module: GAME_IDS.debtRunner,
+                })
+              }
             >
               New run
             </Button>

@@ -21,6 +21,7 @@ import DebtCollectorPaperTrail from './scene/DebtCollectorPaperTrail';
 import BeachDecor from './scene/BeachDecor';
 import BeachSand from './scene/BeachSand';
 import Ocean from './scene/Ocean';
+import OceanInlets from './scene/OceanInlets';
 import ParadiseSkydomeMesh from './scene/ParadiseSkydomeMesh';
 import SandPuff from './scene/SandPuff';
 import ShorelineDecor from './scene/ShorelineDecor';
@@ -743,6 +744,7 @@ export default function DebtRunnerGame(_props: GameProps) {
       <Ocean />
       <ShorelineDecor />
       <BeachSand />
+      <OceanInlets />
       <BeachDecor />
 
       {/* Distant island silhouettes — a small archipelago at varied bearings
