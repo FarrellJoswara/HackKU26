@@ -11,6 +11,7 @@ import { ParadiseWater } from './water/ParadiseWater';
 import { getLandingPayload } from './landingPayload';
 import { SQUARE_LABELS } from './tips';
 import { eventBus } from '@/core/events';
+import { advanceHops } from '@/core/campaign/lapCounter';
 import type {
   IslandScenarioBeat,
   IslandScenarioChoiceId,
@@ -236,6 +237,14 @@ export interface IslandRunBootstrapOptions {
    * Bus so `core` never imports games. Receives `{ totalHops, laps }`.
    */
   onLapComplete?: (info: { totalHops: number; laps: number }) => void;
+  /**
+   * Hop counter to start from (cumulative hops across all prior Island
+   * Run sessions for the active save). Lets the React shell keep the
+   * lap counter continuous across remounts so a year-end can never be
+   * lost or fired twice when the player navigates away mid-year and
+   * comes back.
+   */
+  initialTotalHops?: number;
 }
 
 export function bootstrap(opts: IslandRunBootstrapOptions = {}): () => void {
@@ -1034,7 +1043,7 @@ export function bootstrap(opts: IslandRunBootstrapOptions = {}): () => void {
     const snap = opts.getPlayerSnapshot?.() ?? null;
     const ratios = snap?.fundingRatioByCategory;
     const payload = getLandingPayload(square, ratios as never);
-    if (landingTitle) landingTitle.textContent = SQUARE_LABELS[square] ?? 'Finance tip';
+    if (landingTitle) landingTitle.textContent = SQUARE_LABELS[square] ?? 'Money tip';
     if (payload.kind === 'choice') {
       activeBeat = payload.beat;
       if (landingText) landingText.textContent = payload.beat.setup;
@@ -1073,7 +1082,13 @@ export function bootstrap(opts: IslandRunBootstrapOptions = {}): () => void {
   // `src/core/campaign/lapCounter.ts` and referenced in GAME_DESIGN.md.
   // We increment in exactly ONE place (after the dice settles) so a lap
   // can never fire twice or get lost across re-mounts of the React shell.
-  let totalHops = 0;
+  // Seed from persisted `campaign.islandTotalHops` so the in-progress
+  // year is preserved across remounts (the React shell mounts/unmounts
+  // whenever the player navigates away from the map).
+  let totalHops =
+    typeof opts.initialTotalHops === 'number' && opts.initialTotalHops > 0
+      ? Math.floor(opts.initialTotalHops)
+      : 0;
   function finishRollAfterAnimation(roll: number) {
     diceWrap?.classList.remove('dice-rolling');
     diceWrap?.classList.add('dice-roll-pop');
@@ -1083,19 +1098,17 @@ export function bootstrap(opts: IslandRunBootstrapOptions = {}): () => void {
     if (prevIndex !== playerIndex) {
       bananaTravel = { startI: prevIndex, roll, hopIndex: 0, t: 0 };
     }
-    const prevTotalHops = totalHops;
-    totalHops = prevTotalHops + roll;
-    const prevLaps = Math.floor(prevTotalHops / NUM_SQUARES);
-    const laps = Math.floor(totalHops / NUM_SQUARES);
-    if (laps > prevLaps) {
+    const step = advanceHops(totalHops, roll, NUM_SQUARES);
+    totalHops = step.totalHops;
+    if (step.lapCompletedThisStep) {
       // Fire once — the React shell forwards to `island:yearComplete`.
       try {
-        opts.onLapComplete?.({ totalHops, laps });
+        opts.onLapComplete?.({ totalHops: step.totalHops, laps: step.laps });
       } catch (e) {
         console.error('[IslandRun] onLapComplete handler threw', e);
       }
     }
-    statusEl!.textContent = `You rolled ${roll}. Landed on ${SQUARE_LABELS[playerIndex]}.`;
+    statusEl!.textContent = `You rolled ${roll}. You landed on ${SQUARE_LABELS[playerIndex]}.`;
     statusEl?.classList.remove('is-rolling');
     updateHud();
     const moveDelayMs =
@@ -1111,7 +1124,7 @@ export function bootstrap(opts: IslandRunBootstrapOptions = {}): () => void {
   const onRollClick = () => {
     if (rolling) return;
     if (!diceModel) {
-      statusEl!.textContent = 'Loading 3D dice... try again in a moment.';
+      statusEl!.textContent = 'Loading the dice... try again in a moment.';
       return;
     }
     rolling = true;
@@ -1124,7 +1137,7 @@ export function bootstrap(opts: IslandRunBootstrapOptions = {}): () => void {
     // snaps to the rolled face). The HUD "center-pop" mini-die (driven by
     // dicePopTarget) is popped in alongside so both dice animate together.
     if (!worldDiceReady) {
-      statusEl!.textContent = 'Loading 3D dice... try again in a moment.';
+      statusEl!.textContent = 'Loading the dice... try again in a moment.';
       rolling = false;
       if (rollBtn) rollBtn.disabled = false;
       statusEl?.classList.remove('is-rolling');

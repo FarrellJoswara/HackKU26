@@ -14,7 +14,7 @@
  * `@/games/registry`.
  */
 
-export const GAME_TITLE_PLACEHOLDER = 'Island Adventure';
+export const GAME_TITLE_PLACEHOLDER = 'Island Year';
 
 export type DifficultyId = 'easy' | 'normal' | 'hard';
 
@@ -28,17 +28,17 @@ export const DIFFICULTIES: DifficultyOption[] = [
   {
     id: 'easy',
     label: 'Easy',
-    description: 'Relaxed pace, more resources.',
+    description: 'Softer pace with more breathing room.',
   },
   {
     id: 'normal',
     label: 'Normal',
-    description: 'Balanced challenge.',
+    description: 'Balanced pressure and recovery.',
   },
   {
     id: 'hard',
     label: 'Hard',
-    description: 'Punishing — for survivors only.',
+    description: 'Tight margins and tough consequences.',
   },
 ];
 

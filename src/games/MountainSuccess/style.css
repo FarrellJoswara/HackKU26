@@ -1,0 +1,229 @@
+/**
+ * MountainSuccess game-scoped styles.
+ *
+ * Loaded with Vite's `?inline` import in `index.tsx`, attached to a
+ * `<style data-mountain-success>` tag on mount and removed on unmount.
+ * Class names are deliberately game-scoped (`scene-*`) to avoid bleeding
+ * into the host app's styles, even though the lifecycle guarantees only
+ * one game's stylesheet is mounted at a time.
+ */
+
+:root {
+  --mountain-bg: #0c1a2c;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  overflow: hidden;
+  min-height: 100vh;
+  min-height: 100dvh;
+  font-family: 'Outfit', 'DM Sans', system-ui, sans-serif;
+  background: var(--mountain-bg);
+}
+
+.canvas-root {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  outline: none;
+}
+
+.webgl-error {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(15, 25, 40, 0.92);
+  color: #f0f4f8;
+  text-align: center;
+}
+
+.webgl-error.hidden {
+  display: none;
+}
+
+/* ---------------------------------------------------------------- *
+ * Cinematic letterbox bars — slide in over the first ~1.2s to cue
+ * "this is a cutscene" the moment the scene starts.
+ * ---------------------------------------------------------------- */
+
+.scene-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  height: 8vh;
+  background: #000;
+  pointer-events: none;
+  transform: translateY(-100%);
+  animation: scene-bar-in 1.2s cubic-bezier(0.22, 1, 0.36, 1) 0s 1 forwards;
+}
+
+.scene-bar.is-top {
+  top: 0;
+  transform: translateY(-100%);
+}
+
+.scene-bar.is-bottom {
+  bottom: 0;
+  transform: translateY(100%);
+  animation-name: scene-bar-in-bottom;
+}
+
+@keyframes scene-bar-in {
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes scene-bar-in-bottom {
+  to {
+    transform: translateY(0);
+  }
+}
+
+/* ---------------------------------------------------------------- *
+ * HUD captions — purely CSS-driven via `animation-delay` so the
+ * scene script doesn't need to coordinate with React.
+ * ---------------------------------------------------------------- */
+
+.scene-hud {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 24px 14vh;
+  pointer-events: none;
+  text-align: center;
+  text-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.72),
+    0 6px 22px rgba(0, 0, 0, 0.58),
+    0 0 2px rgba(0, 0, 0, 0.85);
+}
+
+.scene-hud::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: min(46vh, 21rem);
+  background:
+    linear-gradient(
+      to top,
+      rgba(0, 0, 0, 0.58) 0%,
+      rgba(0, 0, 0, 0.34) 36%,
+      rgba(0, 0, 0, 0.08) 72%,
+      rgba(0, 0, 0, 0) 100%
+    );
+  filter: blur(1.5px);
+  pointer-events: none;
+}
+
+.scene-chip,
+.scene-title,
+.scene-subtitle {
+  position: relative;
+  z-index: 1;
+  opacity: 0;
+  transform: translateY(8px);
+  animation: scene-caption-in 1.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  color: #fff8e6;
+}
+
+.scene-chip {
+  margin: 0;
+  font-family: 'DM Sans', 'Outfit', system-ui, sans-serif;
+  font-size: clamp(0.72rem, 1.5vw, 0.86rem);
+  font-weight: 600;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: #ffd49a;
+  animation-delay: 5.5s;
+}
+
+.scene-title {
+  margin: 12px 0 0;
+  font-family: 'Fraunces', Georgia, serif;
+  font-weight: 700;
+  font-size: clamp(2rem, 5.6vw, 4.2rem);
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+  color: #fffdf6;
+  text-wrap: balance;
+  animation-delay: 7s;
+}
+
+.scene-subtitle {
+  margin: 16px 0 0;
+  max-width: 32ch;
+  font-family: 'Outfit', 'DM Sans', system-ui, sans-serif;
+  font-size: clamp(0.95rem, 1.9vw, 1.15rem);
+  font-weight: 500;
+  color: rgba(255, 246, 230, 0.9);
+  animation-delay: 9s;
+}
+
+@keyframes scene-caption-in {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ---------------------------------------------------------------- *
+ * Final white-out fade — covers the canvas on the way out so the
+ * Title Hub navigation feels like a deliberate exhalation.
+ * ---------------------------------------------------------------- */
+
+.scene-fade {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  background: #fff;
+  opacity: 0;
+  pointer-events: none;
+  animation: scene-fade-in 1.5s ease-in 13.5s forwards;
+}
+
+@keyframes scene-fade-in {
+  to {
+    opacity: 1;
+  }
+}
+
+/* ---------------------------------------------------------------- *
+ * Reduced-motion: collapse the cinematic timing so the captions
+ * appear immediately and the bars/fade snap rather than slide.
+ * ---------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .scene-bar,
+  .scene-bar.is-bottom,
+  .scene-chip,
+  .scene-title,
+  .scene-subtitle,
+  .scene-fade {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0s !important;
+    transform: none !important;
+    opacity: 1 !important;
+  }
+
+  .scene-fade {
+    opacity: 0 !important;
+  }
+}

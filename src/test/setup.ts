@@ -40,7 +40,6 @@ if (typeof window !== 'undefined' && !window.matchMedia) {
 // event with `{ bubbles: true }`; we don't need to polyfill the full
 // API here, just make sure the constructor exists for `new PointerEvent`.
 if (typeof window !== 'undefined' && typeof window.PointerEvent === 'undefined') {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (window as any).PointerEvent = class PointerEventPolyfill extends Event {
     pointerType: string;
     constructor(type: string, init: PointerEventInit & { pointerType?: string } = {}) {

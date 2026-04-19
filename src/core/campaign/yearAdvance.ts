@@ -1,6 +1,5 @@
 /**
- * Closes a Year Loop and routes the player back to The Box for the next
- * year's budget.
+ * Closes a Year Loop and routes the player to the next destination.
  *
  * Per `GAME_DESIGN.md` §"The Core Game Loop (Per Year)":
  *
@@ -12,104 +11,72 @@
  *   - The player must then re-open The Box and submit a fresh
  *     zero-based budget for year N+1 before they can roll again — that
  *     is the soft `canEnterMapForCampaign` gate, re-armed by clearing
- *     `boxReadyForYear` here.
+ *     `boxReadyForYear` in the close-year patch.
  *
  * On a Debt Runner *loss* we apply a small interest penalty (2% of
  * remaining balance after pay-down) so the loop has weight without
- * fully balancing the in-game economy — the full Year Controller will
- * own that math later.
+ * fully balancing the in-game economy.
  *
- * Pure with respect to inputs (`playerData` + outcome) and side-effects
- * are restricted to one `mergePlayerData` write + one navigate event.
- * The function returns a structured summary so the calling screen can
- * surface what changed if it ever wants to.
+ * The math itself lives in `closeYear.ts` so every year-end route
+ * (DebtRunner summary, Investing Birds end, Mountain Success cinematic)
+ * applies the **same** state mutations. This thin shell only:
+ *  - reads the current store snapshot,
+ *  - merges the computed patch,
+ *  - emits exactly one `navigate:request`.
  *
  * AGENTS.md: this module is core-only. No `ui` or `games` imports.
  */
 
 import { eventBus } from '@/core/events';
 import { useAppStore } from '@/core/store';
+import type { AppState } from '@/core/types';
 import {
-  BOX_DEFAULTS,
-  BOX_PLAYER_DATA_KEYS,
-  readNumber,
-} from '@/core/budgetTypes';
-import { CAMPAIGN_KEYS } from './campaignKeys';
+  computeCloseYear,
+  type YearAdvanceOutcome,
+  type YearAdvanceSummary,
+} from './closeYear';
 
-const LOSS_INTEREST_PENALTY = 0.02; // 2% of remaining balance on a runner loss
+export type { YearAdvanceOutcome, YearAdvanceSummary } from './closeYear';
 
-export type YearAdvanceOutcome = 'win' | 'loss' | 'skipped';
+/** Where to route the player once the year-close patch has been applied. */
+export type YearCloseDestination = Extract<AppState, 'budget' | 'menu'>;
 
-export interface YearAdvanceSummary {
-  /** Year the player just finished. */
-  fromYear: number;
-  /** Year the player is now budgeting for. */
-  toYear: number;
-  /** Debt before any year-end adjustment. */
-  debtBeforeUsd: number;
-  /** Dollars pulled from the High-Interest Debt allocation toward payoff. */
-  debtPaidUsd: number;
-  /** Extra interest added because the runner was lost. */
-  interestPenaltyUsd: number;
-  /** Final running debt balance for next year. */
-  debtAfterUsd: number;
+export interface AdvanceCampaignYearOptions {
+  /** `win` / `loss` of the year-end mini-game, or `skipped` when bypassed. */
+  outcome: YearAdvanceOutcome;
+  /**
+   * Where to route after applying the close-year patch.
+   *  - `'budget'` (default): straight back to The Box for next year's budget.
+   *  - `'menu'`: back to the Title Hub (used by Investing Birds end + the
+   *    Mountain Success cinematic, which both finish on the menu).
+   */
+  destination?: YearCloseDestination;
 }
 
 /**
- * Apply year-end mechanics and route the player back to The Box.
+ * Apply year-end mechanics and route the player to the chosen destination.
  *
- * @param outcome `win` / `loss` of the year-end mini-game, or `skipped`
- *                when the player bypassed it (debt-free → no DebtRunner).
+ * Backwards-compatible: legacy callers that passed a bare `outcome`
+ * string still work and default to routing back to the budget screen.
  */
-export function advanceCampaignYear(outcome: YearAdvanceOutcome): YearAdvanceSummary {
+export function advanceCampaignYear(
+  optsOrOutcome: AdvanceCampaignYearOptions | YearAdvanceOutcome,
+): YearAdvanceSummary {
+  const opts: AdvanceCampaignYearOptions =
+    typeof optsOrOutcome === 'string'
+      ? { outcome: optsOrOutcome }
+      : optsOrOutcome;
+  const destination: YearCloseDestination = opts.destination ?? 'budget';
+
   const { playerData, mergePlayerData } = useAppStore.getState();
-
-  const fromYear = readNumber(
+  const { patch, summary } = computeCloseYear({
     playerData,
-    BOX_PLAYER_DATA_KEYS.currentYear,
-    BOX_DEFAULTS.currentYear,
-  );
-  const toYear = fromYear + 1;
-
-  const debtBefore = readNumber(
-    playerData,
-    BOX_PLAYER_DATA_KEYS.highInterestDebtBalance,
-    BOX_DEFAULTS.highInterestDebtBalance,
-  );
-
-  const allocations =
-    (playerData[BOX_PLAYER_DATA_KEYS.boxAllocations] as Record<string, number> | undefined) ?? {};
-  const debtAlloc = Math.max(0, allocations['highInterestDebt'] ?? 0);
-  const debtPaid = Math.min(debtAlloc, debtBefore);
-
-  let nextDebt = Math.max(0, debtBefore - debtPaid);
-
-  let interestPenalty = 0;
-  if (outcome === 'loss' && nextDebt > 0) {
-    interestPenalty = nextDebt * LOSS_INTEREST_PENALTY;
-    nextDebt += interestPenalty;
-  }
-
-  mergePlayerData({
-    [BOX_PLAYER_DATA_KEYS.currentYear]: toYear,
-    [CAMPAIGN_KEYS.year]: toYear,
-    [BOX_PLAYER_DATA_KEYS.highInterestDebtBalance]: Math.round(nextDebt * 100) / 100,
-    // Re-arm the soft Box gate: the player must submit a fresh zero-based
-    // budget for the new year before the map will let them roll.
-    [CAMPAIGN_KEYS.boxReadyForYear]: 0,
+    outcome: opts.outcome,
   });
 
-  // Send them straight to The Box for next year's budget. The Box's own
-  // `box:budget:submit` handler in `initCampaign.ts` will then advance
-  // them to Island Run for the year.
-  eventBus.emit('navigate:request', { to: 'budget', module: null });
+  mergePlayerData(patch);
 
-  return {
-    fromYear,
-    toYear,
-    debtBeforeUsd: Math.round(debtBefore * 100) / 100,
-    debtPaidUsd: Math.round(debtPaid * 100) / 100,
-    interestPenaltyUsd: Math.round(interestPenalty * 100) / 100,
-    debtAfterUsd: Math.round(nextDebt * 100) / 100,
-  };
+  eventBus.emit('navigate:request', { to: destination, module: null });
+
+  return summary;
 }

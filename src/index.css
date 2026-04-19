@@ -59,3 +59,24 @@ body,
 canvas {
   display: block;
 }
+
+/*
+ * `TransitionManager` toggles `data-transitioning="true"` on <body> while a
+ * navigation animation is in flight. Pause the heaviest decorative
+ * animations during that window so the compositor can spend its budget
+ * on the actual transition overlay instead of background birds, blur
+ * pulses, and blend-mode shimmer. The transition itself drives the
+ * overlay it creates, so it is unaffected.
+ */
+body[data-transitioning='true'] .th-sunBloom,
+body[data-transitioning='true'] .th-sun,
+body[data-transitioning='true'] .th-cloudBlob,
+body[data-transitioning='true'] .th-caustic,
+body[data-transitioning='true'] .th-foam,
+body[data-transitioning='true'] .th-waveArc,
+body[data-transitioning='true'] .th-island,
+body[data-transitioning='true'] .th-bird,
+body[data-transitioning='true'] .th-spark,
+body[data-transitioning='true'] .th-ambient {
+  animation-play-state: paused !important;
+}

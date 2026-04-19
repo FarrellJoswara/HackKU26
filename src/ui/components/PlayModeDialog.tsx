@@ -7,6 +7,7 @@
 
 import { useEffect, useRef } from 'react';
 import { Play, RotateCw, X } from 'lucide-react';
+import { RewardButton } from './RewardButton';
 
 export interface PlayModeDialogProps {
   /** Stable id for `aria-controls` from the title hub Play button. */
@@ -77,16 +78,17 @@ export function PlayModeDialog({
           >
             Play
           </p>
-          <h2 className="island-title mt-1 text-3xl">Choose a mode</h2>
+          <h2 className="island-title mt-1 text-3xl">Choose your path</h2>
           <p id="playModeDesc" className="island-statusText mx-auto mt-3 max-w-xs text-sm">
-            Pick up where you left off, or start fresh with a new difficulty.
+            Continue your current run or begin fresh with a new difficulty.
           </p>
 
           <div className="mt-6 flex flex-col gap-3">
-            <button
+            <RewardButton
               ref={continueBtnRef}
               type="button"
               className="island-btnShell"
+              microReward="normal"
               disabled={!hasSave}
               onClick={onContinue}
               aria-label={hasSave ? 'Continue saved Island Run' : 'Continue (no save yet)'}
@@ -94,30 +96,31 @@ export function PlayModeDialog({
             >
               <RotateCw className="size-4" />
               Continue
-            </button>
-            <button
+            </RewardButton>
+            <RewardButton
               ref={newGameBtnRef}
               type="button"
               className="island-btnShell"
+              microReward="normal"
               aria-label="Start a new game"
               onClick={onNewGame}
             >
               <Play className="size-4" />
               New Game
-            </button>
-            <button
+            </RewardButton>
+            <RewardButton
               type="button"
               className="island-btnShell"
               aria-label="Close and return to title"
               onClick={onClose}
             >
               Cancel
-            </button>
+            </RewardButton>
           </div>
 
           {!hasSave ? (
             <p className="island-hintText mt-4">
-              Continue unlocks once you have an in-progress run.
+              Continue unlocks after you start your first run.
             </p>
           ) : null}
         </div>

@@ -21,12 +21,21 @@ export const GAME_IDS = {
   islandRun: moduleId('islandRun'),
   /** Angry-Birds–style towers with portfolio allocation (R3F, self-contained). */
   investingBirds: moduleId('investingBirds'),
+  /**
+   * Mountain Success — financial-freedom cinematic. Self-contained
+   * imperative Three.js scene inside `src/games/MountainSuccess/`.
+   * Like Island Run, mounts directly from `App.tsx` (its own
+   * `WebGLRenderer`), so it is intentionally NOT in `GAME_MODULES`.
+   */
+  mountainSuccess: moduleId('mountainSuccess'),
 } as const;
 
 export const GAME_MODULES: Record<ModuleId, LazyGame> = {
   [GAME_IDS.debtRunner]: lazy(() => import('./DebtRunner')),
   [GAME_IDS.investingBirds]: lazy(() => import('./InvestingBirds')),
-  // Island Run has no R3F module — it mounts directly from App.tsx (see src/games/IslandRun/main.ts).
+  // Island Run + Mountain Success have no R3F module — they each own
+  // their own WebGLRenderer and mount directly from App.tsx (see
+  // src/games/IslandRun/main.ts and src/games/MountainSuccess/main.ts).
   // TemplateGame remains in `src/games/TemplateGame/` as a copy-paste starter
   // (referenced by AGENTS.md), but is intentionally unregistered so it does
   // not appear in any menu.

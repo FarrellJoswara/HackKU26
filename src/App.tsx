@@ -17,25 +17,32 @@ import { Canvas } from '@react-three/fiber';
 import { TransitionManager } from './transitions/TransitionManager';
 import { GameRegistry } from './games/GameRegistry';
 import { UIRegistry } from './ui/UIRegistry';
+import { SuspenseShell } from './ui/components/SuspenseShell';
 import { useAppStore } from './core/store';
 import { GAME_IDS } from './games/registry';
 import { RunnerResultRouter } from './core/runner/RunnerResultRouter';
 
 const IslandRun = lazy(() => import('./games/IslandRun'));
+const MountainSuccess = lazy(() => import('./games/MountainSuccess'));
 
 export default function App() {
   const appState = useAppStore((s) => s.appState);
   const activeModule = useAppStore((s) => s.activeModule);
-  const islandRun =
-    appState === 'game' && activeModule === GAME_IDS.islandRun;
+  // Games that own their own WebGLRenderer mount OUTSIDE the host R3F
+  // `<Canvas>` so we never instantiate two WebGL contexts at once.
+  const islandRun = appState === 'game' && activeModule === GAME_IDS.islandRun;
+  const mountainSuccess =
+    appState === 'game' && activeModule === GAME_IDS.mountainSuccess;
+  const externalRenderer = islandRun || mountainSuccess;
 
   return (
     <TransitionManager>
       <RunnerResultRouter />
       <div className="absolute inset-0">
-        {islandRun ? (
-          <Suspense fallback={null}>
-            <IslandRun />
+        {externalRenderer ? (
+          <Suspense fallback={<SuspenseShell />}>
+            {islandRun ? <IslandRun /> : null}
+            {mountainSuccess ? <MountainSuccess /> : null}
           </Suspense>
         ) : (
           <Canvas

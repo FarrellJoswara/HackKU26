@@ -8,6 +8,7 @@ import { ArrowLeft, Gamepad2, Volume2, VolumeX } from 'lucide-react';
 import { audio } from '@/audio/AudioManager';
 import { eventBus } from '@/core/events';
 import type { UIProps } from '@/core/types';
+import { RewardButton } from '../components/RewardButton';
 import { TitleHubDecor } from '../components/TitleHubDecor';
 
 export default function SettingsScreen(_props: UIProps<unknown>) {
@@ -38,21 +39,21 @@ export default function SettingsScreen(_props: UIProps<unknown>) {
             >
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
-                  <p className="th-eyebrow th-menuEyebrow">Configuration</p>
+                  <p className="th-eyebrow th-menuEyebrow">Game setup</p>
                   <h1 id="settingsTitle" className="island-title th-titleGradient mt-1 text-3xl md:text-[2rem]">
                     Settings
                   </h1>
                 </div>
-                <button type="button" className="th-btnSettings shrink-0" onClick={handleBack}>
+                <RewardButton type="button" className="th-btnSettings shrink-0" onClick={handleBack}>
                   <ArrowLeft className="size-4 shrink-0" aria-hidden />
                   Back
-                </button>
+                </RewardButton>
               </div>
 
               <div className="th-titleDivider th-menuDivider" role="presentation" />
 
               <p id="settingsIntro" className="island-statusText th-subtitle mt-3 max-w-xl">
-                Tweak how the game sounds and plays. More options coming soon.
+                Tune sound and controls for your run. More options are on the way.
               </p>
 
               <section className="mt-8 space-y-4" aria-label="Audio settings">
@@ -66,20 +67,20 @@ export default function SettingsScreen(_props: UIProps<unknown>) {
                       {muted ? <VolumeX className="size-5" /> : <Volume2 className="size-5" />}
                     </div>
                     <div className="min-w-0">
-                      <p className="font-semibold text-[var(--island-color-title)]">Mute all audio</p>
+                      <p className="font-semibold text-[var(--island-color-title)]">Mute all sound</p>
                       <p className="mt-0.5 text-sm text-[var(--island-color-ink-muted)]">
-                        Silences music and sound effects.
+                        Turns off music and sound effects.
                       </p>
                     </div>
                   </div>
-                  <button
+                  <RewardButton
                     type="button"
                     className="th-btnSettings shrink-0 self-stretch sm:self-center"
                     onClick={toggleMute}
                     aria-pressed={muted}
                   >
                     {muted ? 'Unmute' : 'Mute'}
-                  </button>
+                  </RewardButton>
                 </div>
               </section>
 
@@ -93,9 +94,9 @@ export default function SettingsScreen(_props: UIProps<unknown>) {
                     <Gamepad2 className="size-5" />
                   </div>
                   <div className="min-w-0">
-                    <p className="font-semibold text-[var(--island-color-title)]">Keyboard &amp; mouse</p>
+                      <p className="font-semibold text-[var(--island-color-title)]">Keyboard &amp; mouse</p>
                     <p className="mt-1 text-sm text-[var(--island-color-ink-muted)]">
-                      Rebinding is not available yet. Default controls are used for every mini-game.
+                        Rebinding is not available yet. Default controls apply in every mini-game.
                     </p>
                   </div>
                 </div>

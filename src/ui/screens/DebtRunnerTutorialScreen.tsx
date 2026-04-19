@@ -34,18 +34,18 @@ export default function DebtRunnerTutorialScreen(_props: UIProps<Record<string, 
               role="region"
               aria-labelledby="debtTutorialTitle"
             >
-              <p className="th-eyebrow th-menuEyebrow">Year-end · Debt Runner</p>
+              <p className="th-eyebrow th-menuEyebrow">Year-end - Debt Runner</p>
               <h1
                 id="debtTutorialTitle"
                 className="island-title th-titleGradient mt-1 text-3xl md:text-[2rem]"
               >
-                Outrun the collector.
+                Keep the collector behind you.
               </h1>
               <div className="th-titleDivider th-menuDivider" role="presentation" />
 
               <p className="island-statusText mt-3 max-w-xl">
-                You owe more than you've paid this year. The debt collector is on your tail down a
-                boardwalk. Survive to the end of the run to dent your balance.
+                Your debt is still ahead of your payments this year. The collector is on your tail.
+                Survive the run to chip that balance down.
               </p>
 
               <div className="grid gap-3 sm:grid-cols-2 mt-6">
@@ -61,11 +61,11 @@ export default function DebtRunnerTutorialScreen(_props: UIProps<Record<string, 
                 </div>
                 <div className="island-paperCard rounded-2xl p-4">
                   <p className="flex items-center gap-2 font-medium text-[var(--island-color-title)]">
-                    <Target className="size-4" aria-hidden /> Goal
+                    <Target className="size-4" aria-hidden /> Win condition
                   </p>
                   <p className="island-statusText mt-2 text-sm">
-                    Run out the timer without losing all your lives or letting the collector catch
-                    you. A good budget = more lives, slower collector, kinder hazards.
+                    Let the timer expire before you lose all lives or get caught. Strong budgets
+                    grant more lives, softer hazards, and a slower collector.
                   </p>
                 </div>
               </div>

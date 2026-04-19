@@ -53,7 +53,13 @@ export default function IslandRun() {
 
     let cleanup: () => void = () => {};
     try {
+      const initialTotalHops = readNumber(
+        useAppStore.getState().playerData,
+        CAMPAIGN_KEYS.islandTotalHops,
+        0,
+      );
       cleanup = bootstrap({
+        initialTotalHops,
         // Always re-read the store so a Box edit between rolls flows
         // into the next landing's tier copy.
         getPlayerSnapshot: () => {
@@ -107,10 +113,20 @@ export default function IslandRun() {
         BOX_PLAYER_DATA_KEYS.highInterestDebtBalance,
         0,
       );
+      // Pass through pending cash so the zero-based drift target inside
+      // `finalizeBoxAllocations` is `salary + pending` — otherwise an
+      // Island choice fired while a windfall is still on the table would
+      // silently re-absorb that pending cash into miscFun.
+      const pendingCash = readNumber(
+        playerData,
+        BOX_PLAYER_DATA_KEYS.pendingCashToAllocate,
+        0,
+      );
       const { allocations: next } = applyIslandScenarioChoice({
         allocations,
         annualSalary: annualSalary > 0 ? annualSalary : undefined,
         debtBalance,
+        pendingCashToAllocate: pendingCash,
         payload,
       });
       mergePlayerData({ [BOX_PLAYER_DATA_KEYS.boxAllocations]: next });
@@ -120,7 +136,7 @@ export default function IslandRun() {
   return (
     <>
       <a className="skip-link" href="#canvas-root">
-        Skip to board
+        Skip to game board
       </a>
 
       <div
@@ -129,7 +145,7 @@ export default function IslandRun() {
         role="alert"
         aria-live="assertive"
       >
-        <p>WebGL could not start. Try another browser or update your graphics drivers.</p>
+        <p>WebGL could not start. Try another browser or update your graphics driver.</p>
       </div>
 
       <main
@@ -158,7 +174,7 @@ export default function IslandRun() {
               <rect x="13" y="13" width="8" height="8" rx="1" />
               <rect x="3" y="13" width="8" height="8" rx="1" />
             </svg>
-            Roll dice
+            Roll
           </button>
           <p
             id="status"
@@ -166,18 +182,18 @@ export default function IslandRun() {
             aria-live="polite"
             aria-atomic="true"
           >
-            Roll to ride the tide around the board.
+            Roll and move around the island.
           </p>
           <div className="dice-chip-wrap" id="dice-chip-wrap">
             <span id="dice-face" className="dice-face" aria-hidden="true">
               —
             </span>
             <p id="dice-readout" className="readout-dice">
-              Last roll: —
+              Last roll: -
             </p>
           </div>
           <p id="position-readout" className="readout-secondary">
-            Square: —
+            Square: -
           </p>
 
           <div
@@ -247,7 +263,7 @@ export default function IslandRun() {
           </button>
           <div className="landing-wave" aria-hidden="true" />
           <p id="landing-subtitle" className="landing-subtitle">
-            You landed at
+            You landed on
           </p>
           <h2 id="landing-title">Shore Fund</h2>
           <p id="landing-text" />
@@ -255,7 +271,7 @@ export default function IslandRun() {
             id="landing-choices"
             className="landing-choices"
             role="group"
-            aria-label="Choose how to handle this"
+            aria-label="Choose your response"
           >
             <button
               type="button"
@@ -281,7 +297,7 @@ export default function IslandRun() {
             type="button"
             className="btn-continue"
           >
-            Continue
+            Keep going
           </button>
         </div>
       </div>

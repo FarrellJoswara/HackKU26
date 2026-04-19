@@ -41,6 +41,7 @@ export function RunnerResultRouter() {
   return null;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function getStoredLastRun(data: Record<string, unknown>): StoredRunnerLastRun | null {
   const raw = data[PLAYER_DATA_KEY] as StoredRunnerLastRun | undefined;
   if (!raw || typeof raw !== 'object') return null;

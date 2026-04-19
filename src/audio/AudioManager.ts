@@ -108,6 +108,15 @@ class AudioManager {
       console.warn(`[audio] unknown SFX "${sfxId}" — register it in tracks.ts`);
       return null;
     }
+    // Some browsers leave the WebAudio context suspended even after the
+    // first user gesture if Howler's auto-unlock didn't see a matching
+    // event (happens in some dev tooling / iframes). Defensive resume.
+    try {
+      const ctx = (Howler as unknown as { ctx?: AudioContext }).ctx;
+      if (ctx && ctx.state === 'suspended') void ctx.resume();
+    } catch {
+      // Ignore — fall through to Howler's own play path.
+    }
     if (opts.volume !== undefined) sound.volume(opts.volume * this.sfxVolume);
     return sound.play(opts.sprite);
   }

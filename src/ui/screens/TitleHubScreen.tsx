@@ -16,6 +16,7 @@ import {
   Footprints,
   Layers,
   LayoutGrid,
+  Mountain,
   Palmtree,
   Play,
   Settings,
@@ -25,8 +26,10 @@ import { useAppStore } from '@/core/store';
 import type { UIProps } from '@/core/types';
 import { GAME_IDS } from '@/games/registry';
 import { CAMPAIGN_KEYS } from '@/core/campaign/campaignKeys';
+import { canEnterMapForCampaign } from '@/core/campaign/canEnterMapForCampaign';
 import { MOCK_BUDGET_PROFILE } from '@/core/finance/mockBudgetProfile';
 import { PlayModeDialog } from '../components/PlayModeDialog';
+import { RewardButton } from '../components/RewardButton';
 import {
   GAME_TITLE_PLACEHOLDER,
   PLAYER_KEYS,
@@ -43,6 +46,15 @@ export default function TitleHubScreen(_props: UIProps<unknown>) {
 
   const handleContinue = () => {
     setPlayOpen(false);
+    // Soft Box gate: a player who finished a year but has not yet
+    // submitted a fresh budget for the new year would otherwise enter
+    // the Island map with stale allocations. Route them to The Box
+    // instead so the Year Loop stays well-formed.
+    const gate = canEnterMapForCampaign(playerData);
+    if (!gate.allowed) {
+      eventBus.emit('navigate:request', { to: 'budget', module: null });
+      return;
+    }
     eventBus.emit('navigate:request', {
       to: 'game',
       module: GAME_IDS.islandRun,
@@ -80,15 +92,16 @@ export default function TitleHubScreen(_props: UIProps<unknown>) {
                 {GAME_TITLE_PLACEHOLDER}
               </h1>
               <div className="th-titleDivider" role="presentation" />
-              <p className="th-eyebrow">Main menu</p>
+              <p className="th-eyebrow">Main dock</p>
               <p id="titleHubTagline" className="island-statusText th-subtitle mx-auto mt-2 max-w-md">
-                Waves, summer light, no school — just tides and one more roll. Press Play.
+                Sun is up, board is set, and your next money call is waiting.
               </p>
 
               <div className="th-btnRow mt-8 flex flex-col gap-3 sm:gap-3.5">
-                <button
+                <RewardButton
                   type="button"
                   className="th-btnPlay"
+                  microReward="normal"
                   aria-haspopup="dialog"
                   aria-expanded={playOpen}
                   aria-controls="play-mode-dialog"
@@ -96,8 +109,8 @@ export default function TitleHubScreen(_props: UIProps<unknown>) {
                 >
                   <Play className="size-4 shrink-0" aria-hidden />
                   Play
-                </button>
-                <button
+                </RewardButton>
+                <RewardButton
                   type="button"
                   className="th-btnSettings"
                   onClick={() =>
@@ -109,7 +122,7 @@ export default function TitleHubScreen(_props: UIProps<unknown>) {
                 >
                   <Settings className="size-4 shrink-0" aria-hidden />
                   Settings
-                </button>
+                </RewardButton>
               </div>
             </div>
           </div>
@@ -118,10 +131,10 @@ export default function TitleHubScreen(_props: UIProps<unknown>) {
 
       {import.meta.env.DEV ? (
         <details className="th-devDock">
-          <summary>Developer shortcuts</summary>
+          <summary>Dev shortcuts</summary>
           <div className="island-hudBottle th-devDock__panel">
             <div className="island-hudInner flex flex-col gap-3 px-4 py-4">
-                <button
+                <RewardButton
                   type="button"
                   className="island-btnShell"
                   onClick={() =>
@@ -129,9 +142,9 @@ export default function TitleHubScreen(_props: UIProps<unknown>) {
                   }
                 >
                   <LayoutGrid className="size-4" />
-                  The Box (budget)
-                </button>
-                <button
+                  Open The Box
+                </RewardButton>
+                <RewardButton
                   type="button"
                   className="island-btnShell"
                   onClick={() => {
@@ -143,9 +156,9 @@ export default function TitleHubScreen(_props: UIProps<unknown>) {
                   }}
                 >
                   <Layers className="size-4" />
-                  The Box over Island Run
-                </button>
-                <button
+                  Box over Island Run
+                </RewardButton>
+                <RewardButton
                   type="button"
                   className="island-btnShell"
                   onClick={() =>
@@ -157,8 +170,8 @@ export default function TitleHubScreen(_props: UIProps<unknown>) {
                 >
                   <Bird className="size-4" />
                   Investing Birds
-                </button>
-                <button
+                </RewardButton>
+                <RewardButton
                   type="button"
                   className="island-btnShell"
                   onClick={() => {
@@ -171,8 +184,8 @@ export default function TitleHubScreen(_props: UIProps<unknown>) {
                 >
                   <Palmtree className="size-4" />
                   Island Run
-                </button>
-                <button
+                </RewardButton>
+                <RewardButton
                   type="button"
                   className="island-btnShell"
                   onClick={() => {
@@ -184,18 +197,33 @@ export default function TitleHubScreen(_props: UIProps<unknown>) {
                   }}
                 >
                   <Footprints className="size-4" />
-                  Debt Runner (test)
-                </button>
+                  Debt Runner test
+                </RewardButton>
 
-                <button
+                <RewardButton
+                  type="button"
+                  className="island-btnShell"
+                  onClick={() => {
+                    mergePlayerData({ 'ui:boxOverlay': false });
+                    eventBus.emit('navigate:request', {
+                      to: 'game',
+                      module: GAME_IDS.mountainSuccess,
+                    });
+                  }}
+                >
+                  <Mountain className="size-4" />
+                  Mountain Success cutscene
+                </RewardButton>
+
+                <RewardButton
                   type="button"
                   className="island-btnShell"
                   onClick={() =>
                     mergePlayerData({ [PLAYER_KEYS.islandRunHasSave]: true })
                   }
                 >
-                  Toggle save flag (debug)
-                </button>
+                  Toggle save flag
+                </RewardButton>
               </div>
             </div>
         </details>

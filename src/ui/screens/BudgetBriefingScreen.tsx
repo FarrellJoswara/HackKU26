@@ -38,9 +38,9 @@ export default function BudgetBriefingScreen(_props: UIProps<Record<string, unkn
     return (
       <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-b from-sky-900 via-blue-950 to-slate-950 text-white">
         <div className="mx-4 w-full max-w-xl rounded-2xl border border-white/10 bg-black/35 p-6 backdrop-blur">
-          <h2 className="text-xl font-semibold">Missing budget profile</h2>
+          <h2 className="text-xl font-semibold">Budget profile missing</h2>
           <p className="mt-2 text-sm text-white/70">
-            No backend-style profile is loaded. Go back to menu and start again.
+            No run profile is loaded yet. Head back to menu and start again.
           </p>
           <div className="mt-6">
             <Button
@@ -63,14 +63,14 @@ export default function BudgetBriefingScreen(_props: UIProps<Record<string, unkn
     <div className="absolute inset-0 overflow-auto bg-gradient-to-b from-[#0d2438] via-[#103a4f] to-[#1c1431] text-white">
       <div className="mx-auto w-full max-w-4xl px-4 py-8 pb-32">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-200/85">
-          Year-end · Debt Runner briefing
+          Year-end - Debt Runner briefing
         </p>
         <h1 className="mt-2 font-serif text-3xl font-semibold tracking-tight">
-          Your budget just turned into a route.
+          Your budget now shapes the route.
         </h1>
         <p className="mt-3 max-w-2xl text-sm leading-relaxed text-white/80">
-          Each category below sets one knob on the run — hazards, stamina, lives, healing,
-          Debt Collector pressure, and morale. Keep an eye on anything flagged as high risk.
+          Each category below changes the run: hazards, stamina, lives, healing, collector
+          pressure, and morale. Watch anything flagged as high risk.
         </p>
 
         <div className="mt-6 grid gap-4 md:grid-cols-2">
@@ -113,7 +113,7 @@ export default function BudgetBriefingScreen(_props: UIProps<Record<string, unkn
             {warnings.length === 0 ? (
               <p className="mt-3 flex items-center gap-2 text-sm text-emerald-200/90">
                 <CheckCircle2 className="size-4" aria-hidden />
-                No red flags this run — nice work.
+                No red flags this run. Nice work.
               </p>
             ) : (
               <ul className="mt-3 space-y-2 text-sm text-white/80">
@@ -136,7 +136,7 @@ export default function BudgetBriefingScreen(_props: UIProps<Record<string, unkn
             </p>
             {strengths.length === 0 ? (
               <p className="mt-3 text-sm text-white/70">
-                No strengths flagged yet — fund a category fully next year for a kinder run.
+                No strengths flagged yet. Fully fund a category next year for an easier run.
               </p>
             ) : (
               <ul className="mt-3 space-y-2 text-sm text-white/85">

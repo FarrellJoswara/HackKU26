@@ -24,6 +24,7 @@ import {
   Vector2,
 } from 'three';
 import { eventBus } from '@/core/events';
+import { advanceCampaignYear } from '@/core/campaign/yearAdvance';
 import type { GameProps } from '@/core/types';
 import { fitOrthographicToViewport, type OrthoDesignBounds } from './cameraFit';
 import {
@@ -1059,9 +1060,14 @@ export default function InvestingBirdsGame({
           }
           onStart={() => dispatch({ type: 'START_GAME' })}
           onRestart={() => dispatch({ type: 'RESTART' })}
-          onReturnMenu={() =>
-            eventBus.emit('navigate:request', { to: 'menu', module: null })
-          }
+          onReturnMenu={() => {
+            // Investing Birds is the *year-end* mini-game on debt-free years,
+            // so leaving from the end-of-game modal must close the year
+            // through the unified pipeline (debt math, year++, gate reset,
+            // economy roll). Destination 'menu' preserves the existing UX
+            // ("Back to menu") while still applying the close-year writes.
+            advanceCampaignYear({ outcome: state.outcome ?? 'skipped', destination: 'menu' });
+          }}
         />
       </Html>
     </>

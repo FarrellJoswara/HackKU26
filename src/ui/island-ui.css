@@ -649,3 +649,104 @@
     transition: none;
   }
 }
+
+/* ============================================================== */
+/* Micro-reward overlay — short, obvious flash on click. Uses an  */
+/* absolutely-positioned child <span> so the host button's own    */
+/* transform / box-shadow stack stays untouched.                  */
+/* ============================================================== */
+
+.ui-reward-host {
+  position: relative;
+}
+
+.ui-reward-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  background-color: transparent;
+  /* Animate via keyframes (set on the level classes below) so each
+   * activation is a one-shot pulse rather than a CSS transition that
+   * a fast re-trigger could interrupt mid-flight. */
+}
+
+@keyframes ui-reward-pulse-subtle {
+  0% {
+    opacity: 0;
+    background-color: rgba(255, 245, 215, 0);
+    box-shadow: 0 0 0 0 rgba(255, 232, 180, 0);
+  }
+  20% {
+    opacity: 1;
+    background-color: rgba(255, 245, 215, 0.45);
+    box-shadow: 0 0 18px 4px rgba(255, 232, 180, 0.65);
+  }
+  100% {
+    opacity: 0;
+    background-color: rgba(255, 245, 215, 0);
+    box-shadow: 0 0 26px 6px rgba(255, 232, 180, 0);
+  }
+}
+
+@keyframes ui-reward-pulse-normal {
+  0% {
+    opacity: 0;
+    background-color: rgba(255, 240, 200, 0);
+    box-shadow: 0 0 0 0 rgba(255, 220, 150, 0);
+  }
+  18% {
+    opacity: 1;
+    background-color: rgba(255, 240, 200, 0.7);
+    box-shadow: 0 0 28px 8px rgba(255, 215, 130, 0.85);
+  }
+  100% {
+    opacity: 0;
+    background-color: rgba(255, 240, 200, 0);
+    box-shadow: 0 0 42px 14px rgba(255, 215, 130, 0);
+  }
+}
+
+@keyframes ui-reward-pulse-strong {
+  0% {
+    opacity: 0;
+    background-color: rgba(255, 235, 195, 0);
+    box-shadow: 0 0 0 0 rgba(255, 200, 110, 0);
+  }
+  16% {
+    opacity: 1;
+    background-color: rgba(255, 235, 195, 0.9);
+    box-shadow: 0 0 38px 12px rgba(255, 200, 110, 1);
+  }
+  100% {
+    opacity: 0;
+    background-color: rgba(255, 235, 195, 0);
+    box-shadow: 0 0 60px 22px rgba(255, 200, 110, 0);
+  }
+}
+
+.ui-reward-overlay.is-rewarding-subtle {
+  animation: ui-reward-pulse-subtle 360ms ease-out forwards;
+}
+
+.ui-reward-overlay.is-rewarding-normal {
+  animation: ui-reward-pulse-normal 460ms ease-out forwards;
+}
+
+.ui-reward-overlay.is-rewarding-strong {
+  animation: ui-reward-pulse-strong 560ms ease-out forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-reward-overlay.is-rewarding-subtle,
+  .ui-reward-overlay.is-rewarding-normal,
+  .ui-reward-overlay.is-rewarding-strong {
+    animation: none;
+    /* Static flash that fades via the JS class-removal timer instead. */
+    opacity: 0.55;
+    background-color: rgba(255, 240, 200, 0.35);
+    box-shadow: none;
+  }
+}

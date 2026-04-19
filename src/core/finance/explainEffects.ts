@@ -29,39 +29,39 @@ export function explainBudgetProfileEffects(profile: BudgetProfile): EffectToken
     {
       id: 'food',
       text: {
-        bad: 'Food was BAD, so stamina drained faster and recovery slowed.',
+        bad: 'Food was BAD, so stamina drained faster and recovery slowed down.',
         average: 'Food was AVERAGE, so stamina behavior stayed normal.',
-        good: 'Food was GOOD, giving stronger endurance and faster recovery.',
+        good: 'Food was GOOD, giving better endurance and faster recovery.',
       },
     },
     {
       id: 'transportation',
       text: {
-        bad: 'Transportation was BAD, so turning and lane response were slower.',
+        bad: 'Transportation was BAD, so turns and lane response were slower.',
         average: 'Transportation was AVERAGE, so controls were standard.',
-        good: 'Transportation was GOOD, making movement sharper and cleaner.',
+        good: 'Transportation was GOOD, making movement feel sharper and cleaner.',
       },
     },
     {
       id: 'emergencyFund',
       text: {
-        bad: 'Emergency Fund was BAD, so you only had one life.',
-        average: 'Emergency Fund was AVERAGE, giving limited forgiveness.',
-        good: 'Emergency Fund was GOOD, giving extra lives/revive protection.',
+        bad: 'Emergency Fund was BAD, so you started with only one life.',
+        average: 'Emergency Fund was AVERAGE, giving limited recovery room.',
+        good: 'Emergency Fund was GOOD, giving extra lives and better recovery room.',
       },
     },
     {
       id: 'medical',
       text: {
-        bad: 'Medical was BAD, so injury slowdown lasted longer and hit harder.',
+        bad: 'Medical was BAD, so injuries hit harder and lasted longer.',
         average: 'Medical was AVERAGE, so injury behavior stayed standard.',
-        good: 'Medical was GOOD, reducing injury severity and recovery time.',
+        good: 'Medical was GOOD, reducing injury severity and shortening recovery time.',
       },
     },
     {
       id: 'debtRepayment',
       text: {
-        bad: 'Debt Repayment was BAD, so the Debt Collector became visibly larger and more aggressive.',
+        bad: 'Debt Repayment was BAD, so the Debt Collector became larger and more aggressive.',
         average: 'Debt Repayment was AVERAGE, so collector pressure stayed standard.',
         good: 'Debt Repayment was GOOD, so the Debt Collector stayed smaller and calmer.',
       },
@@ -69,8 +69,8 @@ export function explainBudgetProfileEffects(profile: BudgetProfile): EffectToken
     {
       id: 'miscFun',
       text: {
-        bad: 'Misc/Fun was BAD, increasing stumbles, burnout, and the exhausting run feel.',
-        average: 'Misc/Fun was AVERAGE, so morale/focus stayed near baseline.',
+        bad: 'Misc/Fun was BAD, increasing stumbles, burnout, and run fatigue.',
+        average: 'Misc/Fun was AVERAGE, so morale and focus stayed near baseline.',
         good: 'Misc/Fun was GOOD, improving early morale and comfort.',
       },
     },
@@ -92,7 +92,7 @@ export function explainBudgetProfileEffects(profile: BudgetProfile): EffectToken
       severity: 'high',
       title: 'Total Debt Pressure',
       plainText:
-        'High debt pressure increased chase speed over time (interest shadow), making recovery windows shrink as the run continued.',
+        'High debt pressure raised chase speed over time, shrinking recovery windows as the run continued.',
     });
   }
 

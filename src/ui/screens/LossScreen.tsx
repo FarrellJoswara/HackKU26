@@ -8,13 +8,13 @@ import { advanceCampaignYear } from '@/core/campaign/yearAdvance';
 function lossTitle(failReason?: string) {
   switch (failReason) {
     case 'caught':
-      return 'The Debt Collector caught up';
+      return 'The Debt Collector caught you';
     case 'fall':
-      return 'You stepped off the boardwalk';
+      return 'You slipped off the boardwalk';
     case 'noLives':
-      return 'You ran out of lives';
+      return 'You ran out of chances';
     default:
-      return 'Run cut short';
+      return 'Run ended early';
   }
 }
 
@@ -32,7 +32,7 @@ export default function LossScreen(props: UIProps<Record<string, unknown>>) {
         <div className="tropic-card-dark tropic-pop w-full max-w-xl p-7 text-center">
           <div className="mx-auto inline-flex items-center gap-3 rounded-full bg-gradient-to-b from-[#ff8b6b] to-[#b94530] px-4 py-2 text-white shadow">
             <Skull className="size-5" />
-            <span className="text-xs font-bold uppercase tracking-[0.18em]">Tide turned</span>
+            <span className="text-xs font-bold uppercase tracking-[0.18em]">Rough waters</span>
           </div>
 
           <h2
@@ -43,8 +43,8 @@ export default function LossScreen(props: UIProps<Record<string, unknown>>) {
           </h2>
           <p className="mt-3 text-sm text-white/80">
             {lastRun?.stats?.timeSurvivedSeconds != null
-              ? `You lasted ${Math.round(lastRun.stats.timeSurvivedSeconds)} seconds. Let's see what your budget set up.`
-              : 'Pull up the financial debrief and try a different allocation next time.'}
+              ? `You lasted ${Math.round(lastRun.stats.timeSurvivedSeconds)} seconds. Now let's review what your budget set up.`
+              : 'Open the financial recap, then try a new allocation next run.'}
           </p>
 
           {!lastRun ? (
@@ -53,7 +53,7 @@ export default function LossScreen(props: UIProps<Record<string, unknown>>) {
               <p>
                 No saved run data yet. Once the runner emits{' '}
                 <code className="rounded bg-white/10 px-1">runner:finished</code>, this screen
-                will show a concrete breakdown.
+                will show the full breakdown.
               </p>
             </div>
           ) : null}
@@ -71,7 +71,7 @@ export default function LossScreen(props: UIProps<Record<string, unknown>>) {
               leadingIcon={<RotateCcw className="size-4" />}
               onClick={() => eventBus.emit('navigate:request', { to: 'summary', module: null })}
             >
-              What caused this?
+              What led to this?
             </Button>
             <Button
               variant="ghost"

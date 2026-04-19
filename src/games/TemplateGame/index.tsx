@@ -33,13 +33,12 @@ export default function TemplateGame({
     eventBus.emit('game:event', startEvt);
     onEvent?.(startEvt);
 
-    // TODO: kick off real game logic, wire input handlers, etc.
+    const startedAtMs = startedAt.current;
 
     return () => {
-      // Example end-of-game emission. Remove / replace with real logic.
       const out: TemplateOutput = {
         score: 0,
-        durationMs: performance.now() - startedAt.current,
+        durationMs: performance.now() - startedAtMs,
       };
       const resultEvt = { kind: 'result' as const, payload: out };
       eventBus.emit('game:result', resultEvt);

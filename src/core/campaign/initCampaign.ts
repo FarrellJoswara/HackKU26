@@ -29,6 +29,7 @@ import type { BoxBudgetSubmitPayload } from '@/core/budgetTypes';
 import type { EventMap } from '@/core/types';
 import { allocationsToBudgetProfile } from '@/core/finance/allocationsToBudgetProfile';
 import { CAMPAIGN_KEYS, DEBT_RUNNER_KEYS } from './campaignKeys';
+import { hasReachedFinancialFreedom } from './financialFreedom';
 import { GAME_IDS } from '@/games/registry';
 
 let initialized = false;
@@ -75,25 +76,35 @@ function onBoxSubmit(payload: BoxBudgetSubmitPayload): void {
   }
 }
 
-function onYearComplete(payload: EventMap['island:yearComplete']): void {
+function onYearComplete(_payload: EventMap['island:yearComplete']): void {
   if (yearEndInFlight) return;
   yearEndInFlight = true;
 
-  const { playerData, mergePlayerData } = useAppStore.getState();
+  const { playerData } = useAppStore.getState();
   const debtBalance = readNumber(
     playerData,
     BOX_PLAYER_DATA_KEYS.highInterestDebtBalance,
     BOX_DEFAULTS.highInterestDebtBalance,
   );
 
-  // Bump campaign year ledger.
-  mergePlayerData({ [CAMPAIGN_KEYS.year]: payload.year });
+  // NOTE: do NOT bump `campaign.year` here. Year progression is owned
+  // by `advanceCampaignYear` (the unified close-year pipeline) so the
+  // counter cannot drift from `currentYear` based on which year-end
+  // route the player took.
 
   if (debtBalance > 0.01) {
     const tutorialSeen = playerData[DEBT_RUNNER_KEYS.tutorialSeen] === true;
     eventBus.emit('navigate:request', {
       to: tutorialSeen ? 'briefing' : 'debtRunnerTutorial',
       module: null,
+    });
+  } else if (hasReachedFinancialFreedom(playerData)) {
+    // Debt-free AND invested balance has crossed the win goal — play
+    // the Mountain Success cinematic instead of routing into another
+    // year-end mini-game. The cinematic auto-returns to the Title Hub.
+    eventBus.emit('navigate:request', {
+      to: 'game',
+      module: GAME_IDS.mountainSuccess,
     });
   } else {
     eventBus.emit('navigate:request', {

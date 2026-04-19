@@ -22,6 +22,7 @@ import type { AppState, ModuleId, UIProps } from '@/core/types';
 import { assertNever } from '@/core/types';
 import { GAME_IDS } from '@/games/registry';
 import { HUD } from './hud/HUD';
+import { SuspenseShell } from './components/SuspenseShell';
 
 type ScreenComp = LazyExoticComponent<ComponentType<UIProps<any>>>;
 
@@ -99,7 +100,7 @@ export function UIRegistry() {
       <>
         <HUD />
         {PerModule ? (
-          <Suspense fallback={null}>
+          <Suspense fallback={<SuspenseShell />}>
             <PerModule data={playerData} />
           </Suspense>
         ) : null}
@@ -111,7 +112,7 @@ export function UIRegistry() {
   if (!Screen) return null;
 
   return (
-    <Suspense fallback={null}>
+    <Suspense fallback={<SuspenseShell />}>
       <Screen data={playerData} />
     </Suspense>
   );

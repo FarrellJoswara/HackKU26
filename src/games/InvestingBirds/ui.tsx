@@ -298,16 +298,16 @@ export function InvestingBirdsOverlay(props: InvestingBirdsOverlayProps) {
       {/* Aim hint */}
       {state === 'PLAYING' && showAimHint ? (
         <div className="pointer-events-none absolute bottom-24 left-1/2 w-[min(420px,calc(100vw-32px))] -translate-x-1/2 rounded-2xl border border-white/20 bg-black/60 px-4 py-3 text-center text-sm leading-snug text-white/95 shadow-lg backdrop-blur">
-          Pull back from the pouch and release. The dotted arc previews your shot.
+          Pull back, then release. The dotted arc shows your shot.
         </div>
       ) : null}
 
       {/* Allocate panel */}
       {state === 'ALLOCATE' ? (
         <div className="pointer-events-auto absolute inset-x-0 top-24 mx-auto w-[min(560px,calc(100vw-24px))] rounded-2xl border border-white/20 bg-slate-950/92 p-6 shadow-2xl">
-          <h2 className="text-xl font-bold tracking-tight">Build your portfolio</h2>
+          <h2 className="text-xl font-bold tracking-tight">Set your portfolio mix</h2>
           <p className="mt-1 text-sm text-white/75">
-            Each category becomes a tower. More investment ⇒ taller tower, more birds, bigger multiplier.
+            Each category becomes a tower. More allocation means taller stacks, more birds, and a bigger multiplier.
           </p>
           <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
             <SliderRow
@@ -379,7 +379,7 @@ export function InvestingBirdsOverlay(props: InvestingBirdsOverlayProps) {
               onClick={onStart}
               disabled={totalAllocation <= 0}
             >
-              Start game
+              Start round
             </button>
           </div>
         </div>
@@ -407,7 +407,7 @@ export function InvestingBirdsOverlay(props: InvestingBirdsOverlayProps) {
               className="text-5xl font-black tracking-tight text-white drop-shadow-[0_4px_16px_rgba(0,0,0,0.6)] sm:text-6xl"
               style={{ animation: 'ibPopIn 0.35s ease-out' }}
             >
-              {roundOutcome === 'cleared' ? 'Tower Cleared!' : 'Tower Survived…'}
+              {roundOutcome === 'cleared' ? 'Tower cleared!' : 'Tower still standing'}
             </h1>
             <p
               className="text-lg font-semibold text-white/85"
@@ -422,7 +422,7 @@ export function InvestingBirdsOverlay(props: InvestingBirdsOverlayProps) {
                 className="mt-6 flex items-center gap-3 rounded-2xl border border-white/30 bg-black/50 px-5 py-3 text-base font-semibold text-white shadow-2xl backdrop-blur-md"
                 style={{ animation: 'ibSlideIn 0.6s ease-out 0.25s both' }}
               >
-                <span className="text-white/80">Next Up:</span>
+                <span className="text-white/80">Next up:</span>
                 <span className="inline-flex items-center gap-2">
                   <CategoryIcon type={nextLevel.type} className="size-5" />
                   {nextLevel.label}
@@ -467,12 +467,12 @@ export function InvestingBirdsOverlay(props: InvestingBirdsOverlayProps) {
         <div className="pointer-events-auto absolute inset-0 z-30 flex items-center justify-center bg-black/60 px-4 backdrop-blur-sm">
           <div className="w-full max-w-md rounded-2xl border border-white/20 bg-slate-950/95 p-6 shadow-2xl">
             <h2 className="text-2xl font-bold tracking-tight">
-              {outcome === 'win' ? 'Portfolio cleared!' : 'No birds left'}
+              {outcome === 'win' ? 'Portfolio cleared!' : 'Out of birds'}
             </h2>
             <p className="mt-2 text-sm text-white/75">
               {outcome === 'loss'
-                ? 'Some towers still stand. Rebalance your portfolio and try again.'
-                : 'You knocked every stack off the ground.'}
+                ? 'Some towers are still standing. Rebalance and try again.'
+                : 'You knocked every tower down.'}
             </p>
             <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-white/55">
               Final score
@@ -498,7 +498,7 @@ export function InvestingBirdsOverlay(props: InvestingBirdsOverlayProps) {
                 Play again
               </button>
               <button type="button" className={btnGhost} onClick={onReturnMenu}>
-                Main menu
+                Back to menu
               </button>
             </div>
           </div>

@@ -20,21 +20,21 @@ export default function WinScreen(props: UIProps<Record<string, unknown>>) {
         <div className="tropic-card tropic-pop w-full max-w-xl p-7 text-center">
           <div className="mx-auto inline-flex items-center gap-3 rounded-full bg-gradient-to-b from-[#ffe7a8] to-[#f59f3a] px-4 py-2 text-[#4a3514] shadow">
             <Trophy className="size-5" />
-            <span className="text-xs font-bold uppercase tracking-[0.18em]">You made it</span>
+            <span className="text-xs font-bold uppercase tracking-[0.18em]">You held the line</span>
           </div>
 
           <h2
             className="mt-5 text-4xl font-semibold text-[#1a4d5c]"
             style={{ fontFamily: 'var(--island-font-display)' }}
           >
-            Sunset over the boardwalk
+            Sunset over the pier
           </h2>
           <p className="mt-3 text-sm text-[#3d3428]/85">
-            You survived the run
+            You made it through the run
             {lastRun?.stats?.timeSurvivedSeconds != null
               ? ` (${Math.round(lastRun.stats.timeSurvivedSeconds)}s)`
               : ''}.{' '}
-            The Debt Collector is back at the pier — for now.
+            The Debt Collector is back at the pier - for now.
           </p>
 
           <div className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row">
@@ -50,7 +50,7 @@ export default function WinScreen(props: UIProps<Record<string, unknown>>) {
               leadingIcon={<Sun className="size-4" />}
               onClick={() => eventBus.emit('navigate:request', { to: 'summary', module: null })}
             >
-              See what your budget caused
+              See what your budget changed
             </Button>
             <Button
               variant="ghost"

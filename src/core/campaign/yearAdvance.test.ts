@@ -2,7 +2,13 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { eventBus } from '@/core/events';
 import { useAppStore } from '@/core/store';
-import { BOX_PLAYER_DATA_KEYS } from '@/core/budgetTypes';
+import {
+  BOX_DEFAULTS,
+  BOX_PLAYER_DATA_KEYS,
+  INFLATION_RANGE_MAX,
+  INFLATION_RANGE_MIN,
+} from '@/core/budgetTypes';
+import { INVESTED_BALANCE_KEY } from '@/core/finance/boxGoalRail';
 import { CAMPAIGN_KEYS } from './campaignKeys';
 import { advanceCampaignYear } from './yearAdvance';
 
@@ -82,5 +88,52 @@ describe('advanceCampaignYear', () => {
 
     expect(summary.interestPenaltyUsd).toBe(0);
     expect(summary.debtAfterUsd).toBe(0);
+  });
+
+  it('routes to the menu when destination=menu (Investing Birds / Mountain Success)', () => {
+    freshStore({
+      [BOX_PLAYER_DATA_KEYS.currentYear]: 5,
+      [BOX_PLAYER_DATA_KEYS.highInterestDebtBalance]: 0,
+    });
+    const navs: Array<{ to: string }> = [];
+    eventBus.on('navigate:request', (p) => navs.push({ to: p.to }));
+
+    const summary = advanceCampaignYear({ outcome: 'win', destination: 'menu' });
+
+    expect(navs).toEqual([{ to: 'menu' }]);
+    expect(useAppStore.getState().playerData[BOX_PLAYER_DATA_KEYS.currentYear]).toBe(6);
+    expect(useAppStore.getState().playerData[CAMPAIGN_KEYS.year]).toBe(6);
+    expect(useAppStore.getState().playerData[CAMPAIGN_KEYS.boxReadyForYear]).toBe(0);
+    expect(summary.toYear).toBe(6);
+  });
+
+  it('persists yearly economy updates: inflation, employer match policy, invested balance', () => {
+    freshStore({
+      [BOX_PLAYER_DATA_KEYS.currentYear]: 1,
+      [BOX_PLAYER_DATA_KEYS.annualSalary]: 60_000,
+      [BOX_PLAYER_DATA_KEYS.highInterestDebtBalance]: 0,
+      [BOX_PLAYER_DATA_KEYS.boxAllocations]: {
+        indexFunds: 2_000,
+        bonds: 500,
+        employerMatch: 3_600,
+      },
+      [INVESTED_BALANCE_KEY]: 1_000,
+    });
+
+    advanceCampaignYear({ outcome: 'win' });
+
+    const data = useAppStore.getState().playerData;
+    const inflation = data[BOX_PLAYER_DATA_KEYS.currentInflationRate] as number;
+    expect(typeof inflation).toBe('number');
+    expect(inflation).toBeGreaterThanOrEqual(INFLATION_RANGE_MIN);
+    expect(inflation).toBeLessThanOrEqual(INFLATION_RANGE_MAX);
+    expect(data[BOX_PLAYER_DATA_KEYS.employerMatchRate]).toBe(
+      BOX_DEFAULTS.employerMatchRate,
+    );
+    expect(data[BOX_PLAYER_DATA_KEYS.employerMatchCapPctSalary]).toBe(
+      BOX_DEFAULTS.employerMatchCapPctSalary,
+    );
+    // 2_500 (subcategories) + 1_800 (match) = 4_300; prior balance 1_000.
+    expect(data[INVESTED_BALANCE_KEY]).toBe(5_300);
   });
 });

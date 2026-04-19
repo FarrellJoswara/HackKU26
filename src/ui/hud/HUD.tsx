@@ -77,9 +77,9 @@ function DebtRunnerHudLayer({ hud }: { hud: RunnerHudState }) {
     if (STAGE_ORDER[hud.monsterStage] > STAGE_ORDER[prev]) {
       const lines: Record<RunnerHudState['monsterStage'], string> = {
         manageable: '',
-        threatening: 'Collector is picking up the pace.',
-        dangerous: 'They are gaining — protect your gap!',
-        overwhelming: 'Debt pressure is overwhelming — sprint!',
+        threatening: 'Collector is gaining speed.',
+        dangerous: 'They are closing in - protect your gap!',
+        overwhelming: 'Debt pressure is maxed - sprint!',
       };
       const msg = lines[hud.monsterStage];
       if (msg) {
@@ -252,17 +252,17 @@ function DebtRunnerHudLayer({ hud }: { hud: RunnerHudState }) {
           <div className="tropic-pause-wave-top mb-0 max-w-md" aria-hidden />
           <div className="tropic-card tropic-pop w-full max-w-md rounded-t-none border-t-0 px-7 pb-7 pt-5 text-center shadow-lg">
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#1a4d5c]/75">
-              Paradise paused
+              Run paused
             </p>
             <h3
               className="mt-1 text-3xl font-semibold text-[#1a4d5c]"
               style={{ fontFamily: 'var(--island-font-display)' }}
             >
-              Catch your breath
+              Take a breath
             </h3>
             <p className="mt-2 text-sm text-[#3d3428]/85">
               Press <kbd className="rounded bg-[#fbe6be] px-1.5 py-0.5 text-[11px] font-semibold">Esc</kbd> to
-              resume, or return to the menu when you are ready.
+              resume, or head to menu when you are ready.
             </p>
             <div className="mt-5 flex justify-center gap-3">
               <button
@@ -277,7 +277,7 @@ function DebtRunnerHudLayer({ hud }: { hud: RunnerHudState }) {
                 type="button"
                 onClick={() => eventBus.emit('navigate:request', { to: 'menu', module: null })}
               >
-                Quit to menu
+                Back to menu
               </button>
             </div>
           </div>
@@ -308,7 +308,7 @@ export function HUD() {
               eventBus.emit('navigate:request', { to: 'menu', module: null })
             }
           >
-            Back to menu
+            Return to menu
           </button>
         </div>
       </div>

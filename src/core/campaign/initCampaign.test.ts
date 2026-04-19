@@ -3,6 +3,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { eventBus } from '@/core/events';
 import { useAppStore } from '@/core/store';
 import { BOX_PLAYER_DATA_KEYS } from '@/core/budgetTypes';
+import {
+  DEFAULT_WIN_GOAL_USD,
+  INVESTED_BALANCE_KEY,
+} from '@/core/finance/boxGoalRail';
 import { __resetCampaignForTests, initCampaign } from './initCampaign';
 import { CAMPAIGN_KEYS, DEBT_RUNNER_KEYS } from './campaignKeys';
 import { GAME_IDS } from '@/games/registry';
@@ -124,6 +128,27 @@ describe('initCampaign', () => {
     expect(captured[0]!.module).toBe(GAME_IDS.investingBirds);
   });
 
+  it('routes to MountainSuccess when debt is cleared and invested ≥ win goal', () => {
+    initCampaign();
+    useAppStore.setState((s) => ({
+      playerData: {
+        ...s.playerData,
+        [BOX_PLAYER_DATA_KEYS.highInterestDebtBalance]: 0,
+        [INVESTED_BALANCE_KEY]: DEFAULT_WIN_GOAL_USD,
+      },
+    }));
+    const captured: Array<{ to: string; module: unknown }> = [];
+    eventBus.on('navigate:request', (p) => captured.push({ to: p.to, module: p.module }));
+
+    eventBus.emit('island:yearComplete', { year: 5, totalHops: 60 });
+
+    expect(captured).toHaveLength(1);
+    expect(captured[0]!.to).toBe('game');
+    expect(captured[0]!.module).toBe(GAME_IDS.mountainSuccess);
+    // Investing Birds branch should NOT have been taken.
+    expect(captured.some((c) => c.module === GAME_IDS.investingBirds)).toBe(false);
+  });
+
   it('ignores re-entrant year-complete emits in the same tick', () => {
     initCampaign();
     useAppStore.setState((s) => ({
@@ -137,5 +162,51 @@ describe('initCampaign', () => {
     eventBus.emit('island:yearComplete', { year: 1, totalHops: 12 });
     eventBus.emit('island:yearComplete', { year: 1, totalHops: 12 });
     expect(fired).toHaveBeenCalledTimes(1);
+  });
+
+  it('re-arms the year-complete latch after a microtask so a later year still routes', async () => {
+    initCampaign();
+    useAppStore.setState((s) => ({
+      playerData: {
+        ...s.playerData,
+        [BOX_PLAYER_DATA_KEYS.highInterestDebtBalance]: 0,
+      },
+    }));
+    const fired = vi.fn();
+    eventBus.on('navigate:request', fired);
+
+    eventBus.emit('island:yearComplete', { year: 1, totalHops: 12 });
+    // Same tick is still deduped.
+    eventBus.emit('island:yearComplete', { year: 1, totalHops: 12 });
+    expect(fired).toHaveBeenCalledTimes(1);
+
+    // Awaiting a microtask flushes `queueMicrotask` cleanup in
+    // `initCampaign`, which clears the in-flight latch.
+    await Promise.resolve();
+
+    eventBus.emit('island:yearComplete', { year: 2, totalHops: 24 });
+    expect(fired).toHaveBeenCalledTimes(2);
+  });
+
+  it('does NOT bump campaign.year on island:yearComplete (yearAdvance owns year progression)', () => {
+    initCampaign();
+    useAppStore.setState((s) => ({
+      playerData: {
+        ...s.playerData,
+        [BOX_PLAYER_DATA_KEYS.currentYear]: 1,
+        [CAMPAIGN_KEYS.year]: 1,
+        [BOX_PLAYER_DATA_KEYS.highInterestDebtBalance]: 0,
+      },
+    }));
+
+    eventBus.emit('island:yearComplete', { year: 99, totalHops: 12 });
+
+    const store = useAppStore.getState();
+    // The year-end router must NOT touch the year counters; that's the
+    // unified close-year pipeline's job. Counters stay at their current
+    // values until `advanceCampaignYear` runs at the end of the
+    // year-end mini-game / cinematic.
+    expect(store.playerData[BOX_PLAYER_DATA_KEYS.currentYear]).toBe(1);
+    expect(store.playerData[CAMPAIGN_KEYS.year]).toBe(1);
   });
 });

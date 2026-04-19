@@ -27,7 +27,7 @@ function startingLineFor(id: DifficultyId): string {
   const incomeKey = id as DifficultyIncomeId;
   const income = DIFFICULTY_INCOME_USD[incomeKey];
   const debt = DIFFICULTY_DEBT_USD[incomeKey];
-  return `Starts at ${usd.format(income)} salary · ${usd.format(debt)} debt`;
+  return `Start: ${usd.format(income)} salary - ${usd.format(debt)} debt`;
 }
 
 export interface DifficultySelectProps {

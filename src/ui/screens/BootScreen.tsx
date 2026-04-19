@@ -22,7 +22,7 @@ export default function BootScreen(_props: UIProps<unknown>) {
   return (
     <div className="absolute inset-0 flex flex-col items-center justify-center bg-black text-white/80">
       <Loader2 className="size-10 animate-spin text-indigo-400" />
-      <p className="mt-4 text-sm tracking-widest uppercase opacity-70">Loading</p>
+      <p className="mt-4 text-sm tracking-widest uppercase opacity-70">Setting sail</p>
     </div>
   );
 }

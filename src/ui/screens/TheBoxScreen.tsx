@@ -60,6 +60,7 @@ import {
   type BoxTabId,
   type BudgetCategoryId,
 } from '@/core/budgetTypes';
+import { composeBoxSubmit } from '@/core/finance/boxSubmit';
 import {
   CONFIRM_COPY,
   EMPLOYER_MATCH_COPY,
@@ -247,33 +248,17 @@ export default function TheBoxScreen({ data }: UIProps<Record<string, unknown>>)
       validation.markConfirmAttemptFailed();
       return;
     }
-    const investmentsAggregate = sumInvestmentSubcategories(allocations);
-    const finalAllocations: Record<BudgetCategoryId, number> = {
-      ...allocations,
-      investments: investmentsUnlocked ? investmentsAggregate : 0,
-    };
-    if (!investmentsUnlocked) {
-      finalAllocations.indexFunds = 0;
-      finalAllocations.individualStocks = 0;
-      finalAllocations.bonds = 0;
-      finalAllocations.cds = 0;
-      finalAllocations.crypto = 0;
-    }
-    const payload = {
-      allocations: finalAllocations,
+    const { payload, playerDataPatch } = composeBoxSubmit({
+      allocations,
       annualSalary,
-      highInterestDebtBalanceAtSubmit: debtBalance,
+      debtBalance,
       inflationRate,
       employerMatchProjected,
-      year: currentYear,
-      pendingCashConsumed: pendingCash,
-    };
-    eventBus.emit('box:budget:submit', payload);
-    mergePlayerData({
-      [BOX_PLAYER_DATA_KEYS.boxAllocations]: payload.allocations,
-      [BOX_PLAYER_DATA_KEYS.pendingCashToAllocate]: 0,
-      boxBudgetSubmittedAt: Date.now(),
+      currentYear,
+      pendingCash,
     });
+    eventBus.emit('box:budget:submit', payload);
+    mergePlayerData(playerDataPatch);
     validation.reset();
   };
 

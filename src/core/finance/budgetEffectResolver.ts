@@ -72,12 +72,12 @@ export function resolveBudgetEffects(profile: BudgetProfile): RunnerSessionConfi
     effects.pathHazardMultiplier = 1.35;
     effects.pathReadability = 0.8;
     effects.pathNarrowChance = 0.35;
-    notes.push(note('rent', 'bad', 'Rent was BAD: route is rougher with more hazards and tighter layouts.'));
+    notes.push(note('rent', 'bad', 'Rent was BAD: more hazards spawn and lanes tighten up.'));
   } else if (profile.rent === 'good') {
     effects.pathHazardMultiplier = 0.82;
     effects.pathReadability = 1.2;
     effects.pathNarrowChance = 0.1;
-    notes.push(note('rent', 'good', 'Rent was GOOD: route is cleaner with safer turns.'));
+    notes.push(note('rent', 'good', 'Rent was GOOD: cleaner route with safer turns.'));
   } else {
     notes.push(note('rent', 'average', 'Rent was AVERAGE: route difficulty stays near baseline.'));
   }
@@ -85,11 +85,11 @@ export function resolveBudgetEffects(profile: BudgetProfile): RunnerSessionConfi
   if (profile.food === 'bad') {
     effects.staminaDrainMultiplier = 1.4;
     effects.staminaRecoveryMultiplier = 0.65;
-    notes.push(note('food', 'bad', 'Food was BAD: stamina drains faster and recovery is slower.'));
+    notes.push(note('food', 'bad', 'Food was BAD: stamina drains faster and recovers slower.'));
   } else if (profile.food === 'good') {
     effects.staminaDrainMultiplier = 0.75;
     effects.staminaRecoveryMultiplier = 1.35;
-    notes.push(note('food', 'good', 'Food was GOOD: stronger endurance and recovery.'));
+    notes.push(note('food', 'good', 'Food was GOOD: better endurance and faster recovery.'));
   } else {
     notes.push(note('food', 'average', 'Food was AVERAGE: normal stamina behavior.'));
   }
@@ -98,22 +98,22 @@ export function resolveBudgetEffects(profile: BudgetProfile): RunnerSessionConfi
     effects.movementResponseMultiplier = 0.72;
     effects.turnWindowSeconds = 0.52;
     notes.push(
-      note('transportation', 'bad', 'Transportation was BAD: movement and turning feel less responsive.'),
+      note('transportation', 'bad', 'Transportation was BAD: turning and lane swaps feel slower.'),
     );
   } else if (profile.transportation === 'good') {
     effects.movementResponseMultiplier = 1.28;
     effects.turnWindowSeconds = 0.75;
-    notes.push(note('transportation', 'good', 'Transportation was GOOD: lane shifts and turns are sharper.'));
+    notes.push(note('transportation', 'good', 'Transportation was GOOD: lane shifts and turns feel sharper.'));
   } else {
     notes.push(note('transportation', 'average', 'Transportation was AVERAGE: baseline responsiveness.'));
   }
 
   if (profile.emergencyFund === 'bad') {
     effects.startingLives = 1;
-    notes.push(note('emergencyFund', 'bad', 'Emergency Fund was BAD: only one life.'));
+    notes.push(note('emergencyFund', 'bad', 'Emergency Fund was BAD: you start with only one life.'));
   } else if (profile.emergencyFund === 'good') {
     effects.startingLives = 3;
-    notes.push(note('emergencyFund', 'good', 'Emergency Fund was GOOD: extra lives improve forgiveness.'));
+    notes.push(note('emergencyFund', 'good', 'Emergency Fund was GOOD: extra lives give more recovery room.'));
   } else {
     effects.startingLives = 2;
     notes.push(note('emergencyFund', 'average', 'Emergency Fund was AVERAGE: limited safety net.'));
@@ -122,11 +122,11 @@ export function resolveBudgetEffects(profile: BudgetProfile): RunnerSessionConfi
   if (profile.medical === 'bad') {
     effects.injurySlowMultiplier = 1.5;
     effects.injuryDurationMultiplier = 1.6;
-    notes.push(note('medical', 'bad', 'Medical was BAD: injuries slow you harder for longer.'));
+    notes.push(note('medical', 'bad', 'Medical was BAD: injuries hit harder and last longer.'));
   } else if (profile.medical === 'good') {
     effects.injurySlowMultiplier = 0.75;
     effects.injuryDurationMultiplier = 0.7;
-    notes.push(note('medical', 'good', 'Medical was GOOD: faster healing and lighter injury penalties.'));
+    notes.push(note('medical', 'good', 'Medical was GOOD: faster recovery and lighter injury penalties.'));
   } else {
     notes.push(note('medical', 'average', 'Medical was AVERAGE: standard injury behavior.'));
   }
@@ -138,7 +138,7 @@ export function resolveBudgetEffects(profile: BudgetProfile): RunnerSessionConfi
       note(
         'debtRepayment',
         'bad',
-        'Debt Repayment was BAD: Debt Collector is visibly bigger and more aggressive.',
+        'Debt Repayment was BAD: Debt Collector is bigger and more aggressive.',
       ),
     );
   } else if (profile.debtRepayment === 'good') {
@@ -153,7 +153,7 @@ export function resolveBudgetEffects(profile: BudgetProfile): RunnerSessionConfi
     effects.stumbleChancePerSecond = 0.04;
     effects.burnoutDrainMultiplier = 1.35;
     effects.stumbleTerrainChance += 0.1;
-    notes.push(note('miscFun', 'bad', 'Misc/Fun was BAD: more stumbling, burnout, and exhausting run feel.'));
+    notes.push(note('miscFun', 'bad', 'Misc/Fun was BAD: more stumbles and faster burnout.'));
   } else if (profile.miscFun === 'good') {
     effects.stumbleChancePerSecond = 0.01;
     effects.burnoutDrainMultiplier = 0.85;
@@ -162,7 +162,7 @@ export function resolveBudgetEffects(profile: BudgetProfile): RunnerSessionConfi
       note(
         'miscFun',
         'good',
-        'Misc/Fun was GOOD: better morale and comfort early, but can trade off against safety categories.',
+        'Misc/Fun was GOOD: stronger early morale, but weak safety categories can still punish you.',
       ),
     );
   } else {
@@ -184,7 +184,7 @@ export function resolveBudgetEffects(profile: BudgetProfile): RunnerSessionConfi
       note(
         'debtRepayment',
         profile.debtRepayment,
-        'High total debt pressure: the interest shadow accelerates over time and mistakes become deadlier.',
+        'High total debt pressure: chase speed ramps up and mistakes punish harder over time.',
       ),
     );
   } else if (totalDebtPressureTier === 'low') {
@@ -199,7 +199,7 @@ export function resolveBudgetEffects(profile: BudgetProfile): RunnerSessionConfi
       note(
         'miscFun',
         'good',
-        'Strong early morale, but weak safety categories reduce long-term resilience.',
+        'Strong early morale, but weak safety categories limit long-run resilience.',
       ),
     );
   }

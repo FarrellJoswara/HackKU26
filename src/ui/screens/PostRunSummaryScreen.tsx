@@ -18,10 +18,10 @@ export default function PostRunSummaryScreen(props: UIProps<Record<string, unkno
             className="text-2xl font-semibold text-[#1a4d5c]"
             style={{ fontFamily: 'var(--island-font-display)' }}
           >
-            Post-run summary
+            Post-run report
           </h2>
           <p className="mt-2 text-sm text-[#3d3428]/85">
-            No run data saved yet. This screen will populate after the runner emits{' '}
+            No run data saved yet. This screen fills in after the runner emits{' '}
             <code className="rounded bg-[#fbe6be] px-1">runner:finished</code>.
           </p>
           <div className="mt-6">
@@ -56,13 +56,13 @@ export default function PostRunSummaryScreen(props: UIProps<Record<string, unkno
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.22em] text-[#1a4d5c]/75">
-              Financial debrief
+              Financial recap
             </p>
             <h2
               className="mt-1 text-3xl font-semibold text-[#1a4d5c]"
               style={{ fontFamily: 'var(--island-font-display)' }}
             >
-              {lastRun.outcome === 'win' ? 'Bright sunset, calm tide.' : 'The currents pulled hard.'}
+              {lastRun.outcome === 'win' ? 'Clear sunset, steady water.' : 'The currents hit hard.'}
             </h2>
             <p className="mt-1 text-sm text-[#3d3428]/80">
               Outcome:{' '}
@@ -78,7 +78,12 @@ export default function PostRunSummaryScreen(props: UIProps<Record<string, unkno
             <Button
               variant="coral"
               leadingIcon={<ArrowRight className="size-4" />}
-              onClick={() => advanceCampaignYear(lastRun.outcome)}
+              onClick={() =>
+                advanceCampaignYear({
+                  outcome: lastRun.outcome,
+                  destination: 'budget',
+                })
+              }
             >
               Continue to next year
             </Button>
@@ -130,7 +135,7 @@ export default function PostRunSummaryScreen(props: UIProps<Record<string, unkno
             <div className="flex items-center gap-2">
               <Sparkles className="size-4 text-[#f59f3a]" />
               <h3 className="text-sm font-bold uppercase tracking-wide text-[#1a4d5c]">
-                What that caused in gameplay
+                How it changed gameplay
               </h3>
             </div>
             <ul className="mt-4 space-y-3 text-sm text-[#2a2418]">
@@ -187,7 +192,7 @@ export default function PostRunSummaryScreen(props: UIProps<Record<string, unkno
         {lastRun.outcome === 'loss' ? (
           <div className="tropic-card mt-6 p-5">
             <h3 className="text-sm font-bold uppercase tracking-wide text-[#1a4d5c]">
-              Why the loss makes sense (cause → effect)
+              Why this loss happened (cause to effect)
             </h3>
             <div className="mt-4 grid gap-3 md:grid-cols-2">
               {effects

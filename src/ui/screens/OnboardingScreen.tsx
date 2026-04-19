@@ -38,36 +38,35 @@ export default function OnboardingScreen(_props: UIProps<Record<string, unknown>
               role="region"
               aria-labelledby="onboardingTitle"
             >
-              <p className="th-eyebrow th-menuEyebrow">Welcome ashore</p>
+              <p className="th-eyebrow th-menuEyebrow">Welcome aboard</p>
               <h1
                 id="onboardingTitle"
                 className="island-title th-titleGradient mt-1 text-3xl md:text-[2rem]"
               >
-                Run the Box. Sail the year.
+                Balance the Box. Sail the year.
               </h1>
               <div className="th-titleDivider th-menuDivider" role="presentation" />
 
               <ol className="island-statusText mt-4 grid gap-3 text-sm leading-relaxed sm:text-base">
                 <li>
                   <span className="font-semibold text-[var(--island-color-title)]">1. The Box.</span>{' '}
-                  Spend every dollar of this year's pay before you set sail. Zero-based: nothing
-                  forgotten on the table.
+                  Give every dollar a job before you set sail. Zero-based means nothing gets
+                  lost in the shuffle.
                 </li>
                 <li>
                   <span className="font-semibold text-[var(--island-color-title)]">2. The Island.</span>{' '}
-                  Roll the die, hop the squares. Each landing tests how well your budget holds up to
-                  real life.
+                  Roll, move, and face the square you land on. Each stop tests how your budget
+                  handles real life.
                 </li>
                 <li>
                   <span className="font-semibold text-[var(--island-color-title)]">3. The Year-end run.</span>{' '}
-                  Finish a full lap and the year ends — what happens next is decided by what's on
-                  your books.
+                  Finish a full lap to close the year. Your numbers decide what comes next.
                 </li>
               </ol>
 
               <p className="island-hintText mt-5 text-sm">
-                You can revisit this from the menu later. Soft warnings are nudges, never blockers —
-                Confirm only requires a balanced budget.
+                You can revisit this later from the menu. Warnings are nudges, not blockers -
+                Confirm only needs a balanced plan.
               </p>
 
               <div className="th-menuActions mt-8">

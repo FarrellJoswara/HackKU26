@@ -75,12 +75,12 @@ export default function NewGameDifficultyScreen(
             >
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
-                  <p className="th-eyebrow th-menuEyebrow">New game</p>
+                  <p className="th-eyebrow th-menuEyebrow">Fresh start</p>
                   <h1
                     id="thDiffTitle"
                     className="island-title th-titleGradient mt-1 text-3xl md:text-[2rem]"
                   >
-                    Choose a difficulty
+                    Pick your pace
                   </h1>
                 </div>
                 <button type="button" className="th-btnSettings shrink-0" onClick={handleBack}>
@@ -92,7 +92,7 @@ export default function NewGameDifficultyScreen(
               <div className="th-titleDivider th-menuDivider" role="presentation" />
 
               <p id="thDiffDesc" className="island-statusText th-subtitle mt-3 max-w-xl">
-                Difficulty controls pacing and resources for this run. You can change it later by
+                Difficulty sets your starting money pressure for this run. You can always switch by
                 starting a new game.
               </p>
 
@@ -106,7 +106,7 @@ export default function NewGameDifficultyScreen(
                 </button>
                 <button type="button" className="th-btnPlay" onClick={handleCreate}>
                   <Sparkles className="size-4 shrink-0" aria-hidden />
-                  Create
+                  Start run
                 </button>
               </div>
             </div>
