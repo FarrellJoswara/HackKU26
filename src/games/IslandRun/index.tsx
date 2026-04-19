@@ -26,6 +26,7 @@ import {
   isIslandScenarioChoicePayload,
 } from '@/core/scenarios';
 import { CAMPAIGN_KEYS } from '@/core/campaign/campaignKeys';
+import { IslandHudYear } from './IslandHudYear';
 
 const FONTS_HREF =
   'https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Outfit:wght@400;500;600&display=swap';
@@ -53,36 +54,27 @@ export default function IslandRun() {
 
     let cleanup: () => void = () => {};
     try {
-      const initialTotalHops = readNumber(
-        useAppStore.getState().playerData,
-        CAMPAIGN_KEYS.islandTotalHops,
-        0,
-      );
+      const { playerData: bootPd } = useAppStore.getState();
       cleanup = bootstrap({
-        initialTotalHops,
-        // Always re-read the store so a Box edit between rolls flows
-        // into the next landing's tier copy.
-        getPlayerSnapshot: () => {
+        initialTotalHops: readNumber(bootPd, CAMPAIGN_KEYS.islandTotalHops, 0),
+        getFundingRatioByCategory: () => {
           const { playerData } = useAppStore.getState();
           const allocations = readAllocations(playerData) ?? emptyAllocations();
-          const annualSalary = readNumber(
-            playerData,
-            BOX_PLAYER_DATA_KEYS.annualSalary,
-            0,
-          );
+          const annualSalary = readNumber(playerData, BOX_PLAYER_DATA_KEYS.annualSalary, 0);
+          if (annualSalary <= 0) return undefined;
           const fundingRatioByCategory: Partial<Record<BudgetCategoryId, number>> = {};
-          if (annualSalary > 0) {
-            (Object.keys(allocations) as BudgetCategoryId[]).forEach((k) => {
-              fundingRatioByCategory[k] = (allocations[k] ?? 0) / annualSalary;
-            });
-          }
-          return { annualSalary, fundingRatioByCategory };
+          (Object.keys(allocations) as BudgetCategoryId[]).forEach((k) => {
+            fundingRatioByCategory[k] = (allocations[k] ?? 0) / annualSalary;
+          });
+          return fundingRatioByCategory;
         },
-        // Persist hop counter + emit campaign event. Bumping `campaign.year`
-        // is the campaign router's job (`initCampaign.ts`).
-        onLapComplete: ({ totalHops, laps }) => {
-          const { mergePlayerData } = useAppStore.getState();
-          mergePlayerData({
+        onTotalHopsPersist: ({ totalHops }) => {
+          useAppStore.getState().mergePlayerData({
+            [CAMPAIGN_KEYS.islandTotalHops]: totalHops,
+          });
+        },
+        onYearEndAtStart: ({ totalHops, laps }) => {
+          useAppStore.getState().mergePlayerData({
             [CAMPAIGN_KEYS.islandTotalHops]: totalHops,
           });
           eventBus.emit('island:yearComplete', { year: laps + 1, totalHops });
@@ -113,20 +105,10 @@ export default function IslandRun() {
         BOX_PLAYER_DATA_KEYS.highInterestDebtBalance,
         0,
       );
-      // Pass through pending cash so the zero-based drift target inside
-      // `finalizeBoxAllocations` is `salary + pending` — otherwise an
-      // Island choice fired while a windfall is still on the table would
-      // silently re-absorb that pending cash into miscFun.
-      const pendingCash = readNumber(
-        playerData,
-        BOX_PLAYER_DATA_KEYS.pendingCashToAllocate,
-        0,
-      );
       const { allocations: next } = applyIslandScenarioChoice({
         allocations,
         annualSalary: annualSalary > 0 ? annualSalary : undefined,
         debtBalance,
-        pendingCashToAllocate: pendingCash,
         payload,
       });
       mergePlayerData({ [BOX_PLAYER_DATA_KEYS.boxAllocations]: next });
@@ -136,7 +118,7 @@ export default function IslandRun() {
   return (
     <>
       <a className="skip-link" href="#canvas-root">
-        Skip to game board
+        Skip to board
       </a>
 
       <div
@@ -145,7 +127,7 @@ export default function IslandRun() {
         role="alert"
         aria-live="assertive"
       >
-        <p>WebGL could not start. Try another browser or update your graphics driver.</p>
+        <p>WebGL could not start. Try another browser or update your graphics drivers.</p>
       </div>
 
       <main
@@ -157,7 +139,10 @@ export default function IslandRun() {
 
       <div id="hud" className="hud-bottle">
         <div className="hud-inner">
-          <h1 className="hud-title">Island Run</h1>
+          <div className="hud-title-row">
+            <h1 className="hud-title">Island Run</h1>
+            <IslandHudYear />
+          </div>
           <button id="roll-btn" type="button" className="btn-shell">
             <svg
               className="btn-icon"
@@ -174,7 +159,7 @@ export default function IslandRun() {
               <rect x="13" y="13" width="8" height="8" rx="1" />
               <rect x="3" y="13" width="8" height="8" rx="1" />
             </svg>
-            Roll
+            Roll dice
           </button>
           <p
             id="status"
@@ -182,18 +167,18 @@ export default function IslandRun() {
             aria-live="polite"
             aria-atomic="true"
           >
-            Roll and move around the island.
+            Roll to ride the tide around the board.
           </p>
           <div className="dice-chip-wrap" id="dice-chip-wrap">
             <span id="dice-face" className="dice-face" aria-hidden="true">
               —
             </span>
             <p id="dice-readout" className="readout-dice">
-              Last roll: -
+              Last roll: —
             </p>
           </div>
           <p id="position-readout" className="readout-secondary">
-            Square: -
+            Square: —
           </p>
 
           <div
@@ -263,7 +248,7 @@ export default function IslandRun() {
           </button>
           <div className="landing-wave" aria-hidden="true" />
           <p id="landing-subtitle" className="landing-subtitle">
-            You landed on
+            You landed at
           </p>
           <h2 id="landing-title">Shore Fund</h2>
           <p id="landing-text" />
@@ -271,7 +256,7 @@ export default function IslandRun() {
             id="landing-choices"
             className="landing-choices"
             role="group"
-            aria-label="Choose your response"
+            aria-label="Choose how to handle this"
           >
             <button
               type="button"
@@ -291,13 +276,22 @@ export default function IslandRun() {
               <span className="btn-choice-label" data-role="label" />
               <span className="btn-choice-outcome" data-role="outcome" />
             </button>
+            <button
+              type="button"
+              id="landing-choice-c"
+              className="btn-choice hidden"
+              data-choice="c"
+            >
+              <span className="btn-choice-label" data-role="label" />
+              <span className="btn-choice-outcome" data-role="outcome" />
+            </button>
           </div>
           <button
             id="landing-close"
             type="button"
             className="btn-continue"
           >
-            Keep going
+            Continue
           </button>
         </div>
       </div>

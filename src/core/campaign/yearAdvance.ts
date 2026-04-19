@@ -39,7 +39,10 @@ import {
 export type { YearAdvanceOutcome, YearAdvanceSummary } from './closeYear';
 
 /** Where to route the player once the year-close patch has been applied. */
-export type YearCloseDestination = Extract<AppState, 'budget' | 'menu'>;
+export type YearCloseDestination = Extract<
+  AppState,
+  'budget' | 'menu' | 'playthroughSummary'
+>;
 
 export interface AdvanceCampaignYearOptions {
   /** `win` / `loss` of the year-end mini-game, or `skipped` when bypassed. */
@@ -47,8 +50,9 @@ export interface AdvanceCampaignYearOptions {
   /**
    * Where to route after applying the close-year patch.
    *  - `'budget'` (default): straight back to The Box for next year's budget.
-   *  - `'menu'`: back to the Title Hub (used by Investing Birds end + the
-   *    Mountain Success cinematic, which both finish on the menu).
+   *  - `'menu'`: back to the Title Hub (used by Investing Birds end).
+   *  - `'playthroughSummary'`: post-cinematic recap shown after the
+   *    Mountain Success ending.
    */
   destination?: YearCloseDestination;
 }

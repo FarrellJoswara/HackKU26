@@ -60,10 +60,16 @@ export default function MountainSuccess() {
           // The cinematic IS the year-end celebration on financial-freedom
           // years, so close the year through the unified pipeline so the
           // counter, debt math, and economy roll cannot be skipped by
-          // playing through Mountain Success instead of DebtRunner. The
-          // TransitionManager picks up the resulting `navigate:request`,
-          // chaining the in-scene white fade into the global transition.
-          advanceCampaignYear({ outcome: 'win', destination: 'menu' });
+          // playing through Mountain Success instead of DebtRunner. We
+          // route to the post-cinematic playthrough recap rather than the
+          // menu so the player gets to see the run-level stats before
+          // returning home. The TransitionManager picks up the resulting
+          // `navigate:request`, chaining the in-scene white fade into the
+          // global transition.
+          advanceCampaignYear({
+            outcome: 'win',
+            destination: 'playthroughSummary',
+          });
         },
       });
     } catch (e) {
@@ -110,9 +116,9 @@ export default function MountainSuccess() {
           there is no two-way timing handshake with `main.ts`. */}
       <div className="scene-hud" role="status" aria-live="polite">
         <p className="scene-chip">Financial Freedom</p>
-        <h2 className="scene-title">You made it to open sky.</h2>
+        <h2 className="scene-title">You reached Stability Summit</h2>
         <p className="scene-subtitle">
-          From here on, the horizon is yours.
+          The world is your Oyster
         </p>
       </div>
 

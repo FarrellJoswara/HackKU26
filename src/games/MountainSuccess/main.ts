@@ -648,6 +648,421 @@ export function bootstrap(opts: MountainSuccessBootstrapOptions): () => void {
 }
 
 /* ============================================================ *
+ * Background variant — used by the Playthrough Summary screen
+ * to render the mountain scene as a quietly orbiting backdrop.
+ *
+ * Same hero composition as the cinematic (mountain + banana on
+ * peak, cloud sea, big back-lit sun, warm sky) but:
+ *   - no captions / letterbox / fade (those are CSS in
+ *     `style.css`, scoped to the cinematic shell)
+ *   - no completion timer (it's a backdrop, not a cutscene)
+ *   - sun sits at its final height immediately so the first
+ *     frame already looks like the "after the climb" beat
+ *   - camera orbits indefinitely at a wider, eye-level radius
+ *     so summary cards never compete with the silhouette
+ * ============================================================ */
+
+export interface MountainBackgroundOptions {
+  /** Optional override for the orbit angular speed (rad/s). */
+  orbitSpeed?: number;
+}
+
+export function bootstrapMountainBackground(
+  rootEl: HTMLElement,
+  opts: MountainBackgroundOptions = {},
+): () => void {
+  let disposed = false;
+  let rafId = 0;
+
+  const scene = new THREE.Scene();
+  scene.fog = null;
+  scene.background = null;
+
+  const clock = new THREE.Clock();
+
+  const camera = new THREE.PerspectiveCamera(
+    42,
+    window.innerWidth / window.innerHeight,
+    0.1,
+    500_000,
+  );
+  scene.add(camera);
+
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setClearColor(0xffd1a8, 1);
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.toneMapping = THREE.NoToneMapping;
+  renderer.toneMappingExposure = 1.06;
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  rootEl.appendChild(renderer.domElement);
+
+  const composer = new EffectComposer(renderer);
+  composer.addPass(new RenderPass(scene, camera));
+  const gradePass = new ShaderPass(ParadiseGradeShader);
+  const gu = gradePass.material.uniforms;
+  gu['saturation']!.value = 1.18;
+  gu['warmth']!.value = 0.5;
+  gu['highlightBloom']!.value = 0.3;
+  composer.addPass(gradePass);
+  const outputPass = new OutputPass();
+  outputPass.needsSwap = false;
+  composer.addPass(outputPass);
+
+  const skydome = new ParadiseSkydome({
+    radius: 450_000,
+    horizonColor: new THREE.Color(0xff8a4a),
+    midColor: new THREE.Color(0xffd1a8),
+    zenithColor: new THREE.Color(0x3aa2ff),
+  });
+  scene.add(skydome);
+
+  const sunDir = new THREE.Vector3(-3, 7, -16).normalize();
+
+  const keyLight = new THREE.DirectionalLight(0xffd49a, 1.6);
+  keyLight.position.copy(sunDir.clone().multiplyScalar(40));
+  keyLight.castShadow = true;
+  keyLight.shadow.mapSize.set(2048, 2048);
+  keyLight.shadow.camera.near = 2;
+  keyLight.shadow.camera.far = 80;
+  keyLight.shadow.camera.left = -18;
+  keyLight.shadow.camera.right = 18;
+  keyLight.shadow.camera.top = 18;
+  keyLight.shadow.camera.bottom = -18;
+  keyLight.shadow.bias = -0.00012;
+  scene.add(keyLight);
+
+  const fillLight = new THREE.DirectionalLight(0x9ed4ff, 0.4);
+  fillLight.position.set(18, 6, 22);
+  scene.add(fillLight);
+
+  scene.add(new THREE.HemisphereLight(0xa3c8ff, 0x5a4a3a, 0.55));
+  scene.add(new THREE.AmbientLight(0xfff4ea, 0.35));
+
+  const mountainGroup = new THREE.Group();
+  scene.add(mountainGroup);
+  const summitPoint = new THREE.Vector3(0, SUMMIT_Y, 0);
+  const bananaGroup = new THREE.Group();
+  scene.add(bananaGroup);
+  let bananaMixer: THREE.AnimationMixer | null = null;
+
+  const cloudGroup = new THREE.Group();
+  scene.add(cloudGroup);
+  const cloudBobs: { mesh: THREE.Object3D; baseY: number; phase: number }[] = [];
+
+  const fogTex = createRadialAlphaTexture(256);
+  const fogWash = new THREE.Mesh(
+    new THREE.PlaneGeometry(180, 180, 1, 1),
+    new THREE.MeshBasicMaterial({
+      color: 0xfff4e0,
+      transparent: true,
+      opacity: 0.85,
+      depthWrite: false,
+      alphaMap: fogTex,
+      side: THREE.DoubleSide,
+    }),
+  );
+  fogWash.rotation.x = -Math.PI / 2;
+  fogWash.position.y = 2.2;
+  fogWash.renderOrder = 2;
+  scene.add(fogWash);
+
+  const fogBelow = new THREE.Mesh(
+    new THREE.PlaneGeometry(220, 220, 1, 1),
+    new THREE.MeshBasicMaterial({
+      color: 0xf2c8a0,
+      transparent: true,
+      opacity: 0.55,
+      depthWrite: false,
+      alphaMap: fogTex,
+      side: THREE.DoubleSide,
+    }),
+  );
+  fogBelow.rotation.x = -Math.PI / 2;
+  fogBelow.position.y = 0.4;
+  fogBelow.renderOrder = 1;
+  scene.add(fogBelow);
+
+  // Sun parked at its final cinematic height so frame 0 already
+  // reads as the post-climb tableau.
+  const sunGroup = new THREE.Group();
+  sunGroup.position.set(-10, 19, -58);
+  scene.add(sunGroup);
+
+  const raysAlpha = createVerticalAlphaTexture(64);
+  const raysMat = new THREE.MeshBasicMaterial({
+    color: 0xffe6b0,
+    transparent: true,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+    alphaMap: raysAlpha,
+    opacity: 0.78,
+  });
+  const RAYS_HEIGHT = 42;
+  const raysGeo = new THREE.ConeGeometry(18, RAYS_HEIGHT, 26, 1, true);
+  const raysMesh = new THREE.Mesh(raysGeo, raysMat);
+  raysMesh.position.set(0, -RAYS_HEIGHT / 2, 0);
+  raysMesh.renderOrder = 3;
+  sunGroup.add(raysMesh);
+
+  let sunDiscRoot: THREE.Group | null = null;
+
+  void (async () => {
+    try {
+      const mountainSrc = await loadGltf(mountainUrl);
+      if (disposed) return;
+      enableShadows(mountainSrc, true, true);
+      const box = new THREE.Box3().setFromObject(mountainSrc);
+      const size = new THREE.Vector3();
+      box.getSize(size);
+      const targetH = 16.5;
+      const s = targetH / Math.max(size.y, 0.001);
+      mountainSrc.scale.setScalar(s);
+      const box2 = new THREE.Box3().setFromObject(mountainSrc);
+      const center = new THREE.Vector3();
+      box2.getCenter(center);
+      mountainSrc.position.sub(center);
+      const box3 = new THREE.Box3().setFromObject(mountainSrc);
+      mountainSrc.position.y -= box3.min.y;
+
+      mountainSrc.traverse((o) => {
+        const m = o as THREE.Mesh;
+        if (!m.isMesh || !m.material) return;
+        const mats = Array.isArray(m.material) ? m.material : [m.material];
+        for (const mat of mats) {
+          const std = mat as THREE.MeshStandardMaterial;
+          if (std.color) std.color.lerp(new THREE.Color(0xb5916c), 0.18);
+          if (std.roughness !== undefined) std.roughness = Math.max(0.75, std.roughness);
+        }
+      });
+
+      mountainGroup.add(mountainSrc);
+      mountainGroup.updateWorldMatrix(true, true);
+      const apex = findObjectApexWorld(mountainGroup);
+      if (apex) {
+        summitPoint.copy(apex);
+        summitPoint.y += 0.02;
+      } else {
+        const box4 = new THREE.Box3().setFromObject(mountainGroup);
+        summitPoint.set(0, box4.max.y + 0.2, 0);
+      }
+    } catch (e) {
+      console.warn('[MountainBackground] mountain failed to load', e);
+    }
+  })();
+
+  void (async () => {
+    try {
+      const { scene: bananaSrc, animations } = await loadGltfWithAnimations(bananaUrl);
+      if (disposed) return;
+      enableShadows(bananaSrc, true, false);
+      const box = new THREE.Box3().setFromObject(bananaSrc);
+      const size = new THREE.Vector3();
+      box.getSize(size);
+      const targetH = 0.9;
+      const scale = targetH / Math.max(size.y, 0.001);
+      bananaSrc.scale.setScalar(scale);
+
+      const centered = new THREE.Box3().setFromObject(bananaSrc);
+      const center = new THREE.Vector3();
+      centered.getCenter(center);
+      bananaSrc.position.sub(center);
+      const feetBox = new THREE.Box3().setFromObject(bananaSrc);
+      bananaSrc.position.y -= feetBox.min.y;
+
+      bananaGroup.add(bananaSrc);
+      if (animations.length > 0) {
+        bananaMixer = new THREE.AnimationMixer(bananaSrc);
+        bananaMixer.clipAction(animations[0]!).play();
+      }
+    } catch (e) {
+      console.warn('[MountainBackground] banana failed to load', e);
+    }
+  })();
+
+  void (async () => {
+    try {
+      const cloudSources = await Promise.all([
+        loadGltf(cloudAUrl),
+        loadGltf(cloudBUrl),
+        loadGltf(cloudCUrl),
+      ]);
+      if (disposed) return;
+      for (const src of cloudSources) lightenCloudMaterials(src);
+      const cloudInfos = cloudSources.map((src) => {
+        const cb = new THREE.Box3().setFromObject(src);
+        const csz = new THREE.Vector3();
+        cb.getSize(csz);
+        const baseScale = 7.5 / Math.max(csz.x, csz.y, csz.z, 0.001);
+        src.scale.setScalar(baseScale);
+        return src;
+      });
+      const rng = createRng(0x5eedc10d);
+
+      const spawnBand = (cfg: {
+        count: number;
+        radiusMin: number;
+        radiusMax: number;
+        yMid: number;
+        yJitter: number;
+        scaleMin: number;
+        scaleMax: number;
+        angleOffset?: number;
+      }) => {
+        for (let placed = 0; placed < cfg.count; placed++) {
+          const ang =
+            ((placed + sampleRange(-0.32, 0.32, rng)) / cfg.count) * Math.PI * 2
+            + (cfg.angleOffset ?? 0);
+          const radius = sampleRange(cfg.radiusMin, cfg.radiusMax, rng);
+          const y = cfg.yMid + sampleRange(-cfg.yJitter, cfg.yJitter, rng);
+          const x = Math.cos(ang) * radius;
+          const z = Math.sin(ang) * radius;
+
+          const src = cloudInfos[Math.floor(sampleRange(0, cloudInfos.length, rng))]!;
+          const m = src.clone();
+          m.position.set(x, y, z);
+          m.rotation.y = sampleRange(0, Math.PI * 2, rng);
+          m.scale.multiplyScalar(sampleRange(cfg.scaleMin, cfg.scaleMax, rng));
+          cloudGroup.add(m);
+          cloudBobs.push({
+            mesh: m,
+            baseY: y,
+            phase: sampleRange(0, Math.PI * 2, rng),
+          });
+        }
+      };
+
+      spawnBand({
+        count: 30,
+        radiusMin: 22,
+        radiusMax: 38,
+        yMid: 3.8,
+        yJitter: 0.6,
+        scaleMin: 0.82,
+        scaleMax: 1.35,
+      });
+      spawnBand({
+        count: 50,
+        radiusMin: 40,
+        radiusMax: 78,
+        yMid: 4.7,
+        yJitter: 0.8,
+        scaleMin: 0.95,
+        scaleMax: 1.6,
+        angleOffset: 0.18,
+      });
+    } catch (e) {
+      console.warn('[MountainBackground] clouds failed to load', e);
+    }
+  })();
+
+  void (async () => {
+    try {
+      const sunSrc = await loadGltf(sunsetSunUrl);
+      if (disposed) return;
+      enableShadows(sunSrc, false, false);
+      boostSunDiscMaterials(sunSrc);
+      const sb = new THREE.Box3().setFromObject(sunSrc);
+      const ssz = new THREE.Vector3();
+      sb.getSize(ssz);
+      const target = 28;
+      const sn = target / Math.max(ssz.x, ssz.y, ssz.z, 0.001);
+      sunSrc.scale.setScalar(sn);
+      const sb2 = new THREE.Box3().setFromObject(sunSrc);
+      const ctr = new THREE.Vector3();
+      sb2.getCenter(ctr);
+      sunSrc.position.sub(ctr);
+      sunDiscRoot = sunSrc;
+      sunGroup.add(sunSrc);
+    } catch (e) {
+      console.warn('[MountainBackground] sun failed to load', e);
+    }
+  })();
+
+  // Slow continuous orbit. Wider than the cinematic "reveal" beat
+  // and slightly elevated so the summit silhouette anchors the
+  // composition, leaving the upper third of the frame for sky
+  // (i.e. for the summary card to sit on).
+  const ORBIT_RADIUS = 30;
+  const ORBIT_HEIGHT_OFFSET = 6.4;
+  const ORBIT_SPEED = opts.orbitSpeed ?? 0.045; // rad/s — full lap ~140s
+  const ORBIT_BASE_ANGLE = 0.18 * Math.PI;
+
+  const camTargetScratch = new THREE.Vector3();
+  const heroFocusScratch = new THREE.Vector3();
+
+  function tick() {
+    if (disposed) return;
+    rafId = requestAnimationFrame(tick);
+    const dt = clock.getDelta();
+    const t = clock.elapsedTime;
+
+    const heroX = bananaGroup.children.length > 0 ? bananaGroup.position.x : summitPoint.x;
+    const heroY = bananaGroup.children.length > 0 ? bananaGroup.position.y : summitPoint.y;
+    const heroZ = bananaGroup.children.length > 0 ? bananaGroup.position.z : summitPoint.z;
+    heroFocusScratch.set(heroX, heroY + 0.45, heroZ);
+
+    const ang = ORBIT_BASE_ANGLE + t * ORBIT_SPEED;
+    camera.position.set(
+      Math.cos(ang) * ORBIT_RADIUS,
+      summitPoint.y + ORBIT_HEIGHT_OFFSET,
+      Math.sin(ang) * ORBIT_RADIUS,
+    );
+    camTargetScratch.copy(heroFocusScratch);
+    camera.lookAt(camTargetScratch);
+
+    raysMesh.rotation.y += dt * 0.18;
+
+    if (sunDiscRoot) {
+      sunDiscRoot.lookAt(camera.position);
+    }
+
+    cloudGroup.rotation.y += dt * 0.012;
+    for (let i = 0; i < cloudBobs.length; i++) {
+      const b = cloudBobs[i]!;
+      b.mesh.position.y = b.baseY + Math.sin(t * 0.6 + b.phase) * 0.06;
+    }
+
+    bananaMixer?.update(dt);
+    if (bananaGroup.children.length > 0) {
+      bananaGroup.position.set(summitPoint.x, summitPoint.y + 0.003, summitPoint.z);
+      bananaGroup.lookAt(sunGroup.position.x, summitPoint.y + 0.8, sunGroup.position.z);
+    }
+
+    composer.render();
+  }
+  rafId = requestAnimationFrame(tick);
+
+  const onResize = () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    composer.setSize(window.innerWidth, window.innerHeight);
+  };
+  window.addEventListener('resize', onResize);
+
+  return () => {
+    disposed = true;
+    cancelAnimationFrame(rafId);
+    window.removeEventListener('resize', onResize);
+
+    fogTex.dispose();
+    raysAlpha.dispose();
+    raysGeo.dispose();
+    raysMat.dispose();
+
+    renderer.dispose();
+    renderer.forceContextLoss();
+    if (renderer.domElement.parentElement) {
+      renderer.domElement.parentElement.removeChild(renderer.domElement);
+    }
+  };
+}
+
+/* ============================================================ *
  * Helpers — copy-pasted from IslandRun's main.ts so this game
  * stays self-contained (no reach into another game's internals
  * for non-shader logic). Each one is tiny and stable.

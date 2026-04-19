@@ -66,7 +66,7 @@ export function PlayModeDialog({
           <button
             type="button"
             aria-label="Close"
-            className="absolute right-3 top-3 rounded-md p-1 text-[var(--island-color-ink-muted)] hover:bg-black/10"
+            className="play-mode-close-btn absolute right-3 top-3 rounded-md p-1 text-[var(--island-color-ink-muted)] hover:bg-black/10"
             onClick={onClose}
           >
             <X className="size-4" />

@@ -27,13 +27,16 @@ import {
   Car,
   Check,
   CreditCard,
+  FastForward,
   Gem,
   Home,
   Landmark,
   LineChart,
   Lock,
+  Mountain,
   PanelLeftOpen,
   PanelRightClose,
+  Pause,
   PiggyBank,
   Sparkles,
   Stethoscope,
@@ -73,9 +76,11 @@ import {
   type GuidedCategoryId,
 } from '@/core/finance/budgetGuides';
 import {
+  DEFAULT_WIN_GOAL_USD,
   INVESTED_BALANCE_KEY,
   WIN_GOAL_KEY,
 } from '@/core/finance/boxGoalRail';
+import { GAME_IDS } from '@/games/registry';
 import { useAppStore } from '@/core/store';
 import type { UIProps } from '@/core/types';
 import { BoxGoalRail } from '@/ui/components/BoxGoalRail';
@@ -122,6 +127,7 @@ const categoryIcon: Record<BudgetCategoryId, ComponentType<{ className?: string 
 
 export default function TheBoxOverlay({ data }: UIProps<Record<string, unknown>>) {
   const mergePlayerData = useAppStore((s) => s.mergePlayerData);
+  const [pauseMenuOpen, setPauseMenuOpen] = useState(false);
 
   const enabled = Boolean((data as Record<string, unknown>)[BOX_OVERLAY_FLAG]);
 
@@ -180,6 +186,7 @@ export default function TheBoxOverlay({ data }: UIProps<Record<string, unknown>>
   // overlay opens, so panel state always reflects persisted playerData.
   useEffect(() => {
     if (!enabled) return;
+    setPauseMenuOpen(false);
     const saved = readAllocations(data);
     setAllocations(saved ?? emptyAllocations());
   }, [enabled, data]);
@@ -250,6 +257,78 @@ export default function TheBoxOverlay({ data }: UIProps<Record<string, unknown>>
     mergePlayerData({ [BOX_OVERLAY_FLAG]: false });
   };
   const open = () => mergePlayerData({ [BOX_OVERLAY_FLAG]: true });
+  const closePauseMenu = () => setPauseMenuOpen(false);
+
+  /**
+   * Demo / playtest shortcut: collapse the player straight into the
+   * "financial freedom" state with a sensible seeded portfolio so judges
+   * can jump to the late-game economy without grinding early rounds.
+   *
+   * Concretely:
+   *  - zeros high-interest debt and clears the debt-row allocation so
+   *    `hasReachedFinancialFreedom` flips true and the Investments tab
+   *    unlocks on the next overlay open;
+   *  - bumps the running invested balance up to (but not past) the win
+   *    goal so the Goal Rail reads "almost home" rather than "complete";
+   *  - seeds a richer salary + investment-heavy allocation so Investing
+   *    Birds reads non-trivial subcategory funding when it computes
+   *    portfolio shares from `playerData`.
+   *
+   * Navigation is intentionally separate via `startInvestingBirdsDemo`
+   * so "Skip to debt free" does not auto-launch a mini-game.
+   */
+  const SKIP_DEMO_SALARY_USD = 78_000;
+  const skipToDebtFree = () => {
+    closePauseMenu();
+    const goal = Number.isFinite(winGoalUsd) ? winGoalUsd : DEFAULT_WIN_GOAL_USD;
+    // Land just shy of the win goal so the Investing Birds round still
+    // feels like it's pushing the player over the line.
+    const investedTarget = Math.max(investedBalanceUsd, Math.round(goal * 0.85));
+    const nextAllocations = {
+      ...(readAllocations(data) ?? emptyAllocations()),
+      highInterestDebt: 0,
+      rent: 22_000,
+      food: 8_400,
+      emergencyFund: 6_000,
+      indexFunds: 18_000,
+      individualStocks: 6_000,
+      bonds: 9_000,
+      cds: 3_600,
+      crypto: 5_000,
+    };
+
+    mergePlayerData({
+      [BOX_PLAYER_DATA_KEYS.highInterestDebtBalance]: 0,
+      [BOX_PLAYER_DATA_KEYS.annualSalary]: SKIP_DEMO_SALARY_USD,
+      [INVESTED_BALANCE_KEY]: investedTarget,
+      [WIN_GOAL_KEY]: goal,
+      [BOX_PLAYER_DATA_KEYS.boxAllocations]: nextAllocations,
+      [BOX_OVERLAY_FLAG]: false,
+    });
+    setAllocations(nextAllocations);
+
+  };
+
+  const startInvestingBirdsDemo = () => {
+    closePauseMenu();
+    // Use a fixed seed so the demo plays the same level set every time —
+    // judges/devs can rehearse it without surprise board layouts.
+    eventBus.emit('navigate:request', {
+      to: 'game',
+      module: GAME_IDS.investingBirds,
+    });
+  };
+
+  const skipToEnding = () => {
+    closePauseMenu();
+    mergePlayerData({ [BOX_OVERLAY_FLAG]: false });
+    eventBus.emit('navigate:request', {
+      to: 'game',
+      module: GAME_IDS.mountainSuccess,
+    });
+  };
+
+  const isDebtFree = debtBalance <= EPS;
 
   const handleSubmit = () => {
     if (!canSubmit) {
@@ -291,6 +370,91 @@ export default function TheBoxOverlay({ data }: UIProps<Record<string, unknown>>
             <span className="island-openBoxBtn__sub">Edit annual budget</span>
           </span>
         </button>
+      ) : null}
+
+      {/*
+        Demo shortcuts — anchored top-right of the map so they don't
+        overlap the Box panel (right-side aside) once the player opens
+        it. The "Skip to ending" button only appears once the player is
+        debt-free, mirroring the in-game freedom gate.
+      */}
+      {!enabled ? (
+        <div className="pointer-events-auto absolute right-4 top-4 z-40 flex flex-col items-end gap-2">
+          <div className="flex items-center justify-end gap-2">
+            {!isDebtFree ? (
+              <button
+                type="button"
+                onClick={skipToDebtFree}
+                aria-label="Shortcut: clear high-interest debt"
+                className="island-openBoxBtn shrink-0 py-2"
+              >
+                <FastForward className="size-3.5" aria-hidden />
+                <span className="island-openBoxBtn__label">
+                  <span className="island-openBoxBtn__title">Skip to debt free</span>
+                </span>
+              </button>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={startInvestingBirdsDemo}
+                  aria-label="Shortcut: start Investing Birds"
+                  className="island-openBoxBtn shrink-0 py-2"
+                >
+                  <TrendingUp className="size-3.5" aria-hidden />
+                  <span className="island-openBoxBtn__label">
+                    <span className="island-openBoxBtn__title">Start investing game</span>
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={skipToEnding}
+                  aria-label="Shortcut: skip to the ending cinematic"
+                  className="island-openBoxBtn shrink-0 py-2"
+                >
+                  <Mountain className="size-3.5" aria-hidden />
+                  <span className="island-openBoxBtn__label">
+                    <span className="island-openBoxBtn__title">Skip to ending</span>
+                  </span>
+                </button>
+              </>
+            )}
+            <button
+              type="button"
+              onClick={() => setPauseMenuOpen((prev) => !prev)}
+              aria-expanded={pauseMenuOpen}
+              aria-haspopup="dialog"
+              aria-label="Open pause menu"
+              className="island-openBoxBtn shrink-0 py-2"
+            >
+              <Pause className="size-3.5" aria-hidden />
+              <span className="island-openBoxBtn__label">
+                <span className="island-openBoxBtn__title">Pause</span>
+              </span>
+            </button>
+          </div>
+          {pauseMenuOpen ? (
+            <div
+              role="dialog"
+              aria-label="Pause menu"
+              className="island-paperCard w-[min(280px,90vw)] rounded-2xl border border-[rgba(26,77,92,0.12)] p-3 shadow-lg"
+            >
+              <p className="px-1 text-[11px] uppercase tracking-[0.14em] text-[var(--island-color-ink-muted)]">
+                Pause menu
+              </p>
+              <button
+                type="button"
+                onClick={closePauseMenu}
+                className="island-openBoxBtn mt-2 w-full justify-between py-2"
+              >
+                <span className="island-openBoxBtn__label">
+                  <span className="island-openBoxBtn__title">Resume</span>
+                </span>
+                <Pause className="size-4 shrink-0" aria-hidden />
+              </button>
+            </div>
+          ) : null}
+        </div>
       ) : null}
 
       {/*

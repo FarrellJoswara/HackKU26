@@ -739,6 +739,24 @@
   width: 100%;
 }
 
+/*
+ * End-of-run summary screens (campaign finale, playthrough summary) can
+ * exceed the viewport on smaller windows. Allow vertical scrolling while
+ * keeping the hero card horizontally centered.
+ */
+.th-titleHub.th-scrollRoute {
+  justify-content: flex-start;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-top: max(1.5rem, env(safe-area-inset-top));
+  padding-bottom: max(2.5rem, env(safe-area-inset-bottom));
+}
+
+.th-titleHub.th-scrollRoute > .th-content {
+  flex: 0 0 auto;
+  margin: auto 0;
+}
+
 @media (min-width: 480px) {
   .th-menuScreen .th-menuActions {
     flex-direction: row;
@@ -874,56 +892,6 @@
 .th-btnSettings:focus-visible {
   outline: none;
   box-shadow: var(--island-focus-ring), 0 6px 18px rgba(25, 55, 62, 0.12);
-}
-
-/* DEV dock — fixed corner so it never covers the hero or beach focal area */
-.th-devDock {
-  position: fixed;
-  z-index: 50;
-  right: max(0.65rem, env(safe-area-inset-right));
-  bottom: max(0.65rem, env(safe-area-inset-bottom));
-  left: auto;
-  top: auto;
-  width: min(19.5rem, calc(100vw - 1.25rem - env(safe-area-inset-left) - env(safe-area-inset-right)));
-  max-height: min(46vh, 26rem);
-  margin: 0;
-  overflow: hidden;
-  border-radius: calc(var(--island-radius-hud) + 4px);
-  padding: 0.35rem 0.4rem 0.4rem;
-  background: rgba(10, 40, 52, 0.55);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  -webkit-backdrop-filter: blur(10px);
-  backdrop-filter: blur(10px);
-  box-shadow: 0 10px 32px rgba(0, 20, 35, 0.35);
-}
-
-.th-devDock[open] {
-  overflow-y: auto;
-}
-
-.th-devDock summary {
-  cursor: pointer;
-  list-style: none;
-  text-align: left;
-  padding: 0.35rem 0.45rem;
-  font-size: 0.65rem;
-  font-weight: 700;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: rgba(255, 252, 245, 0.92);
-  text-shadow: 0 1px 2px rgba(0, 30, 50, 0.45);
-}
-
-.th-devDock summary::-webkit-details-marker {
-  display: none;
-}
-
-.th-devDock__panel {
-  margin-top: 0.35rem;
-}
-
-.th-devDock .island-hudBottle {
-  opacity: 0.98;
 }
 
 /* Keyframes */

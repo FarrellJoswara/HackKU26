@@ -1,12 +1,22 @@
+import { useEffect } from 'react';
 import { Trophy, Sun, ArrowRight } from 'lucide-react';
 import { eventBus } from '@/core/events';
 import type { UIProps } from '@/core/types';
 import { Button } from '../components/Button';
 import { getStoredLastRun } from '@/core/runner/RunnerResultRouter';
 import { advanceCampaignYear } from '@/core/campaign/yearAdvance';
+import { playWinSfx } from '@/audio/uiSfx';
 
 export default function WinScreen(props: UIProps<Record<string, unknown>>) {
   const lastRun = getStoredLastRun(props.data);
+
+  // Celebrate the run with the WebAudio fanfare. Fire-and-forget — the
+  // synthesizer is a no-op on platforms that block AudioContext until a
+  // user gesture, and the player has just clicked their way here so the
+  // context is virtually always ready by the time this mounts.
+  useEffect(() => {
+    playWinSfx();
+  }, []);
 
   return (
     <div className="tropic-bg-sunset absolute inset-0 overflow-hidden">

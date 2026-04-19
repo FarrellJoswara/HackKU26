@@ -37,16 +37,28 @@ export default function NewGameDifficultyScreen(
   const handleCreate = () => {
     // Difficulty seeds salary + starting debt for the first Box submit.
     // The Year Controller (future) takes over after year 1.
+    //
+    // We flip `islandRunHasSave` to `true` here (was `false`) because the
+    // moment the player picks a difficulty and clicks Create, a save IS
+    // in progress: salary, debt, year, and difficulty are now seeded into
+    // `playerData`, which Zustand's persist middleware mirrors to
+    // localStorage. That means the next time the user opens the site the
+    // title-hub Play modal can offer Continue and resume this exact run
+    // (the budget screen will show their preserved allocations / year /
+    // income, and Island Run will pick up where it left off).
     mergePlayerData({
       [PLAYER_KEYS.islandRunDifficulty]: selected,
-      [PLAYER_KEYS.islandRunHasSave]: false,
+      [PLAYER_KEYS.islandRunHasSave]: true,
       [BOX_PLAYER_DATA_KEYS.annualSalary]: DIFFICULTY_INCOME_USD[selected],
       [BOX_PLAYER_DATA_KEYS.highInterestDebtBalance]: DIFFICULTY_DEBT_USD[selected],
+      [CAMPAIGN_KEYS.initialHighInterestDebt]: DIFFICULTY_DEBT_USD[selected],
       [BOX_PLAYER_DATA_KEYS.currentYear]: 1,
       // Reset campaign progress for the new save.
       [CAMPAIGN_KEYS.year]: 1,
       [CAMPAIGN_KEYS.boxReadyForYear]: 0,
       [CAMPAIGN_KEYS.islandTotalHops]: 0,
+      [CAMPAIGN_KEYS.investingBirdsYearsPlayed]: 0,
+      [CAMPAIGN_KEYS.yearEndBirdsPending]: false,
     });
     // The campaign path always goes through The Box first. Soft gate
     // (`canEnterMapForCampaign`) guards Island entry afterwards.

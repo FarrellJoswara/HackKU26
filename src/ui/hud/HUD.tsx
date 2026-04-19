@@ -298,21 +298,7 @@ export function HUD() {
   }
 
   if (activeModule === GAME_IDS.islandRun) {
-    return (
-      <div className="pointer-events-none absolute inset-0 flex flex-col items-end justify-start p-4">
-        <div className="pointer-events-auto flex items-center gap-2">
-          <button
-            className="tropic-pill tropic-pill--turquoise px-4 py-2 text-sm"
-            type="button"
-            onClick={() =>
-              eventBus.emit('navigate:request', { to: 'menu', module: null })
-            }
-          >
-            Return to menu
-          </button>
-        </div>
-      </div>
-    );
+    return null;
   }
 
   // Fallback HUD for any other game module (e.g. TemplateGame).

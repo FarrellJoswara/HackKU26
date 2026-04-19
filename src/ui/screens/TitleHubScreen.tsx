@@ -4,60 +4,46 @@
  * Shows the placeholder game title plus two primary actions: Play and
  * Settings. Play opens a local modal (`PlayModeDialog`) that branches
  * to Continue or New Game; both end up emitting `navigate:request`.
- *
- * Developer shortcuts (the prototypes that used to live in MainMenu)
- * appear only when `import.meta.env.DEV`, so production builds stay
- * clean without disturbing teammates' workflows.
  */
 
 import { useState } from 'react';
-import {
-  Bird,
-  Footprints,
-  Layers,
-  LayoutGrid,
-  Mountain,
-  Palmtree,
-  Play,
-  Settings,
-} from 'lucide-react';
+import { Play, Settings } from 'lucide-react';
 import { eventBus } from '@/core/events';
 import { useAppStore } from '@/core/store';
 import type { UIProps } from '@/core/types';
-import { GAME_IDS } from '@/games/registry';
 import { CAMPAIGN_KEYS } from '@/core/campaign/campaignKeys';
 import { canEnterMapForCampaign } from '@/core/campaign/canEnterMapForCampaign';
-import { MOCK_BUDGET_PROFILE } from '@/core/finance/mockBudgetProfile';
 import { PlayModeDialog } from '../components/PlayModeDialog';
 import { RewardButton } from '../components/RewardButton';
 import {
   GAME_TITLE_PLACEHOLDER,
-  PLAYER_KEYS,
   selectHasIslandRunSave,
 } from '../menu/gameFlow';
 import { TitleHubDecor } from '../components/TitleHubDecor';
 
 export default function TitleHubScreen(_props: UIProps<unknown>) {
   const playerData = useAppStore((s) => s.playerData);
-  const mergePlayerData = useAppStore((s) => s.mergePlayerData);
   const hasSave = selectHasIslandRunSave(playerData);
 
   const [playOpen, setPlayOpen] = useState(false);
 
   const handleContinue = () => {
     setPlayOpen(false);
-    // Soft Box gate: a player who finished a year but has not yet
-    // submitted a fresh budget for the new year would otherwise enter
-    // the Island map with stale allocations. Route them to The Box
-    // instead so the Year Loop stays well-formed.
+    // Land on the Box (budget) screen rather than jumping straight into
+    // Island Run. The Box visibly displays everything the persisted save
+    // restores (year, salary, debt, allocations) and the campaign router
+    // auto-routes Box → Island Run on re-confirm, so resuming is one
+    // click away. The soft `canEnterMapForCampaign` gate requires
+    // `boxReadyForYear >= currentYear`; going through the Box satisfies
+    // it naturally so the Year Loop stays well-formed.
     const gate = canEnterMapForCampaign(playerData);
     if (!gate.allowed) {
       eventBus.emit('navigate:request', { to: 'budget', module: null });
       return;
     }
     eventBus.emit('navigate:request', {
-      to: 'game',
-      module: GAME_IDS.islandRun,
+      to: 'budget',
+      module: null,
     });
   };
 
@@ -128,106 +114,6 @@ export default function TitleHubScreen(_props: UIProps<unknown>) {
           </div>
         </div>
       </div>
-
-      {import.meta.env.DEV ? (
-        <details className="th-devDock">
-          <summary>Dev shortcuts</summary>
-          <div className="island-hudBottle th-devDock__panel">
-            <div className="island-hudInner flex flex-col gap-3 px-4 py-4">
-                <RewardButton
-                  type="button"
-                  className="island-btnShell"
-                  onClick={() =>
-                    eventBus.emit('navigate:request', { to: 'budget', module: null })
-                  }
-                >
-                  <LayoutGrid className="size-4" />
-                  Open The Box
-                </RewardButton>
-                <RewardButton
-                  type="button"
-                  className="island-btnShell"
-                  onClick={() => {
-                    mergePlayerData({ 'ui:boxOverlay': true });
-                    eventBus.emit('navigate:request', {
-                      to: 'game',
-                      module: GAME_IDS.islandRun,
-                    });
-                  }}
-                >
-                  <Layers className="size-4" />
-                  Box over Island Run
-                </RewardButton>
-                <RewardButton
-                  type="button"
-                  className="island-btnShell"
-                  onClick={() =>
-                    eventBus.emit('navigate:request', {
-                      to: 'game',
-                      module: GAME_IDS.investingBirds,
-                    })
-                  }
-                >
-                  <Bird className="size-4" />
-                  Investing Birds
-                </RewardButton>
-                <RewardButton
-                  type="button"
-                  className="island-btnShell"
-                  onClick={() => {
-                    mergePlayerData({ 'ui:boxOverlay': false });
-                    eventBus.emit('navigate:request', {
-                      to: 'game',
-                      module: GAME_IDS.islandRun,
-                    });
-                  }}
-                >
-                  <Palmtree className="size-4" />
-                  Island Run
-                </RewardButton>
-                <RewardButton
-                  type="button"
-                  className="island-btnShell"
-                  onClick={() => {
-                    mergePlayerData({ 'runner.profile': MOCK_BUDGET_PROFILE });
-                    eventBus.emit('navigate:request', {
-                      to: 'briefing',
-                      module: null,
-                    });
-                  }}
-                >
-                  <Footprints className="size-4" />
-                  Debt Runner test
-                </RewardButton>
-
-                <RewardButton
-                  type="button"
-                  className="island-btnShell"
-                  onClick={() => {
-                    mergePlayerData({ 'ui:boxOverlay': false });
-                    eventBus.emit('navigate:request', {
-                      to: 'game',
-                      module: GAME_IDS.mountainSuccess,
-                    });
-                  }}
-                >
-                  <Mountain className="size-4" />
-                  Mountain Success cutscene
-                </RewardButton>
-
-                <RewardButton
-                  type="button"
-                  className="island-btnShell"
-                  onClick={() =>
-                    mergePlayerData({ [PLAYER_KEYS.islandRunHasSave]: true })
-                  }
-                >
-                  Toggle save flag
-                </RewardButton>
-              </div>
-            </div>
-        </details>
-      ) : null}
 
       <PlayModeDialog
         dialogId="play-mode-dialog"

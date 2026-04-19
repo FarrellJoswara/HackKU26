@@ -38,7 +38,11 @@ export type AppState =
   /** DebtRunner — endgame screens. */
   | 'win'
   | 'loss'
-  | 'summary';
+  | 'summary'
+  /** Campaign complete — congrats + stats (title hub styling). */
+  | 'finale'
+  /** Post-cinematic recap — shown after the Mountain Success ending. */
+  | 'playthroughSummary';
 
 /**
  * Exhaustiveness helper — call from a `default` case in a `switch` over a

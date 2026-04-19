@@ -14,13 +14,15 @@
 import {
   lazy,
   Suspense,
+  useMemo,
   type ComponentType,
   type LazyExoticComponent,
 } from 'react';
+import { eventBus } from '@/core/events';
 import { useAppStore } from '@/core/store';
 import type { AppState, ModuleId, UIProps } from '@/core/types';
 import { assertNever } from '@/core/types';
-import { GAME_IDS } from '@/games/registry';
+import { GAME_IDS, getGame } from '@/games/registry';
 import { HUD } from './hud/HUD';
 import { SuspenseShell } from './components/SuspenseShell';
 
@@ -45,6 +47,8 @@ const SCREENS: Record<AppState, ScreenComp | null> = {
   win: lazy(() => import('./screens/WinScreen')),
   loss: lazy(() => import('./screens/LossScreen')),
   summary: lazy(() => import('./screens/PostRunSummaryScreen')),
+  finale: lazy(() => import('./screens/CampaignFinaleScreen')),
+  playthroughSummary: lazy(() => import('./screens/PlaythroughSummaryScreen')),
   // Active game module is rendered via MODULE_SCREENS / GameRegistry.
   game: null,
   // Transition is owned by `TransitionManager`, which masks the screen.
@@ -64,6 +68,8 @@ function pickScreen(state: AppState): ScreenComp | null {
     case 'win':
     case 'loss':
     case 'summary':
+    case 'finale':
+    case 'playthroughSummary':
     case 'game':
     case 'transition':
       return SCREENS[state];
@@ -93,8 +99,46 @@ export function UIRegistry() {
   const appState = useAppStore((s) => s.appState);
   const activeModule = useAppStore((s) => s.activeModule);
   const playerData = useAppStore((s) => s.playerData);
+  const hasRenderableGameModule = useMemo(() => {
+    if (!activeModule) return false;
+    // External-renderer games own their own WebGLRenderer and are mounted
+    // by `App.tsx` outside the shared <Canvas>, so they do not appear in
+    // the R3F GAME_MODULES registry. Treat them as renderable here so the
+    // "Game route failed to load" recovery panel does not appear on top
+    // of a perfectly working game.
+    if (
+      activeModule === GAME_IDS.islandRun ||
+      activeModule === GAME_IDS.mountainSuccess ||
+      activeModule === GAME_IDS.investingBirds
+    ) {
+      return true;
+    }
+    return Boolean(getGame(activeModule));
+  }, [activeModule]);
 
   if (appState === 'game') {
+    if (!hasRenderableGameModule) {
+      return (
+        <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/55 p-4">
+          <div className="max-w-md rounded-2xl border border-white/20 bg-black/50 p-6 text-white backdrop-blur">
+            <h2 className="text-lg font-semibold">Game route failed to load</h2>
+            <p className="mt-2 text-sm text-white/80">
+              The current game module is missing or invalid. Return to menu to
+              recover.
+            </p>
+            <button
+              type="button"
+              className="ui-route-error-btn mt-4 rounded-full bg-white px-4 py-2 text-sm font-semibold text-black"
+              onClick={() =>
+                eventBus.emit('navigate:request', { to: 'menu', module: null })
+              }
+            >
+              Return to menu
+            </button>
+          </div>
+        </div>
+      );
+    }
     const PerModule = activeModule ? MODULE_SCREENS[activeModule] : undefined;
     return (
       <>

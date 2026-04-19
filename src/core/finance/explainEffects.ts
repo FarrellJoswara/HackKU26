@@ -21,47 +21,47 @@ export function explainBudgetProfileEffects(profile: BudgetProfile): EffectToken
     {
       id: 'rent',
       text: {
-        bad: 'Rent was BAD, which created a more hazardous and less forgiving course.',
+        bad: 'Rent was BAD, so the boardwalk looked rougher, hazards increased, and lanes pinched more often.',
         average: 'Rent was AVERAGE, so path difficulty stayed near baseline.',
-        good: 'Rent was GOOD, making the route cleaner and easier to read.',
+        good: 'Rent was GOOD, so the deck stayed wide, warm, and easier to read with fewer hazards.',
       },
     },
     {
       id: 'food',
       text: {
-        bad: 'Food was BAD, so stamina drained faster and recovery slowed down.',
+        bad: 'Food was BAD, so stamina drained faster, recovery slowed, and your sprint pace tired out as the run went on.',
         average: 'Food was AVERAGE, so stamina behavior stayed normal.',
-        good: 'Food was GOOD, giving better endurance and faster recovery.',
+        good: 'Food was GOOD, giving stronger endurance, faster recovery, and a little extra speed when energy was high.',
       },
     },
     {
       id: 'transportation',
       text: {
-        bad: 'Transportation was BAD, so turns and lane response were slower.',
+        bad: 'Transportation was BAD, so base running pace dipped, lane shifts felt sluggish, and turn timing was tighter.',
         average: 'Transportation was AVERAGE, so controls were standard.',
-        good: 'Transportation was GOOD, making movement feel sharper and cleaner.',
+        good: 'Transportation was GOOD, making movement snappier, lane changes smoother, and turn windows more forgiving.',
       },
     },
     {
       id: 'emergencyFund',
       text: {
-        bad: 'Emergency Fund was BAD, so you started with only one life.',
-        average: 'Emergency Fund was AVERAGE, giving limited recovery room.',
-        good: 'Emergency Fund was GOOD, giving extra lives and better recovery room.',
+        bad: 'Emergency Fund was BAD, so you only had one life and the Debt Collector started closer behind you.',
+        average: 'Emergency Fund was AVERAGE, giving limited forgiveness.',
+        good: 'Emergency Fund was GOOD, giving extra lives and more breathing room before the chase tightened.',
       },
     },
     {
       id: 'medical',
       text: {
-        bad: 'Medical was BAD, so injuries hit harder and lasted longer.',
+        bad: 'Medical was BAD, so injury slowdown lasted longer, hit harder, and slick uneven boards showed up more often.',
         average: 'Medical was AVERAGE, so injury behavior stayed standard.',
-        good: 'Medical was GOOD, reducing injury severity and shortening recovery time.',
+        good: 'Medical was GOOD, reducing injury severity and recovery time.',
       },
     },
     {
       id: 'debtRepayment',
       text: {
-        bad: 'Debt Repayment was BAD, so the Debt Collector became larger and more aggressive.',
+        bad: 'Debt Repayment was BAD, so the Debt Collector became visibly larger and more aggressive.',
         average: 'Debt Repayment was AVERAGE, so collector pressure stayed standard.',
         good: 'Debt Repayment was GOOD, so the Debt Collector stayed smaller and calmer.',
       },
@@ -69,9 +69,9 @@ export function explainBudgetProfileEffects(profile: BudgetProfile): EffectToken
     {
       id: 'miscFun',
       text: {
-        bad: 'Misc/Fun was BAD, increasing stumbles, burnout, and run fatigue.',
-        average: 'Misc/Fun was AVERAGE, so morale and focus stayed near baseline.',
-        good: 'Misc/Fun was GOOD, improving early morale and comfort.',
+        bad: 'Misc/Fun was BAD, shortening the survival timer while stumbles and burnout piled on.',
+        average: 'Misc/Fun was AVERAGE, so morale/focus stayed near baseline.',
+        good: 'Misc/Fun was GOOD, stretching the survival timer and lifting early morale.',
       },
     },
   ];
@@ -92,7 +92,7 @@ export function explainBudgetProfileEffects(profile: BudgetProfile): EffectToken
       severity: 'high',
       title: 'Total Debt Pressure',
       plainText:
-        'High debt pressure raised chase speed over time, shrinking recovery windows as the run continued.',
+        'High debt pressure increased chase speed over time (interest shadow), making recovery windows shrink as the run continued.',
     });
   }
 

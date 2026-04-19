@@ -78,6 +78,7 @@ function DifficultyCard({ option, selected, layout, onSelect }: DifficultyCardPr
         aria-checked={selected}
         onClick={onSelect}
         className={[
+          'difficulty-card-btn',
           'ngd-diffCard',
           selected ? 'ngd-diffCard--selected' : '',
         ]
@@ -103,6 +104,7 @@ function DifficultyCard({ option, selected, layout, onSelect }: DifficultyCardPr
       aria-checked={selected}
       onClick={onSelect}
       className={[
+        'difficulty-card-btn',
         'island-paperCard relative rounded-2xl p-4 text-left transition',
         'focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--island-color-title)]/60',
         selected

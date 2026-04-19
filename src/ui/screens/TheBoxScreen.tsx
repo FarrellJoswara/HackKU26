@@ -87,6 +87,7 @@ import { TitleHubDecor } from '@/ui/components/TitleHubDecor';
 import { useBoxValidation } from '@/ui/hooks/useBoxValidation';
 import {
   DEFAULT_DIFFICULTY,
+  PLAYER_KEYS,
   selectIslandRunDifficulty,
 } from '@/ui/menu/gameFlow';
 
@@ -101,6 +102,7 @@ const pct = new Intl.NumberFormat('en-US', {
 });
 
 const EPS = 0.01;
+const SHOW_DEBUG_AUTOFILL = import.meta.env.DEV;
 
 const categoryIcon: Record<BudgetCategoryId, ComponentType<{ className?: string }>> = {
   emergencyFund: PiggyBank,
@@ -120,6 +122,47 @@ const categoryIcon: Record<BudgetCategoryId, ComponentType<{ className?: string 
   crypto: Bitcoin,
   employerMatch: Briefcase,
 };
+
+function buildDebugBestAllocations(args: {
+  cashToAllocate: number;
+  investmentsUnlocked: boolean;
+}): Record<BudgetCategoryId, number> {
+  const { cashToAllocate, investmentsUnlocked } = args;
+  const allocations = emptyAllocations();
+  const assign = (id: BudgetCategoryId, share: number) => {
+    allocations[id] = Math.max(0, Math.round(cashToAllocate * share));
+  };
+
+  // Keep DebtRunner-impact rows at or above their "good" thresholds.
+  assign('rent', 0.28);
+  assign('food', 0.12);
+  assign('transportation', 0.1);
+  assign('emergencyFund', 0.06);
+  assign('medical', 0.05);
+  assign('highInterestDebt', 0.1);
+  assign('miscFun', 0.04);
+
+  // Stable filler rows that don't hurt key profile outcomes.
+  assign('employerMatch', 0.04);
+  assign('savings', 0.07);
+  assign('personal', 0.04);
+
+  if (investmentsUnlocked) {
+    assign('indexFunds', 0.05);
+    assign('bonds', 0.02);
+    assign('cds', 0.02);
+    assign('individualStocks', 0.005);
+    assign('crypto', 0.005);
+  }
+
+  const remainder = Math.round(cashToAllocate - sumZeroBasedAllocations(allocations));
+  if (investmentsUnlocked) {
+    allocations.indexFunds = Math.max(0, allocations.indexFunds + remainder);
+  } else {
+    allocations.highInterestDebt = Math.max(0, allocations.highInterestDebt + remainder);
+  }
+  return allocations;
+}
 
 export default function TheBoxScreen({ data }: UIProps<Record<string, unknown>>) {
   const mergePlayerData = useAppStore((s) => s.mergePlayerData);
@@ -258,7 +301,17 @@ export default function TheBoxScreen({ data }: UIProps<Record<string, unknown>>)
       pendingCash,
     });
     eventBus.emit('box:budget:submit', payload);
-    mergePlayerData(playerDataPatch);
+    // Belt-and-suspenders: any successful Box submit means there is
+    // definitely a save in progress. Setting `islandRunHasSave` here
+    // covers older saves that predate the `NewGameDifficultyScreen`
+    // fix and any entry path that bypasses the difficulty picker (dev
+    // shortcuts, deep links, debug toggles). Once true, the next time
+    // the user opens the site the title hub's Continue button is
+    // enabled and resumes from this exact persisted state.
+    mergePlayerData({
+      ...playerDataPatch,
+      [PLAYER_KEYS.islandRunHasSave]: true,
+    });
     validation.reset();
   };
 
@@ -268,6 +321,15 @@ export default function TheBoxScreen({ data }: UIProps<Record<string, unknown>>)
   ];
 
   const visibleRows = BOX_CATEGORIES.filter((c) => c.tab === activeTab);
+  const debugBestAllocations = useMemo(
+    () => buildDebugBestAllocations({ cashToAllocate, investmentsUnlocked }),
+    [cashToAllocate, investmentsUnlocked],
+  );
+
+  const handleDebugAutofill = useCallback(() => {
+    setAllocations(debugBestAllocations);
+    validation.reset();
+  }, [debugBestAllocations, validation]);
 
   return (
     <div className="th-titleHub th-menuScreen th-boxRoute absolute inset-0 overflow-y-auto text-[var(--island-color-ink)]">
@@ -394,6 +456,18 @@ export default function TheBoxScreen({ data }: UIProps<Record<string, unknown>>)
                   );
                 })}
               </nav>
+              {SHOW_DEBUG_AUTOFILL ? (
+                <div className="mt-3 flex justify-end">
+                  <button
+                    type="button"
+                    className="island-btnShell"
+                    onClick={handleDebugAutofill}
+                  >
+                    <Sparkles className="size-4" aria-hidden />
+                    Debug: autofill best
+                  </button>
+                </div>
+              ) : null}
 
               <div className="island-paperCard mt-4 rounded-xl p-3">
                 <p className="mb-2 text-[11px] uppercase tracking-[0.16em] text-[var(--island-color-ink-muted)]">

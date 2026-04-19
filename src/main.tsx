@@ -3,12 +3,18 @@ import { createRoot } from 'react-dom/client';
 import App from './App';
 import { registerAllTracks } from './audio/tracks';
 import { initCampaign } from './core/campaign/initCampaign';
+import { installGlobalClickFx } from './ui/fx/installGlobalClickFx';
 import './index.css';
 
 registerAllTracks();
 // Module-scope campaign event subscriber (idempotent — safe under
 // React StrictMode's double-mount in dev).
 initCampaign();
+// Document-level click delegator that gives every interactive button in
+// the app (shared `Button` component, title-hub Play/Settings, Island
+// Run HUD + landing dialog, dev shortcuts, etc.) a sound + ripple +
+// pulse on every click. Idempotent — safe under StrictMode double-mount.
+installGlobalClickFx();
 
 const rootEl = document.getElementById('root');
 if (!rootEl) throw new Error('#root not found in index.html');

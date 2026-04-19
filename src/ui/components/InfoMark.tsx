@@ -193,6 +193,7 @@ export function InfoMark({
           scheduleHide();
         }}
         className={[
+          'info-mark-btn',
           'inline-flex size-5 shrink-0 items-center justify-center rounded-full',
           'border border-transparent transition focus:outline-none',
           'hover:border-current focus-visible:border-current focus-visible:ring-2 focus-visible:ring-[var(--island-color-title)]/55',

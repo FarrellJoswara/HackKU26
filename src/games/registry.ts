@@ -19,7 +19,13 @@ export const GAME_IDS = {
   debtRunner: moduleId('debtRunner'),
   /** Island Run — fully self-contained imperative Three.js game inside `src/games/IslandRun/`. Rendered outside the host `<Canvas>` by `App.tsx`, not via `GameRegistry`. */
   islandRun: moduleId('islandRun'),
-  /** Angry-Birds–style towers with portfolio allocation (R3F, self-contained). */
+  /**
+   * Angry Birds–style portfolio mini-game (Planck.js physics). Owns its
+   * own full-screen `<Canvas>` + DOM overlay inside an isolated fixed-
+   * position root, so (like Island Run / Mountain Success) it mounts
+   * OUTSIDE the shared host `<Canvas>` from `App.tsx` and is intentionally
+   * NOT in `GAME_MODULES` below.
+   */
   investingBirds: moduleId('investingBirds'),
   /**
    * Mountain Success — financial-freedom cinematic. Self-contained
@@ -32,10 +38,10 @@ export const GAME_IDS = {
 
 export const GAME_MODULES: Record<ModuleId, LazyGame> = {
   [GAME_IDS.debtRunner]: lazy(() => import('./DebtRunner')),
-  [GAME_IDS.investingBirds]: lazy(() => import('./InvestingBirds')),
-  // Island Run + Mountain Success have no R3F module — they each own
-  // their own WebGLRenderer and mount directly from App.tsx (see
-  // src/games/IslandRun/main.ts and src/games/MountainSuccess/main.ts).
+  // Island Run + Mountain Success + Investing Birds have no R3F module —
+  // they each own their own WebGLRenderer and mount directly from
+  // App.tsx (see src/games/IslandRun/main.ts,
+  // src/games/MountainSuccess/main.ts, and src/games/InvestingBirds/index.tsx).
   // TemplateGame remains in `src/games/TemplateGame/` as a copy-paste starter
   // (referenced by AGENTS.md), but is intentionally unregistered so it does
   // not appear in any menu.
