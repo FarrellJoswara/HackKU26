@@ -98,28 +98,19 @@ function DebtRunnerHudLayer({ hud }: { hud: RunnerHudState }) {
   const stamina = Math.max(0, Math.min(100, hud.stamina));
   const debtPct = Math.max(0, Math.min(100, hud.debtPressure * 100));
   const morale = Math.max(0, Math.min(100, hud.morale));
-  const chasePct = Math.max(0, Math.min(100, (hud.chaseDistance / 24) * 100));
   const timerLow = Math.ceil(hud.timerSeconds) <= 10 && hud.timerSeconds > 0;
   const stage = COLLECTOR_STAGE_UI[hud.monsterStage];
   const StageIcon = stage.Icon;
-  const pressure = hud.collectorPressure01 ?? 0;
-  const vignetteOpacity = 0.12 + pressure * 0.52;
-  const hbDur = `${1.35 + (1 - pressure) * 1.25}s`;
 
   return (
     <div className="pointer-events-none absolute inset-0 p-4 text-[#2a2418]">
+      {/* Static frame vignette — gives the screen a soft tropical edge
+          without the chase-pressure pulsing that previously animated here. */}
       <div
         className="tropic-chase-vignette pointer-events-none absolute inset-0"
-        style={{ opacity: vignetteOpacity }}
+        style={{ opacity: 0.18 }}
         aria-hidden
       />
-      <div
-        className="pointer-events-none absolute bottom-8 left-1/2 h-1 w-[min(42vw,18rem)] -translate-x-1/2"
-        style={{ ['--hb-dur' as string]: hbDur, opacity: 0.25 + pressure * 0.65 }}
-        aria-hidden
-      >
-        <div className="tropic-chase-heartbeat-line h-full w-full" />
-      </div>
 
       <span className="sr-only" aria-live="polite">
         {timerLow ? `${Math.ceil(hud.timerSeconds)} seconds remaining` : ''}
@@ -134,36 +125,36 @@ function DebtRunnerHudLayer({ hud }: { hud: RunnerHudState }) {
         </div>
       ) : null}
 
+      {/* Top center: timer + lives in a single combined pill so the focal
+          point of the screen is one tight HUD anchor instead of two. */}
       <div
-        className={`absolute left-1/2 top-3 -translate-x-1/2 tropic-hudPill tropic-hudPill--contrast px-5 py-2 tropic-pop ${
+        className={`absolute left-1/2 top-3 -translate-x-1/2 tropic-hudPill tropic-hudPill--contrast tropic-pop flex items-center gap-3 px-4 py-2 ${
           timerLow ? 'tropic-timer-urgent' : ''
         }`}
       >
-        <div className="flex items-center gap-2">
-          <span
-            className="grid place-items-center rounded-full bg-gradient-to-b from-[#ffe7a8] to-[#f59f3a] p-1.5 shadow-inner"
-            aria-hidden
-          >
-            <Timer className="size-4 text-[#4a3514]" />
-          </span>
-          <span
-            className={`font-display text-2xl font-semibold tabular-nums ${
-              timerLow ? 'text-[#b94530]' : 'text-[#1a4d5c]'
-            }`}
-            style={{ fontFamily: 'var(--island-font-display)' }}
-          >
-            {Math.ceil(hud.timerSeconds)}s
-          </span>
-        </div>
+        <span
+          className="grid place-items-center rounded-full bg-gradient-to-b from-[#ffe7a8] to-[#f59f3a] p-1.5 shadow-inner"
+          aria-hidden
+        >
+          <Timer className="size-4 text-[#4a3514]" />
+        </span>
+        <span
+          className={`text-2xl font-semibold tabular-nums leading-none ${
+            timerLow ? 'text-[#b94530]' : 'text-[#1a4d5c]'
+          }`}
+          style={{ fontFamily: 'var(--island-font-display)' }}
+        >
+          {Math.ceil(hud.timerSeconds)}s
+        </span>
+        <span className="h-7 w-px bg-[#b8895f]/40" aria-hidden />
+        <ShellHearts lives={hud.lives} max={hud.maxLives} />
       </div>
 
-      <div className="pointer-events-none mt-16 flex justify-between gap-3">
-        <div className="space-y-2">
-          <div className="tropic-hudPill tropic-hudPill--contrast px-3 py-2 inline-flex items-center gap-3">
-            <ShellHearts lives={hud.lives} max={hud.maxLives} />
-          </div>
-
-          <div className="tropic-hudPill tropic-hudPill--contrast w-60 px-4 py-2.5">
+      <div className="pointer-events-none mt-16 flex items-start justify-between gap-3">
+        {/* Left: a single frosted stat card grouping all three bars. Sharing
+            one container reduces the visual noise of three stacked pills. */}
+        <div className="tropic-hudPill tropic-hudPill--contrast w-64 space-y-2.5 px-4 py-3">
+          <div>
             <div className="mb-1 flex items-center justify-between text-xs font-semibold text-[#0e3a40]">
               <span className="inline-flex items-center gap-1.5">
                 <Waves className="size-3.5 text-[#2aa6b0]" />
@@ -176,7 +167,7 @@ function DebtRunnerHudLayer({ hud }: { hud: RunnerHudState }) {
             </div>
           </div>
 
-          <div className="tropic-hudPill tropic-hudPill--contrast w-60 px-4 py-2.5">
+          <div>
             <div className="mb-1 flex items-center justify-between text-xs font-semibold text-[#481b10]">
               <span className="inline-flex items-center gap-1.5">
                 <Flame className="size-3.5 text-[#e8624a]" />
@@ -189,7 +180,7 @@ function DebtRunnerHudLayer({ hud }: { hud: RunnerHudState }) {
             </div>
           </div>
 
-          <div className="tropic-hudPill tropic-hudPill--contrast w-60 px-4 py-2.5">
+          <div>
             <div className="mb-1 flex items-center justify-between text-xs font-semibold text-[#3d5c1a]">
               <span className="inline-flex items-center gap-1.5">
                 <Smile className="size-3.5 text-[#6ba32a]" />
@@ -203,23 +194,17 @@ function DebtRunnerHudLayer({ hud }: { hud: RunnerHudState }) {
           </div>
         </div>
 
+        {/* Right: compact stage badge + pause. Chase-gap pill removed — the
+            collector is hidden during normal play, so showing the literal gap
+            in metres is redundant noise. The stage badge already conveys
+            escalation, and the screen vignette conveys urgency. */}
         <div className="pointer-events-auto flex h-fit flex-col items-end gap-2">
           <div
-            className={`tropic-hudPill tropic-hudPill--contrast flex items-center gap-2 px-4 py-2 text-sm ${stage.pill}`}
+            className={`tropic-hudPill tropic-hudPill--contrast flex items-center gap-2 px-3 py-1.5 text-xs ${stage.pill}`}
+            title={`Collector: ${hud.monsterStage} (gap ${hud.chaseDistance.toFixed(1)}m)`}
           >
-            <StageIcon className={`size-4 shrink-0 ${stage.iconClass}`} aria-hidden />
-            <span className="text-[#2a2418]">Collector</span>
+            <StageIcon className={`size-3.5 shrink-0 ${stage.iconClass}`} aria-hidden />
             <span className="font-semibold capitalize">{hud.monsterStage}</span>
-          </div>
-
-          <div className="tropic-hudPill tropic-hudPill--contrast w-56 px-4 py-2.5 text-sm">
-            <div className="mb-1 flex items-center justify-between font-semibold text-[#0e3a40]">
-              <span>Chase gap</span>
-              <span className="tabular-nums text-[#1a4d5c]">{hud.chaseDistance.toFixed(1)}m</span>
-            </div>
-            <div className="tropic-hudBar tropic-hudBar--turquoise">
-              <span style={{ width: `${chasePct}%` }} />
-            </div>
           </div>
 
           <button
@@ -239,10 +224,11 @@ function DebtRunnerHudLayer({ hud }: { hud: RunnerHudState }) {
             <span className="inline-flex items-center gap-1.5">
               <Footprints className="size-3.5 shrink-0 text-[#2aa6b0]" aria-hidden />
               <span>
-                <kbd className="rounded bg-[#fbe6be] px-1 py-0.5 font-mono text-[10px]">D</kbd> /{' '}
-                <kbd className="rounded bg-[#fbe6be] px-1 py-0.5 font-mono text-[10px]">←</kbd> left lane ·{' '}
                 <kbd className="rounded bg-[#fbe6be] px-1 py-0.5 font-mono text-[10px]">A</kbd> /{' '}
+                <kbd className="rounded bg-[#fbe6be] px-1 py-0.5 font-mono text-[10px]">←</kbd> left ·{' '}
+                <kbd className="rounded bg-[#fbe6be] px-1 py-0.5 font-mono text-[10px]">D</kbd> /{' '}
                 <kbd className="rounded bg-[#fbe6be] px-1 py-0.5 font-mono text-[10px]">→</kbd> right ·{' '}
+                <kbd className="rounded bg-[#fbe6be] px-1 py-0.5 font-mono text-[10px]">↑</kbd> /{' '}
                 <kbd className="rounded bg-[#fbe6be] px-1 py-0.5 font-mono text-[10px]">Space</kbd> jump
               </span>
             </span>

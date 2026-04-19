@@ -207,7 +207,7 @@ export function resolveBudgetEffects(profile: BudgetProfile): RunnerSessionConfi
   return {
     profile,
     effects,
-    durationSeconds: 90,
+    durationSeconds: 30,
     totalDebtPressureTier,
     notes: notes.map((item) => ({
       ...item,

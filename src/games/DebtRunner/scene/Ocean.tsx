@@ -1,68 +1,39 @@
 /**
- * Lagoon-style water: Island Run water normals + animated UV scroll,
- * MeshPhysicalMaterial for fresnel/clearcoat read. Vertex motion kept subtle.
+ * Ocean plane — INTENTIONALLY STATIC.
+ *
+ * Earlier versions of this component animated:
+ *   1. The plane's vertex Z values (wave displacement via useFrame), which
+ *      created visible undulating cyan crests across the surface.
+ *   2. The normal-map UV offset (scrolling water normals).
+ *
+ * Both of those produced what the player perceived as "blue masses moving in
+ * the background." User feedback was explicit: get rid of them. So this
+ * component now renders a flat, motion-free pale-lagoon plane:
+ *
+ *   - No `useFrame`. No per-frame writes to geometry attributes. No UV scroll.
+ *   - Plain low-segment `PlaneGeometry` (no need for wave detail).
+ *   - Softer, less-saturated color so the water reads as calm shallow lagoon
+ *     rather than vivid cyan ocean.
+ *
+ * If you ever want subtle motion back, re-introduce a useFrame here AND read
+ * the related conversation history first — the user explicitly does not want
+ * moving blue masses in the background.
  */
 
-import { useLayoutEffect, useMemo, useRef } from 'react';
-import { useFrame, useLoader } from '@react-three/fiber';
-import { PlaneGeometry, RepeatWrapping, TextureLoader, Vector2, type Mesh } from 'three';
-import waterNormalsUrl from '@/games/IslandRun/assets/textures/waternormals.jpg?url';
-
-const WATER_NORMALS = waterNormalsUrl;
-
 export default function Ocean() {
-  const ref = useRef<Mesh>(null);
-  const geometry = useMemo(() => new PlaneGeometry(900, 900, 48, 48), []);
-  const basePositions = useMemo(
-    () => geometry.attributes.position!.array.slice() as Float32Array,
-    [geometry],
-  );
-
-  const normalMap = useLoader(TextureLoader, WATER_NORMALS);
-  const normalScale = useMemo(() => new Vector2(0.65, 0.65), []);
-
-  useLayoutEffect(() => {
-    normalMap.wrapS = normalMap.wrapT = RepeatWrapping;
-    normalMap.repeat.set(4, 4);
-  }, [normalMap]);
-
-  useFrame(({ clock }) => {
-    const t = clock.getElapsedTime();
-    if (normalMap) {
-      normalMap.offset.set(t * 0.012, t * 0.008);
-    }
-    const arr = geometry.attributes.position!.array as Float32Array;
-    const waveAmp = 0.14;
-    for (let i = 0; i < arr.length; i += 3) {
-      const x = basePositions[i] ?? 0;
-      const y = basePositions[i + 1] ?? 0;
-      arr[i + 2] =
-        Math.sin(x * 0.05 + t * 0.85) * waveAmp * 0.95 + Math.cos(y * 0.045 + t * 0.65) * waveAmp * 0.75;
-    }
-    geometry.attributes.position!.needsUpdate = true;
-  });
-
   return (
     <mesh
-      ref={ref}
       rotation={[-Math.PI / 2, 0, 0]}
       position={[0, -0.32, 0]}
-      geometry={geometry}
       renderOrder={-1}
     >
-      <meshPhysicalMaterial
-        color="#2ab8c4"
-        emissive="#0a3d48"
-        emissiveIntensity={0.06}
-        roughness={0.28}
-        metalness={0.12}
-        normalMap={normalMap}
-        normalScale={normalScale}
-        clearcoat={0.55}
-        clearcoatRoughness={0.35}
-        ior={1.33}
+      <planeGeometry args={[900, 900, 1, 1]} />
+      <meshStandardMaterial
+        color="#3fb6d6"
+        roughness={0.55}
+        metalness={0.08}
         transparent
-        opacity={0.96}
+        opacity={0.94}
         depthWrite={false}
       />
     </mesh>

@@ -87,25 +87,44 @@ export default function BeachObstacle({ kind, position }: BeachObstacleProps) {
   }
 
   if (kind === 'high') {
-    // Overhead palm-leaf bar — two posts + a leafy beam to slide under.
+    // Chest-high driftwood hurdle: two short stumps holding a horizontal log
+    // around hip/chest height (~0.7m) so the silhouette clearly invites a jump.
+    // (Was previously an overhead palm-leaf gate, which read as "duck under"
+    // even though the collision logic requires a jump.)
     return (
       <group ref={root} position={position}>
-        <mesh position={[-0.7, 0.85, 0]}>
-          <cylinderGeometry args={[0.08, 0.08, 1.7, 10]} />
-          <meshStandardMaterial color="#7a4f24" roughness={0.85} />
+        {/* Side stumps — short and stout. */}
+        <mesh castShadow position={[-0.7, 0.3, 0]}>
+          <cylinderGeometry args={[0.13, 0.16, 0.6, 12]} />
+          <meshStandardMaterial color="#7a4f24" roughness={0.92} />
         </mesh>
-        <mesh position={[0.7, 0.85, 0]}>
-          <cylinderGeometry args={[0.08, 0.08, 1.7, 10]} />
-          <meshStandardMaterial color="#7a4f24" roughness={0.85} />
+        <mesh castShadow position={[0.7, 0.3, 0]}>
+          <cylinderGeometry args={[0.13, 0.16, 0.6, 12]} />
+          <meshStandardMaterial color="#7a4f24" roughness={0.92} />
         </mesh>
-        <mesh position={[0, 1.65, 0]}>
-          <boxGeometry args={[1.7, 0.18, 0.18]} />
-          <meshStandardMaterial color="#3fa57a" roughness={0.65} />
+        {/* Horizontal driftwood log lying across the stumps — the thing you jump over. */}
+        <mesh
+          castShadow
+          position={[0, 0.65, 0]}
+          rotation={[0, 0, Math.PI / 2]}
+        >
+          <cylinderGeometry args={[0.12, 0.12, 1.7, 12]} />
+          <meshStandardMaterial color="#8a5c30" roughness={0.88} />
         </mesh>
-        {/* Leafy fringe. */}
-        <mesh position={[0, 1.5, 0.05]} rotation={[0.4, 0, 0]}>
-          <boxGeometry args={[1.5, 0.05, 0.4]} />
-          <meshStandardMaterial color="#1f7a52" />
+        {/* Tied palm fronds at each end for tropical flair (kept low so the
+            silhouette stays a hurdle, not a gate). */}
+        <mesh position={[-0.7, 0.78, 0]} rotation={[0.5, 0, 0.2]}>
+          <boxGeometry args={[0.32, 0.04, 0.32]} />
+          <meshStandardMaterial color="#3fa57a" roughness={0.7} />
+        </mesh>
+        <mesh position={[0.7, 0.78, 0]} rotation={[0.5, 0, -0.2]}>
+          <boxGeometry args={[0.32, 0.04, 0.32]} />
+          <meshStandardMaterial color="#3fa57a" roughness={0.7} />
+        </mesh>
+        {/* Stapled "late fee" paper to keep the finance theme. */}
+        <mesh position={[0, 0.65, 0.13]} rotation={[0, 0, 0.05]}>
+          <boxGeometry args={[0.34, 0.22, 0.01]} />
+          <meshStandardMaterial color="#fffaea" roughness={0.95} />
         </mesh>
       </group>
     );

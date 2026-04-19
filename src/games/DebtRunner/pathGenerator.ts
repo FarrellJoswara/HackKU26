@@ -3,6 +3,28 @@ import type { Heading, ObstacleKind, ObstacleSpec, TrackTile, TurnDirection } fr
 
 const TILE_SIZE = 8;
 
+/**
+ * Number of straight tiles either side of a turn tile that must be free of
+ * obstacles. Player base speed is 10 m/s and a tile is 8 m, so 1 tile ≈ 0.8s
+ * of travel.
+ *
+ *   - PRE_TURN_CLEAR_TILES = 1  ->  ≥ 0.8s of clean approach (player can read
+ *                                   the upcoming turn without dodging)
+ *   - POST_TURN_CLEAR_TILES = 2 ->  ≥ 1.6s of clean exit (satisfies the
+ *                                   "1–1.5s of NO obstacles after a turn"
+ *                                   gameplay requirement; the exact value
+ *                                   stretches to ~1.3–2.0s once the budget
+ *                                   profile's `movementResponseMultiplier`
+ *                                   is applied)
+ *
+ * Together with always clearing the turn tile itself, this guarantees that
+ * obstacles only appear on straight pathway segments at least one tile away
+ * from any turn — see {@link validateTrackTurnClearance} for the runnable
+ * proof.
+ */
+export const PRE_TURN_CLEAR_TILES = 1;
+export const POST_TURN_CLEAR_TILES = 2;
+
 const HAZARD_LABELS: Record<ObstacleKind, string[]> = {
   block: ['Driftwood', 'Broken Board', 'Beach Debris'],
   low: ['Low Dock Beam', 'Rent Issue Sign', 'Late Fee Banner'],
@@ -31,7 +53,10 @@ function moveCoord(x: number, z: number, heading: Heading) {
 }
 
 function pickObstacle(seed: number, lane: -1 | 0 | 1): ObstacleSpec {
-  const kinds: ObstacleKind[] = ['block', 'low', 'high', 'hazard'];
+  // 'hazard' (cyan pulsing puddles) intentionally excluded — they read as
+  // distracting blue blobs in the player's forward view. Path difficulty is
+  // still carried by block / low / high obstacles + slippery / narrow tiles.
+  const kinds: ObstacleKind[] = ['block', 'low', 'high'];
   const kind = kinds[Math.floor(rand(seed) * kinds.length)] ?? 'block';
   const labels = HAZARD_LABELS[kind];
   const label = labels[Math.floor(rand(seed + 1) * labels.length)] ?? labels[0] ?? 'Hazard';
@@ -83,6 +108,106 @@ export function generateTrackTiles(count: number, effects: BudgetEffects): Track
     z = moved.z;
   }
 
+  // POST-PASS: enforce the obstacle-clearance rule around every turn.
+  //
+  // Spawning obstacles inside the obstacle-list during the main loop makes
+  // density tunable per profile, but a turn tile or its immediate neighbours
+  // must NEVER carry an obstacle regardless of difficulty. We therefore wipe
+  // obstacles on:
+  //
+  //   1. Every turn tile itself
+  //   2. The PRE_TURN_CLEAR_TILES tiles immediately preceding each turn
+  //   3. The POST_TURN_CLEAR_TILES tiles immediately following each turn
+  //
+  // This is the single source of truth for the "no obstacles on/around
+  // turns" gameplay rule. See `validateTrackTurnClearance` for the
+  // executable assertion that proves it holds.
+  for (let i = 0; i < tiles.length; i += 1) {
+    const tile = tiles[i]!;
+    if (tile.turn === 'straight') continue;
+    const lo = Math.max(0, i - PRE_TURN_CLEAR_TILES);
+    const hi = Math.min(tiles.length - 1, i + POST_TURN_CLEAR_TILES);
+    for (let j = lo; j <= hi; j += 1) {
+      tiles[j]!.obstacles = [];
+    }
+  }
+
   return tiles;
+}
+
+/**
+ * Validates that a generated track honours the turn-clearance rule:
+ *
+ *   - Every tile with `turn !== 'straight'` has zero obstacles.
+ *   - Every straight tile within `PRE_TURN_CLEAR_TILES` BEFORE a turn has
+ *     zero obstacles.
+ *   - Every straight tile within `POST_TURN_CLEAR_TILES` AFTER a turn has
+ *     zero obstacles.
+ *
+ * Returns `{ ok: true }` if the rule holds for every tile, otherwise
+ * `{ ok: false, violations }` where `violations` lists each tile that
+ * carries an obstacle when it shouldn't (with the index of the nearest turn
+ * tile and the reason). Used by both the runtime self-check at game start
+ * and the standalone `scripts/validateTurnClearance.ts` validator.
+ */
+export interface TurnClearanceViolation {
+  tileIndex: number;
+  tileId: string;
+  reason: 'turn-tile-has-obstacle' | 'pre-turn-window' | 'post-turn-window';
+  nearestTurnIndex: number;
+  obstacleCount: number;
+}
+
+export function validateTrackTurnClearance(tiles: TrackTile[]): {
+  ok: boolean;
+  violations: TurnClearanceViolation[];
+} {
+  const violations: TurnClearanceViolation[] = [];
+
+  for (let i = 0; i < tiles.length; i += 1) {
+    const tile = tiles[i]!;
+    if (tile.obstacles.length === 0) continue;
+
+    if (tile.turn !== 'straight') {
+      violations.push({
+        tileIndex: i,
+        tileId: tile.id,
+        reason: 'turn-tile-has-obstacle',
+        nearestTurnIndex: i,
+        obstacleCount: tile.obstacles.length,
+      });
+      continue;
+    }
+
+    // Search a small window for any nearby turn tile. We bound the search by
+    // the maximum clear radius so we don't waste work on long straightaways.
+    const radius = Math.max(PRE_TURN_CLEAR_TILES, POST_TURN_CLEAR_TILES);
+    for (let d = 1; d <= radius; d += 1) {
+      const before = tiles[i - d];
+      if (before && before.turn !== 'straight' && d <= POST_TURN_CLEAR_TILES) {
+        violations.push({
+          tileIndex: i,
+          tileId: tile.id,
+          reason: 'post-turn-window',
+          nearestTurnIndex: i - d,
+          obstacleCount: tile.obstacles.length,
+        });
+        break;
+      }
+      const after = tiles[i + d];
+      if (after && after.turn !== 'straight' && d <= PRE_TURN_CLEAR_TILES) {
+        violations.push({
+          tileIndex: i,
+          tileId: tile.id,
+          reason: 'pre-turn-window',
+          nearestTurnIndex: i + d,
+          obstacleCount: tile.obstacles.length,
+        });
+        break;
+      }
+    }
+  }
+
+  return { ok: violations.length === 0, violations };
 }
 

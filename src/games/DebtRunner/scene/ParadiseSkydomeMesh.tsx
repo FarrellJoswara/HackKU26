@@ -6,9 +6,9 @@
 import { useMemo } from 'react';
 import { BackSide, Color, ShaderMaterial, SphereGeometry } from 'three';
 
-const HORIZON = new Color(0xff7a3d);
-const MID = new Color(0xe8a0c8);
-const ZENITH = new Color(0x47a8f2);
+const HORIZON = new Color(0xfff0c4);
+const MID = new Color(0x9bd6f0);
+const ZENITH = new Color(0x3aa6ee);
 
 export default function ParadiseSkydomeMesh() {
   const { geometry, material } = useMemo(() => {

@@ -12,12 +12,13 @@ import { parseBudgetProfile } from '@/core/finance/budgetTypes';
 import { resolveBudgetEffects } from '@/core/finance/budgetEffectResolver';
 import type { RunnerFinishedPayload } from '@/core/runner/runnerTypes';
 import type { RunnerHudState } from '@/core/runner/hudTypes';
-import { generateTrackTiles } from './pathGenerator';
+import { generateTrackTiles, validateTrackTurnClearance } from './pathGenerator';
 import type { TrackTile } from './types';
 import BeachCharacter from './scene/BeachCharacter';
 import BeachObstacle from './scene/BeachObstacle';
 import DebtCollector from './scene/DebtCollector';
 import DebtCollectorPaperTrail from './scene/DebtCollectorPaperTrail';
+import BeachDecor from './scene/BeachDecor';
 import BeachSand from './scene/BeachSand';
 import Ocean from './scene/Ocean';
 import ParadiseSkydomeMesh from './scene/ParadiseSkydomeMesh';
@@ -105,7 +106,7 @@ interface ActiveSandPuff {
 
 function createEmptyHud(maxLives: number): RunnerHudState {
   return {
-    timerSeconds: 90,
+    timerSeconds: 30,
     stamina: 100,
     lives: maxLives,
     maxLives,
@@ -133,10 +134,36 @@ function easeOutCubic(t: number) {
 
 export default function DebtRunnerGame(_props: GameProps) {
   const mergePlayerData = useAppStore((s) => s.mergePlayerData);
-  const profileInput = useAppStore.getState().playerData['runner.profile'];
-  const profile = parseBudgetProfile(profileInput) ?? MOCK_BUDGET_PROFILE;
+  // CRITICAL: subscribe to the raw profile value via a selector so its
+  // reference is stable across unrelated store mutations (the HUD pump
+  // re-merges `runner.hud` every 120ms, which would otherwise re-render the
+  // component and recompute `profile`/`session`/`initialHud` each tick —
+  // resetting `timerSeconds` back to 30 ten times a second and freezing
+  // the visible countdown). Memoizing the parse on the raw input keeps
+  // `profile` referentially stable for as long as the store value is.
+  const profileInput = useAppStore((s) => s.playerData['runner.profile']);
+  const profile = useMemo(
+    () => parseBudgetProfile(profileInput) ?? MOCK_BUDGET_PROFILE,
+    [profileInput],
+  );
   const session = useMemo(() => resolveBudgetEffects(profile), [profile]);
-  const tiles = useMemo(() => generateTrackTiles(260, session.effects), [session.effects]);
+  const tiles = useMemo(() => {
+    const generated = generateTrackTiles(260, session.effects);
+    // Runtime self-check: every game-start asserts the turn-clearance rule
+    // holds for the freshly generated track. In dev this surfaces any
+    // regression as a console error the moment it happens; in prod it's a
+    // cheap O(n) walk that's effectively free at this scale (~260 tiles).
+    if (import.meta.env.DEV) {
+      const result = validateTrackTurnClearance(generated);
+      if (!result.ok) {
+        console.error(
+          '[DebtRunner] Turn-clearance rule violated by generated track:',
+          result.violations,
+        );
+      }
+    }
+    return generated;
+  }, [session.effects]);
 
   const initialHud = useMemo(() => buildHudForSession(session), [session]);
 
@@ -237,13 +264,20 @@ export default function DebtRunnerGame(_props: GameProps) {
         pendingTurn.current = { direction: 'right', atSeconds: elapsed.current };
       };
 
-      if (event.code === 'ArrowLeft' || event.code === 'KeyD') {
+      if (event.code === 'ArrowLeft' || event.code === 'KeyA') {
         event.preventDefault();
         goLeft();
-      } else if (event.code === 'ArrowRight' || event.code === 'KeyA') {
+      } else if (event.code === 'ArrowRight' || event.code === 'KeyD') {
         event.preventDefault();
         goRight();
-      } else if (event.code === 'Space') {
+      } else if (
+        event.code === 'Space' ||
+        event.code === 'ArrowUp' ||
+        event.code === 'KeyW'
+      ) {
+        // Jump on Space, ArrowUp, or W — three common runner-game conventions.
+        // ArrowUp specifically requested by the player so the arrow cluster is
+        // self-contained for jumping and turning without reaching for Space.
         event.preventDefault();
         if (!jumpingRef.current) {
           jumpingRef.current = true;
@@ -694,29 +728,51 @@ export default function DebtRunnerGame(_props: GameProps) {
       {/* Sky — Island Run ParadiseSkydome gradient (see scene component). */}
       {/* Canvas clear color: zenith blue for any uncovered pixels.      */}
       {/* ============================================================= */}
-      <color attach="background" args={['#47a8f2']} />
+      <color attach="background" args={['#3aa6ee']} />
       <ParadiseSkydomeMesh />
       <fog attach="fog" args={[new Color('#ffd4b8'), 42, 200]} />
 
-      {/* Lighting aligned with IslandBoardWeb/src/main.ts beach board. */}
-      <ambientLight intensity={0.52} color="#fff4ea" />
-      <hemisphereLight color="#5bb8ff" groundColor="#edd4a8" intensity={0.68} position={[0, 40, 0]} />
-      <directionalLight position={[-22, 15, 13]} intensity={1.48} color="#ffe8cc" castShadow={false} />
-      <directionalLight position={[18, 6, -22]} intensity={0.46} color="#b8dcff" castShadow={false} />
+      {/* Sunny midday tropical lighting — slightly warmer + brighter than the
+          previous afternoon bias so the new beach decor (umbrellas, surfboards,
+          loungers) reads as colourful and freshly lit rather than muted. */}
+      <ambientLight intensity={0.62} color="#fff8ec" />
+      <hemisphereLight color="#7fc8ff" groundColor="#f4d8a8" intensity={0.78} position={[0, 40, 0]} />
+      <directionalLight position={[-22, 22, 13]} intensity={1.65} color="#fff1d2" castShadow={false} />
+      <directionalLight position={[18, 8, -22]} intensity={0.42} color="#cfe8ff" castShadow={false} />
 
       <Ocean />
       <ShorelineDecor />
       <BeachSand />
+      <BeachDecor />
 
-      {/* Distant island silhouettes — softer greens so fog reads as depth. */}
-      <group position={[0, 0, -80]}>
-        <mesh position={[-30, 4, 0]}>
-          <sphereGeometry args={[8, 14, 10, 0, Math.PI * 2, 0, Math.PI / 2]} />
+      {/* Distant island silhouettes — a small archipelago at varied bearings
+          so the horizon stays interesting no matter which way the path
+          twists during a run. Softer tropical greens / blue-greens so fog
+          reads as atmospheric depth rather than flat colour. */}
+      <group>
+        <mesh position={[-50, 4, -90]}>
+          <sphereGeometry args={[10, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2]} />
           <meshStandardMaterial color="#4a9576" roughness={1} metalness={0} />
         </mesh>
-        <mesh position={[26, 3.6, -10]}>
-          <sphereGeometry args={[7, 14, 10, 0, Math.PI * 2, 0, Math.PI / 2]} />
+        <mesh position={[40, 3.6, -100]}>
+          <sphereGeometry args={[8, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2]} />
           <meshStandardMaterial color="#3d7f62" roughness={1} metalness={0} />
+        </mesh>
+        <mesh position={[110, 4.4, -40]}>
+          <sphereGeometry args={[9, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2]} />
+          <meshStandardMaterial color="#5aa088" roughness={1} metalness={0} />
+        </mesh>
+        <mesh position={[-120, 3.2, 30]}>
+          <sphereGeometry args={[7.5, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2]} />
+          <meshStandardMaterial color="#3f8870" roughness={1} metalness={0} />
+        </mesh>
+        <mesh position={[20, 3, 130]}>
+          <sphereGeometry args={[8, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2]} />
+          <meshStandardMaterial color="#487f6a" roughness={1} metalness={0} />
+        </mesh>
+        <mesh position={[-90, 2.8, 110]}>
+          <sphereGeometry args={[6.5, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2]} />
+          <meshStandardMaterial color="#56988a" roughness={1} metalness={0} />
         </mesh>
       </group>
 
@@ -733,8 +789,18 @@ export default function DebtRunnerGame(_props: GameProps) {
         const yaw = Math.atan2(dx, dz);
         const isTurn = tile.turn !== 'straight';
         const depthLen = distance + (isTurn ? PLANK_OVERLAP_TURN : PLANK_OVERLAP_STRAIGHT);
+        // Side rails removed entirely (see prior commit) — they could not be
+        // trimmed enough to stop intruding into perpendicular tiles at corners.
         const width = tile.narrow ? 5.8 : 6.6;
-        const plankColor = tile.slippery ? '#7ec9d2' : '#e6c79a';
+        // Slightly weathered driftwood color. Slippery tiles are still cooler
+        // (wet plank look) but biased less aqua so the boardwalk reads as wood.
+        const plankColor = tile.slippery ? '#a89a76' : '#c79b62';
+        const plankShadowColor = tile.slippery ? '#74684f' : '#7a4f24';
+        // Number of cross-plank seams (decorative dark grooves perpendicular to
+        // travel) so the surface reads as individual dock boards. Roughly one
+        // seam per ~1.1m of length — enough density to feel built without
+        // exploding triangle count.
+        const seamCount = Math.max(2, Math.floor(distance / 1.1));
 
         let bisYaw = 0;
         if (isTurn) {
@@ -768,25 +834,87 @@ export default function DebtRunnerGame(_props: GameProps) {
                   polygonOffsetUnits={-0.75}
                 />
               </mesh>
+              {/* Subtle wash highlight along the top of the planks — gives the
+                  surface a sun-bleached glow without hiding the seam grooves. */}
               <mesh position={[0, 0.17, 0]}>
                 <boxGeometry args={[width, 0.02, depthLen]} />
                 <meshStandardMaterial
-                  color="#b6864a"
+                  color="#e9c794"
                   transparent
-                  opacity={0.55}
+                  opacity={0.42}
                   polygonOffset
                   polygonOffsetFactor={-0.5}
                   polygonOffsetUnits={-0.5}
                 />
               </mesh>
-              <mesh position={[-width / 2, 0.45, 0]}>
-                <boxGeometry args={[0.12, 0.25, depthLen]} />
-                <meshStandardMaterial color="#8b5a2b" />
+              {/* Cross-plank seams — thin dark grooves perpendicular to travel
+                  so the boardwalk reads as a sequence of laid dock boards.
+                  Rendered as flat boxes hovering just above the deck so they
+                  show on top without z-fighting (polygonOffset on the deck
+                  pushes the deck back; the seams sit slightly higher). */}
+              {Array.from({ length: seamCount }).map((_, i) => {
+                const t = (i + 1) / (seamCount + 1);
+                const seamZ = (t - 0.5) * depthLen;
+                return (
+                  <mesh
+                    key={`seam-${tile.id}-${i}`}
+                    position={[0, 0.181, seamZ]}
+                  >
+                    <boxGeometry args={[width - 0.05, 0.012, 0.06]} />
+                    <meshStandardMaterial
+                      color={plankShadowColor}
+                      roughness={0.95}
+                      transparent
+                      opacity={0.55}
+                    />
+                  </mesh>
+                );
+              })}
+              {/* Edge beams running the length of the boards — the long
+                  stringers a real dock would have along each side. */}
+              <mesh position={[-width / 2 + 0.08, 0.005, 0]}>
+                <boxGeometry args={[0.16, 0.36, depthLen]} />
+                <meshStandardMaterial color={plankShadowColor} roughness={0.95} />
               </mesh>
-              <mesh position={[width / 2, 0.45, 0]}>
-                <boxGeometry args={[0.12, 0.25, depthLen]} />
-                <meshStandardMaterial color="#8b5a2b" />
+              <mesh position={[width / 2 - 0.08, 0.005, 0]}>
+                <boxGeometry args={[0.16, 0.36, depthLen]} />
+                <meshStandardMaterial color={plankShadowColor} roughness={0.95} />
               </mesh>
+              {/* Cross-beam under the deck near the front of the tile — visible
+                  from the side as a structural support. Rendered only on
+                  straight tiles so corners stay visually clean. */}
+              {!isTurn ? (
+                <mesh position={[0, -0.18, depthLen * 0.35]}>
+                  <boxGeometry args={[width + 0.1, 0.18, 0.18]} />
+                  <meshStandardMaterial color={plankShadowColor} roughness={0.95} />
+                </mesh>
+              ) : null}
+              {/* Pilings — pairs of weathered wooden posts descending into the
+                  water at the leading edge of each plank. The trailing edge is
+                  covered by the next tile's pilings, so we only render one pair
+                  per tile to keep draw counts tight. */}
+              {!isTurn ? (
+                <>
+                  <mesh position={[-width / 2 - 0.05, -0.7, depthLen * 0.42]} castShadow>
+                    <cylinderGeometry args={[0.16, 0.2, 1.8, 8]} />
+                    <meshStandardMaterial color="#5b3a1c" roughness={0.95} />
+                  </mesh>
+                  <mesh position={[width / 2 + 0.05, -0.7, depthLen * 0.42]} castShadow>
+                    <cylinderGeometry args={[0.16, 0.2, 1.8, 8]} />
+                    <meshStandardMaterial color="#5b3a1c" roughness={0.95} />
+                  </mesh>
+                  {/* Tiny wet-line ring near the waterline on each piling for
+                      a touch of "this lives in salt water" detail. */}
+                  <mesh position={[-width / 2 - 0.05, -0.32, depthLen * 0.42]}>
+                    <cylinderGeometry args={[0.205, 0.205, 0.05, 8]} />
+                    <meshStandardMaterial color="#3a5a4a" roughness={1} />
+                  </mesh>
+                  <mesh position={[width / 2 + 0.05, -0.32, depthLen * 0.42]}>
+                    <cylinderGeometry args={[0.205, 0.205, 0.05, 8]} />
+                    <meshStandardMaterial color="#3a5a4a" roughness={1} />
+                  </mesh>
+                </>
+              ) : null}
               {tile.obstacles.map((obs, index) => (
                 <BeachObstacle
                   key={`${tile.id}-${obs.label}-${index}`}
@@ -796,16 +924,29 @@ export default function DebtRunnerGame(_props: GameProps) {
               ))}
             </group>
             {isTurn ? (
-              <mesh position={[nextTile.x, 0.145, nextTile.z]} rotation={[0, bisYaw, 0]} receiveShadow>
-                <boxGeometry args={[2.65, 0.07, 2.65]} />
-                <meshStandardMaterial
-                  color={plankColor}
-                  roughness={0.88}
-                  polygonOffset
-                  polygonOffsetFactor={-1}
-                  polygonOffsetUnits={-1}
-                />
-              </mesh>
+              <group position={[nextTile.x, 0, nextTile.z]} rotation={[0, bisYaw, 0]}>
+                {/* Corner deck cap — same warm dock tone as the planks. */}
+                <mesh position={[0, 0.145, 0]} receiveShadow>
+                  <boxGeometry args={[2.65, 0.07, 2.65]} />
+                  <meshStandardMaterial
+                    color={plankColor}
+                    roughness={0.88}
+                    polygonOffset
+                    polygonOffsetFactor={-1}
+                    polygonOffsetUnits={-1}
+                  />
+                </mesh>
+                {/* Single corner piling under the bend — anchors the turn
+                    visually to the water below. */}
+                <mesh position={[0, -0.7, 0]} castShadow>
+                  <cylinderGeometry args={[0.22, 0.26, 1.8, 10]} />
+                  <meshStandardMaterial color="#5b3a1c" roughness={0.95} />
+                </mesh>
+                <mesh position={[0, -0.32, 0]}>
+                  <cylinderGeometry args={[0.265, 0.265, 0.05, 10]} />
+                  <meshStandardMaterial color="#3a5a4a" roughness={1} />
+                </mesh>
+              </group>
             ) : null}
           </group>
         );
