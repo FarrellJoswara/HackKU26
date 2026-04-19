@@ -103,7 +103,7 @@ function DebtRunnerHudLayer({ hud }: { hud: RunnerHudState }) {
   const StageIcon = stage.Icon;
 
   return (
-    <div className="pointer-events-none absolute inset-0 p-4 text-[#2a2418]">
+    <div className="pointer-events-none absolute inset-0 z-30 p-4 text-[#2a2418]">
       {/* Static frame vignette — gives the screen a soft tropical edge
           without the chase-pressure pulsing that previously animated here. */}
       <div
@@ -219,17 +219,17 @@ function DebtRunnerHudLayer({ hud }: { hud: RunnerHudState }) {
       </div>
 
       {showHints ? (
-        <div className="pointer-events-none absolute bottom-16 left-1/2 z-10 w-[min(92vw,28rem)] -translate-x-1/2">
-          <div className="tropic-hudPill tropic-hudPill--contrast px-4 py-2 text-center text-xs font-semibold text-[#2a2418]/90 shadow-md">
+        <div className="pointer-events-none absolute bottom-16 left-1/2 z-20 w-[min(94vw,34rem)] -translate-x-1/2">
+          <div className="tropic-hudPill tropic-hudPill--contrast px-4 py-2 text-center text-sm font-semibold text-[#2a2418]/90 shadow-md">
             <span className="inline-flex items-center gap-1.5">
               <Footprints className="size-3.5 shrink-0 text-[#2aa6b0]" aria-hidden />
               <span>
-                <kbd className="rounded bg-[#fbe6be] px-1 py-0.5 font-mono text-[10px]">A</kbd> /{' '}
-                <kbd className="rounded bg-[#fbe6be] px-1 py-0.5 font-mono text-[10px]">←</kbd> left ·{' '}
-                <kbd className="rounded bg-[#fbe6be] px-1 py-0.5 font-mono text-[10px]">D</kbd> /{' '}
-                <kbd className="rounded bg-[#fbe6be] px-1 py-0.5 font-mono text-[10px]">→</kbd> right ·{' '}
-                <kbd className="rounded bg-[#fbe6be] px-1 py-0.5 font-mono text-[10px]">↑</kbd> /{' '}
-                <kbd className="rounded bg-[#fbe6be] px-1 py-0.5 font-mono text-[10px]">Space</kbd> jump
+                <kbd className="rounded bg-[#fbe6be] px-1 py-0.5 font-mono text-[11px]">A</kbd> /{' '}
+                <kbd className="rounded bg-[#fbe6be] px-1 py-0.5 font-mono text-[11px]">←</kbd> left ·{' '}
+                <kbd className="rounded bg-[#fbe6be] px-1 py-0.5 font-mono text-[11px]">D</kbd> /{' '}
+                <kbd className="rounded bg-[#fbe6be] px-1 py-0.5 font-mono text-[11px]">→</kbd> right ·{' '}
+                <kbd className="rounded bg-[#fbe6be] px-1 py-0.5 font-mono text-[11px]">↑</kbd> /{' '}
+                <kbd className="rounded bg-[#fbe6be] px-1 py-0.5 font-mono text-[11px]">Space</kbd> jump
               </span>
             </span>
           </div>

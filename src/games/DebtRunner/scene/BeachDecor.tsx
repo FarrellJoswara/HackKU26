@@ -10,8 +10,15 @@
  *      background — see the Ocean.tsx header for context.
  *   2. NOTHING IS BLUE-AND-MOVING. Static cyan accents (lagoon-blue beach
  *      ball stripes, surfboard fins) are fine because they don't animate.
- *   3. EVERYTHING SITS OUTSIDE THE PATH. All items are placed at radius
- *      ≥ 14m from world origin so they cannot intrude on the boardwalk.
+ *   3. EVERYTHING SITS OUTSIDE THE PATH. The radial scatter starts at
+ *      radius ≥ 14m from world origin AND we run a post-pass that
+ *      culls any item closer than {@link PATH_CLEARANCE_M} to any
+ *      generated path tile (centre). Without the per-tile cull,
+ *      decor placed inside the inner band would overlap the boardwalk
+ *      anywhere the procedural path winds back toward origin —
+ *      sandcastles literally landing on the planks. The radial
+ *      threshold alone is NOT enough; the path centre point can be
+ *      anywhere in world space.
  *   4. DETERMINISTIC. The scatter is seeded so the layout is stable across
  *      re-renders and game restarts (no flicker, no surprise reposition).
  *
@@ -28,6 +35,16 @@
  */
 
 import { useMemo } from 'react';
+
+import type { TrackTile } from '../types';
+
+/**
+ * Minimum distance (metres) any decor item must keep from any path-tile
+ * centre. The boardwalk is up to 6.6m wide (3.3m per side) plus a small
+ * visual breathing margin so umbrellas / loungers / sandcastles never
+ * appear to touch or rest on the planks.
+ */
+const PATH_CLEARANCE_M = 4.5;
 
 type Decor =
   | { kind: 'shell'; x: number; z: number; rot: number; tint: string }
@@ -146,7 +163,22 @@ function pickWeighted<K extends string>(
   return entries[0]![0];
 }
 
-function generateDecor(): Decor[] {
+function isOnPath(x: number, z: number, tiles: ReadonlyArray<TrackTile>): boolean {
+  // Tiles are spaced ~8m apart on a grid, so we can short-circuit by
+  // bounding-box first to keep this O(N) walk inexpensive even for the
+  // ~150 candidate decor items per generation.
+  const r = PATH_CLEARANCE_M;
+  for (const tile of tiles) {
+    const dx = tile.x - x;
+    if (dx > r || dx < -r) continue;
+    const dz = tile.z - z;
+    if (dz > r || dz < -r) continue;
+    if (dx * dx + dz * dz <= r * r) return true;
+  }
+  return false;
+}
+
+function generateDecor(tiles: ReadonlyArray<TrackTile>): Decor[] {
   const rand = mulberry32(0xbeac21);
   const items: Decor[] = [];
 
@@ -159,6 +191,16 @@ function generateDecor(): Decor[] {
         band.innerRadius + rand() * (band.outerRadius - band.innerRadius);
       const x = Math.cos(angle) * radius;
       const z = Math.sin(angle) * radius;
+      // Critical: skip any item that would sit on/inside the boardwalk.
+      // We still consume the random kind below so removing items from one
+      // band does not shift the deterministic palette downstream.
+      if (isOnPath(x, z, tiles)) {
+        // Burn the same number of `rand()` calls a placed item would
+        // spend so the rest of the layout stays deterministic regardless
+        // of whether this slot was kept.
+        pickWeighted(band.weights, rand);
+        continue;
+      }
       const kind = pickWeighted(band.weights, rand);
 
       switch (kind) {
@@ -582,8 +624,8 @@ function RockMesh({ rot, size }: { rot: number; size: number }) {
   );
 }
 
-export default function BeachDecor() {
-  const items = useMemo(generateDecor, []);
+export default function BeachDecor({ tiles }: { tiles: ReadonlyArray<TrackTile> }) {
+  const items = useMemo(() => generateDecor(tiles), [tiles]);
 
   return (
     <group renderOrder={-1}>

@@ -1,8 +1,9 @@
-import { Skull, AlertTriangle, RotateCcw } from 'lucide-react';
+import { Skull, AlertTriangle, RotateCcw, ArrowRight } from 'lucide-react';
 import { eventBus } from '@/core/events';
 import type { UIProps } from '@/core/types';
 import { Button } from '../components/Button';
 import { getStoredLastRun } from '@/core/runner/RunnerResultRouter';
+import { advanceCampaignYear } from '@/core/campaign/yearAdvance';
 
 function lossTitle(failReason?: string) {
   switch (failReason) {
@@ -60,13 +61,20 @@ export default function LossScreen(props: UIProps<Record<string, unknown>>) {
           <div className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <Button
               variant="coral"
+              leadingIcon={<ArrowRight className="size-4" />}
+              onClick={() => advanceCampaignYear('loss')}
+            >
+              Continue to next year
+            </Button>
+            <Button
+              variant="turquoise"
               leadingIcon={<RotateCcw className="size-4" />}
               onClick={() => eventBus.emit('navigate:request', { to: 'summary', module: null })}
             >
               What caused this?
             </Button>
             <Button
-              variant="turquoise"
+              variant="ghost"
               onClick={() => eventBus.emit('navigate:request', { to: 'menu', module: null })}
             >
               Back to menu

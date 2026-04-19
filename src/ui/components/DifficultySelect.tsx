@@ -11,6 +11,24 @@ import {
   type DifficultyId,
   type DifficultyOption,
 } from '@/ui/menu/gameFlow';
+import {
+  DIFFICULTY_DEBT_USD,
+  DIFFICULTY_INCOME_USD,
+  type DifficultyIncomeId,
+} from '@/core/campaign/campaignKeys';
+
+const usd = new Intl.NumberFormat('en-US', {
+  style: 'currency',
+  currency: 'USD',
+  maximumFractionDigits: 0,
+});
+
+function startingLineFor(id: DifficultyId): string {
+  const incomeKey = id as DifficultyIncomeId;
+  const income = DIFFICULTY_INCOME_USD[incomeKey];
+  const debt = DIFFICULTY_DEBT_USD[incomeKey];
+  return `Starts at ${usd.format(income)} salary · ${usd.format(debt)} debt`;
+}
 
 export interface DifficultySelectProps {
   value: DifficultyId;
@@ -73,6 +91,7 @@ function DifficultyCard({ option, selected, layout, onSelect }: DifficultyCardPr
         ) : null}
         <p className="ngd-diffCard__label">{option.label}</p>
         <p className="ngd-diffCard__desc">{option.description}</p>
+        <p className="ngd-diffCard__desc opacity-80">{startingLineFor(option.id)}</p>
       </button>
     );
   }
@@ -101,6 +120,9 @@ function DifficultyCard({ option, selected, layout, onSelect }: DifficultyCardPr
       </p>
       <p className="mt-1 text-xs text-[var(--island-color-ink-muted)]">
         {option.description}
+      </p>
+      <p className="mt-1 font-mono text-[11px] text-[var(--island-color-ink-muted)] opacity-80">
+        {startingLineFor(option.id)}
       </p>
     </button>
   );

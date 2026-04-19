@@ -25,8 +25,11 @@ export function RunnerResultRouter() {
 
       mergePlayerData({ ...caughtBump, [PLAYER_DATA_KEY]: stored });
 
+      // Run-end always lands on Financial Debrief. This removes the extra
+      // intermediate win/loss card so the loop stays focused:
+      // runner -> debrief -> continue next year.
       eventBus.emit('navigate:request', {
-        to: payload.outcome === 'win' ? 'win' : 'loss',
+        to: 'summary',
         module: null,
       });
     },

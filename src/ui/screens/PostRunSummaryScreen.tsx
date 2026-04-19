@@ -1,11 +1,11 @@
-import { ArrowLeft, RotateCcw, Sparkles } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Sparkles } from 'lucide-react';
 import { eventBus } from '@/core/events';
 import type { UIProps } from '@/core/types';
 import { Button } from '../components/Button';
 import { CATEGORY_LABELS, type BudgetCategoryId } from '@/core/finance/budgetTypes';
 import { explainBudgetProfileEffects } from '@/core/finance/explainEffects';
 import { getStoredLastRun } from '@/core/runner/RunnerResultRouter';
-import { GAME_IDS } from '@/games/registry';
+import { advanceCampaignYear } from '@/core/campaign/yearAdvance';
 
 export default function PostRunSummaryScreen(props: UIProps<Record<string, unknown>>) {
   const lastRun = getStoredLastRun(props.data);
@@ -76,34 +76,11 @@ export default function PostRunSummaryScreen(props: UIProps<Record<string, unkno
           </div>
           <div className="flex flex-col gap-2 sm:flex-row">
             <Button
-              variant="turquoise"
-              leadingIcon={<ArrowLeft className="size-4" />}
-              onClick={() =>
-                eventBus.emit('navigate:request', {
-                  to: lastRun.outcome === 'win' ? 'win' : 'loss',
-                  module: null,
-                })
-              }
-            >
-              Back
-            </Button>
-            <Button
               variant="coral"
-              leadingIcon={<RotateCcw className="size-4" />}
-              onClick={() =>
-                // Replay the runner directly using the same budget profile
-                // that's already in `playerData['runner.profile']` (set on
-                // the briefing screen and preserved across the run). The
-                // game module reads it on mount so no extra setup is
-                // needed — this lands the player straight back into the
-                // dock and starts a fresh attempt with identical settings.
-                eventBus.emit('navigate:request', {
-                  to: 'game',
-                  module: GAME_IDS.debtRunner,
-                })
-              }
+              leadingIcon={<ArrowRight className="size-4" />}
+              onClick={() => advanceCampaignYear(lastRun.outcome)}
             >
-              New run
+              Continue to next year
             </Button>
           </div>
         </div>
@@ -157,28 +134,52 @@ export default function PostRunSummaryScreen(props: UIProps<Record<string, unkno
               </h3>
             </div>
             <ul className="mt-4 space-y-3 text-sm text-[#2a2418]">
-              {effects.map((e, idx) => (
-                <li
-                  key={`${e.categoryId}-${idx}`}
-                  className="rounded-2xl border border-[#fbe6be] bg-[#fff7e8]/85 p-3"
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="font-semibold text-[#1a4d5c]">{e.title}</span>
-                    <span
-                      className={
-                        e.severity === 'high'
-                          ? 'rounded-full bg-[#ff8b6b]/25 px-2 py-0.5 text-xs font-semibold text-[#b94530]'
-                          : e.severity === 'medium'
-                            ? 'rounded-full bg-[#ffc36b]/30 px-2 py-0.5 text-xs font-semibold text-[#a8854a]'
-                            : 'rounded-full bg-[#5ed6d9]/30 px-2 py-0.5 text-xs font-semibold text-[#1a7a8c]'
-                      }
-                    >
-                      {e.severity.toUpperCase()}
-                    </span>
-                  </div>
-                  <p className="mt-2 text-[#3d3428]/85">{e.plainText}</p>
-                </li>
-              ))}
+              {effects.map((e, idx) => {
+                // The severity field is derived from the rating
+                // (bad → high, average → medium, good → low). The chip used
+                // to print the raw severity ("LOW") which read as confusing
+                // when the underlying rating was GOOD. Translate to the
+                // direction-of-impact wording the player already sees on
+                // the left column.
+                const chipLabel =
+                  e.severity === 'high'
+                    ? 'Risk'
+                    : e.severity === 'medium'
+                      ? 'Baseline'
+                      : 'Strength';
+                // Plain text already starts with "X was Y, " — strip that
+                // since the title chip carries the same info. Keep the
+                // verb that follows ("reducing", "giving", etc.) so the
+                // sentence still reads as a consequence and not just a
+                // bare noun phrase.
+                const consequence = e.plainText.replace(
+                  /^[^,]+\swas\s[A-Z]+,\s*(?:so\s+|which\s+)?/,
+                  '',
+                );
+                const cleaned = consequence.charAt(0).toUpperCase() + consequence.slice(1);
+                return (
+                  <li
+                    key={`${e.categoryId}-${idx}`}
+                    className="rounded-2xl border border-[#fbe6be] bg-[#fff7e8]/85 p-3"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="font-semibold text-[#1a4d5c]">{e.title}</span>
+                      <span
+                        className={
+                          e.severity === 'high'
+                            ? 'rounded-full bg-[#ff8b6b]/25 px-2 py-0.5 text-xs font-semibold text-[#b94530]'
+                            : e.severity === 'medium'
+                              ? 'rounded-full bg-[#ffc36b]/30 px-2 py-0.5 text-xs font-semibold text-[#a8854a]'
+                              : 'rounded-full bg-[#5ed6d9]/30 px-2 py-0.5 text-xs font-semibold text-[#1a7a8c]'
+                        }
+                      >
+                        {chipLabel}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-[#3d3428]/85">{cleaned}</p>
+                  </li>
+                );
+              })}
             </ul>
           </div>
         </div>

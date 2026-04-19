@@ -14,12 +14,16 @@
  * The legacy `investments` aggregate field is recomputed from the five
  * investment subcategories at submit time so older consumers still work.
  *
- * TODO: wire difficulty (Easy/Medium/Hard) to `[VAR_STARTING_INCOME]`.
- * TODO: logic layer should subscribe to `box:budget:submit` and advance to "The Grind".
+ * Difficulty seeds `annualSalary` + `highInterestDebtBalance` via
+ * `NewGameDifficultyScreen` (see `DIFFICULTY_INCOME_USD` /
+ * `DIFFICULTY_DEBT_USD` in `core/campaign/campaignKeys.ts`). The campaign
+ * router (`core/campaign/initCampaign`) listens for `box:budget:submit`
+ * and advances to Island Run.
  */
 
 import { useCallback, useEffect, useMemo, useState, type ComponentType } from 'react';
 import {
+  AlertTriangle,
   ArrowLeft,
   Banknote,
   Bitcoin,
@@ -56,9 +60,34 @@ import {
   type BoxTabId,
   type BudgetCategoryId,
 } from '@/core/budgetTypes';
+import {
+  CONFIRM_COPY,
+  EMPLOYER_MATCH_COPY,
+  FOOTER_STATUS,
+  HEADER_STRAPLINE,
+  INVESTMENTS_LOCKED,
+  ROW_BELOW_BAND,
+  ROW_INFO,
+} from '@/core/finance/boxCopy';
+import {
+  evaluateBand,
+  type DifficultyId,
+  type GuidedCategoryId,
+} from '@/core/finance/budgetGuides';
+import {
+  INVESTED_BALANCE_KEY,
+  WIN_GOAL_KEY,
+} from '@/core/finance/boxGoalRail';
 import { useAppStore } from '@/core/store';
 import type { UIProps } from '@/core/types';
+import { BoxGoalRail } from '@/ui/components/BoxGoalRail';
+import { InfoMark } from '@/ui/components/InfoMark';
 import { TitleHubDecor } from '@/ui/components/TitleHubDecor';
+import { useBoxValidation } from '@/ui/hooks/useBoxValidation';
+import {
+  DEFAULT_DIFFICULTY,
+  selectIslandRunDifficulty,
+} from '@/ui/menu/gameFlow';
 
 const fmt = new Intl.NumberFormat('en-US', {
   style: 'currency',
@@ -134,12 +163,16 @@ export default function TheBoxScreen({ data }: UIProps<Record<string, unknown>>)
     pendingCashToAllocate: pendingCash,
   });
   const investmentsUnlocked = debtBalance <= EPS;
+  const difficulty: DifficultyId = selectIslandRunDifficulty(data) ?? DEFAULT_DIFFICULTY;
+  const winGoalUsd = readNumber(data, WIN_GOAL_KEY, Number.NaN);
+  const investedBalanceUsd = readNumber(data, INVESTED_BALANCE_KEY, 0);
 
   const [allocations, setAllocations] = useState<Record<BudgetCategoryId, number>>(() => {
     const saved = readAllocations(data);
     return saved ?? emptyAllocations();
   });
   const [activeTab, setActiveTab] = useState<BoxTabId>('essentials');
+  const validation = useBoxValidation();
 
   // If debt re-appears mid-session, scrub locked Investments rows + bounce
   // the tab. Employer Match stays — it lives on Essentials and is always
@@ -177,14 +210,23 @@ export default function TheBoxScreen({ data }: UIProps<Record<string, unknown>>)
     [allocations, annualSalary, matchRate, matchCapPct],
   );
 
-  const fundedCount = useMemo(
+  // "Funded" only counts categories the player can actually fund right
+  // now. Locked Investments rows would otherwise inflate the denominator
+  // (15) while only 10 are reachable, which read as broken progress.
+  const fundableCategories = useMemo(
     () =>
       BOX_CATEGORIES.filter(
-        (c) => c.id !== 'investments' && (allocations[c.id] ?? 0) > EPS,
-      ).length,
-    [allocations],
+        (c) =>
+          c.id !== 'investments' &&
+          !(c.lockedUntilDebtFree && !investmentsUnlocked),
+      ),
+    [investmentsUnlocked],
   );
-  const fundableCount = BOX_CATEGORIES.filter((c) => c.id !== 'investments').length;
+  const fundedCount = useMemo(
+    () => fundableCategories.filter((c) => (allocations[c.id] ?? 0) > EPS).length,
+    [fundableCategories, allocations],
+  );
+  const fundableCount = fundableCategories.length;
 
   const setCategory = useCallback(
     (id: BudgetCategoryId, raw: string) => {
@@ -193,12 +235,18 @@ export default function TheBoxScreen({ data }: UIProps<Record<string, unknown>>)
         if (isInvestmentSubcategory(id) && debtBalance > EPS) return prev;
         return { ...prev, [id]: n };
       });
+      // Editing re-arms blur — don't nag while the user is fixing a row.
+      validation.markEditing(id);
     },
-    [debtBalance],
+    [debtBalance, validation],
   );
 
   const handleSubmit = () => {
-    if (!canSubmit) return;
+    if (!canSubmit) {
+      // Surface row-level + banner nudges after first failed Confirm.
+      validation.markConfirmAttemptFailed();
+      return;
+    }
     const investmentsAggregate = sumInvestmentSubcategories(allocations);
     const finalAllocations: Record<BudgetCategoryId, number> = {
       ...allocations,
@@ -226,6 +274,7 @@ export default function TheBoxScreen({ data }: UIProps<Record<string, unknown>>)
       [BOX_PLAYER_DATA_KEYS.pendingCashToAllocate]: 0,
       boxBudgetSubmittedAt: Date.now(),
     });
+    validation.reset();
   };
 
   const tabs: ReadonlyArray<{ id: BoxTabId; label: string; locked: boolean }> = [
@@ -273,8 +322,7 @@ export default function TheBoxScreen({ data }: UIProps<Record<string, unknown>>)
                 <div className="th-titleDivider th-menuDivider" role="presentation" />
 
                 <p className="island-statusText th-subtitle max-w-xl">
-                  Allocate <strong>every dollar</strong> of salary across your categories.
-                  Investments stay locked until high-interest debt is paid off.
+                  {HEADER_STRAPLINE.full}
                 </p>
 
                 <div className="grid gap-3 sm:grid-cols-3">
@@ -295,7 +343,13 @@ export default function TheBoxScreen({ data }: UIProps<Record<string, unknown>>)
                           pending cash
                         </>
                       ) : (
-                        <>[VAR_STARTING_INCOME]</>
+                        <>
+                          Difficulty:{' '}
+                          <span className="font-medium capitalize text-[var(--island-color-ink)]">
+                            {difficulty}
+                          </span>{' '}
+                          · this year's pay to allocate
+                        </>
                       )}
                     </p>
                   </div>
@@ -324,7 +378,16 @@ export default function TheBoxScreen({ data }: UIProps<Record<string, unknown>>)
                 </div>
               </header>
 
-              <nav className="mt-5 flex flex-wrap gap-2" aria-label="Box sections">
+              <div className="mt-5">
+                <BoxGoalRail
+                  highInterestDebtBalance={debtBalance}
+                  highInterestDebtAllocation={allocations.highInterestDebt ?? 0}
+                  winGoalUsd={Number.isFinite(winGoalUsd) ? winGoalUsd : undefined}
+                  investedBalanceUsd={investedBalanceUsd}
+                />
+              </div>
+
+              <nav className="mt-4 flex flex-wrap gap-2" aria-label="Box sections">
                 {tabs.map((t) => {
                   const isActive = activeTab === t.id;
                   return (
@@ -352,7 +415,7 @@ export default function TheBoxScreen({ data }: UIProps<Record<string, unknown>>)
                   Funding progress
                 </p>
                 <div className="island-progressStrip">
-                  {BOX_CATEGORIES.filter((c) => c.id !== 'investments').map((cat) => (
+                  {fundableCategories.map((cat) => (
                     <span
                       key={cat.id}
                       className={['island-progressSeg', (allocations[cat.id] ?? 0) > EPS ? 'is-active' : ''].join(' ')}
@@ -369,11 +432,11 @@ export default function TheBoxScreen({ data }: UIProps<Record<string, unknown>>)
                   <div className="flex items-start gap-3">
                     <Lock className="mt-0.5 size-5 shrink-0 text-[#8b6914]" aria-hidden />
                     <div>
-                      <p className="font-medium text-[var(--island-color-ink)]">Investments locked</p>
+                      <p className="font-medium text-[var(--island-color-ink)]">
+                        {INVESTMENTS_LOCKED.title}
+                      </p>
                       <p className="mt-1 text-sm text-[var(--island-color-ink-muted)]">
-                        Pay your high-interest debt down to $0 to unlock Index Funds, Individual
-                        Stocks, Bonds, CDs, and Crypto. (Employer Match contributions still happen
-                        on the Essentials tab — match dollars are held until you unlock here.)
+                        {INVESTMENTS_LOCKED.long}
                       </p>
                     </div>
                   </div>
@@ -387,17 +450,25 @@ export default function TheBoxScreen({ data }: UIProps<Record<string, unknown>>)
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-baseline justify-between gap-3">
                         <p className="font-medium text-[var(--island-color-ink)]">
-                          Employer Match — projected bonus
+                          {EMPLOYER_MATCH_COPY.title}
+                          <InfoMark
+                            className="ml-2 align-middle"
+                            label="About employer match"
+                            placement="bottom"
+                            popoverWidth={280}
+                          >
+                            {EMPLOYER_MATCH_COPY.hint} Match rate{' '}
+                            <strong>{pct.format(matchRate)}</strong>, capped at{' '}
+                            {pct.format(matchCapPct)} of salary (
+                            {fmt.format(matchCapPct * annualSalary)}).
+                          </InfoMark>
                         </p>
                         <p className="font-mono text-sm text-[var(--island-color-title)]">
                           +{fmt.format(employerMatchProjected)} / yr
                         </p>
                       </div>
                       <p className="mt-1 text-xs text-[var(--island-color-ink-muted)]">
-                        Your contribution in the <strong>Employer Match</strong> row deducts from salary
-                        (counts in zero-based). Later in the year you also get{' '}
-                        <strong>{pct.format(matchRate)}</strong> match on top, capped at{' '}
-                        {pct.format(matchCapPct)} of salary ({fmt.format(matchCapPct * annualSalary)}).
+                        {EMPLOYER_MATCH_COPY.hintShort}
                       </p>
                     </div>
                   </div>
@@ -409,6 +480,20 @@ export default function TheBoxScreen({ data }: UIProps<Record<string, unknown>>)
                   const Icon = categoryIcon[cat.id];
                   const locked = cat.lockedUntilDebtFree && !investmentsUnlocked;
                   const value = locked ? 0 : allocations[cat.id];
+                  const info = ROW_INFO[cat.id];
+                  const bandStatus = evaluateBand(
+                    cat.id,
+                    value ?? 0,
+                    { cashToAllocate, isLocked: locked },
+                    difficulty,
+                  );
+                  const showWarn =
+                    !locked &&
+                    bandStatus === 'below' &&
+                    validation.shouldShowFor(cat.id);
+                  const warnCopy = showWarn
+                    ? ROW_BELOW_BAND[cat.id as GuidedCategoryId]
+                    : null;
 
                   return (
                     <div key={cat.id} className="island-paperCard rounded-2xl p-4">
@@ -425,11 +510,31 @@ export default function TheBoxScreen({ data }: UIProps<Record<string, unknown>>)
                             {locked ? <Lock className="size-5" aria-hidden /> : <Icon className="size-5" aria-hidden />}
                           </div>
                           <div className="min-w-0">
-                            <p className="font-medium leading-tight text-[var(--island-color-ink)]">{cat.label}</p>
-                            <p className="mt-0.5 text-xs text-[var(--island-color-ink-muted)]">{cat.short}</p>
+                            <div className="flex items-center gap-1.5">
+                              <p className="font-medium leading-tight text-[var(--island-color-ink)]">
+                                {cat.label}
+                              </p>
+                              {info ? (
+                                <InfoMark
+                                  label={`About ${cat.label}`}
+                                  placement="bottom"
+                                >
+                                  {info}
+                                </InfoMark>
+                              ) : null}
+                            </div>
+                            <p className="mt-0.5 text-xs text-[var(--island-color-ink-muted)]">
+                              {cat.short}
+                            </p>
                             {locked ? (
                               <p className="mt-2 text-xs text-[#8b6914]">
-                                Locked until high-interest debt hits $0.
+                                {INVESTMENTS_LOCKED.rowSuffix}
+                              </p>
+                            ) : null}
+                            {warnCopy ? (
+                              <p className="mt-2 flex items-center gap-1 text-xs text-[#8b6914]">
+                                <AlertTriangle className="size-3.5 shrink-0" aria-hidden />
+                                <span>{warnCopy}</span>
                               </p>
                             ) : null}
                           </div>
@@ -444,6 +549,7 @@ export default function TheBoxScreen({ data }: UIProps<Record<string, unknown>>)
                             disabled={locked}
                             value={Number.isFinite(value) ? value : 0}
                             onChange={(e) => setCategory(cat.id, e.target.value)}
+                            onBlur={() => validation.markBlurred(cat.id)}
                             className={['island-field w-full rounded-xl px-3 py-2 font-mono text-sm outline-none transition', locked ? 'cursor-not-allowed opacity-60' : ''].join(' ')}
                             aria-label={`Dollars for ${cat.label}`}
                           />
@@ -484,31 +590,43 @@ export default function TheBoxScreen({ data }: UIProps<Record<string, unknown>>)
                   <p className="island-statusText mt-1 text-sm">
                     {isZeroBased ? (
                       <span className="text-[#1a7a8c]">
-                        Zero-based — every dollar assigned
-                        {pendingCash > EPS ? ' (incl. pending cash)' : ''}.
+                        {pendingCash > EPS
+                          ? FOOTER_STATUS.zeroBasedWithPending
+                          : FOOTER_STATUS.zeroBased}
                       </span>
                     ) : remainder > 0 ? (
                       <>
-                        <span className="text-[#8b6914]">{fmt.format(remainder)}</span> left to assign
+                        <span className="text-[#8b6914]">{fmt.format(remainder)}</span>{' '}
+                        {FOOTER_STATUS.remainingPrefix}
                         {pendingCash > EPS ? (
-                          <> · includes {fmt.format(pendingCash)} pending</>
+                          <> · {FOOTER_STATUS.pendingNote} {fmt.format(pendingCash)}</>
                         ) : null}
                       </>
                     ) : (
                       <>
-                        <span className="text-[#c44b36]">{fmt.format(-remainder)}</span> over budget
+                        <span className="text-[#c44b36]">{fmt.format(-remainder)}</span>{' '}
+                        {FOOTER_STATUS.overPrefix}
                       </>
                     )}
                   </p>
+                  {!canSubmit ? (
+                    <p className="island-hintText mt-1 text-xs">{CONFIRM_COPY.disabledHint}</p>
+                  ) : null}
                 </div>
                 <button
                   type="button"
                   className="th-btnPlay w-full shrink-0 sm:w-auto sm:self-end"
-                  disabled={!canSubmit}
+                  aria-disabled={!canSubmit}
+                  // Note: button stays clickable while disabled-looking so the
+                  // failed-Confirm path can fire row-level nudges. We re-check
+                  // `canSubmit` inside `handleSubmit` before emitting.
                   onClick={handleSubmit}
+                  title={canSubmit ? undefined : CONFIRM_COPY.disabledHint}
+                  data-state={canSubmit ? 'ready' : 'pending'}
+                  style={!canSubmit ? { opacity: 0.55, cursor: 'not-allowed' } : undefined}
                 >
                   <Check className="size-4 shrink-0" aria-hidden />
-                  Confirm budget
+                  {CONFIRM_COPY.enabled}
                 </button>
               </div>
             </div>

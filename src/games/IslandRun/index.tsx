@@ -19,11 +19,13 @@ import {
   emptyAllocations,
   readAllocations,
   readNumber,
+  type BudgetCategoryId,
 } from '@/core/budgetTypes';
 import {
   applyIslandScenarioChoice,
   isIslandScenarioChoicePayload,
 } from '@/core/scenarios';
+import { CAMPAIGN_KEYS } from '@/core/campaign/campaignKeys';
 
 const FONTS_HREF =
   'https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Outfit:wght@400;500;600&display=swap';
@@ -51,7 +53,35 @@ export default function IslandRun() {
 
     let cleanup: () => void = () => {};
     try {
-      cleanup = bootstrap();
+      cleanup = bootstrap({
+        // Always re-read the store so a Box edit between rolls flows
+        // into the next landing's tier copy.
+        getPlayerSnapshot: () => {
+          const { playerData } = useAppStore.getState();
+          const allocations = readAllocations(playerData) ?? emptyAllocations();
+          const annualSalary = readNumber(
+            playerData,
+            BOX_PLAYER_DATA_KEYS.annualSalary,
+            0,
+          );
+          const fundingRatioByCategory: Partial<Record<BudgetCategoryId, number>> = {};
+          if (annualSalary > 0) {
+            (Object.keys(allocations) as BudgetCategoryId[]).forEach((k) => {
+              fundingRatioByCategory[k] = (allocations[k] ?? 0) / annualSalary;
+            });
+          }
+          return { annualSalary, fundingRatioByCategory };
+        },
+        // Persist hop counter + emit campaign event. Bumping `campaign.year`
+        // is the campaign router's job (`initCampaign.ts`).
+        onLapComplete: ({ totalHops, laps }) => {
+          const { mergePlayerData } = useAppStore.getState();
+          mergePlayerData({
+            [CAMPAIGN_KEYS.islandTotalHops]: totalHops,
+          });
+          eventBus.emit('island:yearComplete', { year: laps + 1, totalHops });
+        },
+      });
     } catch (e) {
       console.error(e);
       document.getElementById('webgl-error')?.classList.remove('hidden');
@@ -216,10 +246,10 @@ export default function IslandRun() {
             ×
           </button>
           <div className="landing-wave" aria-hidden="true" />
-          <h2 id="landing-title">You landed here</h2>
           <p id="landing-subtitle" className="landing-subtitle">
-            Finance tip
+            You landed at
           </p>
+          <h2 id="landing-title">Shore Fund</h2>
           <p id="landing-text" />
           <div
             id="landing-choices"

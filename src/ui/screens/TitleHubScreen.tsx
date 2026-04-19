@@ -24,6 +24,7 @@ import { eventBus } from '@/core/events';
 import { useAppStore } from '@/core/store';
 import type { UIProps } from '@/core/types';
 import { GAME_IDS } from '@/games/registry';
+import { CAMPAIGN_KEYS } from '@/core/campaign/campaignKeys';
 import { MOCK_BUDGET_PROFILE } from '@/core/finance/mockBudgetProfile';
 import { PlayModeDialog } from '../components/PlayModeDialog';
 import {
@@ -50,8 +51,11 @@ export default function TitleHubScreen(_props: UIProps<unknown>) {
 
   const handleNewGame = () => {
     setPlayOpen(false);
+    // First-ever new game on this save? Show the global onboarding beat.
+    // Subsequent new games skip straight to difficulty.
+    const onboarded = playerData[CAMPAIGN_KEYS.onboardingComplete] === true;
     eventBus.emit('navigate:request', {
-      to: 'newGameDifficulty',
+      to: onboarded ? 'newGameDifficulty' : 'onboarding',
       module: null,
     });
   };

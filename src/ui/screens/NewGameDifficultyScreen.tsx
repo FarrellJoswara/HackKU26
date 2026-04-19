@@ -11,7 +11,12 @@ import { ArrowLeft, Sparkles } from 'lucide-react';
 import { eventBus } from '@/core/events';
 import { useAppStore } from '@/core/store';
 import type { UIProps } from '@/core/types';
-import { GAME_IDS } from '@/games/registry';
+import { BOX_PLAYER_DATA_KEYS } from '@/core/budgetTypes';
+import {
+  CAMPAIGN_KEYS,
+  DIFFICULTY_DEBT_USD,
+  DIFFICULTY_INCOME_USD,
+} from '@/core/campaign/campaignKeys';
 import { TitleHubDecor } from '../components/TitleHubDecor';
 import { DifficultySelect } from '../components/DifficultySelect';
 import {
@@ -30,13 +35,24 @@ export default function NewGameDifficultyScreen(
   );
 
   const handleCreate = () => {
+    // Difficulty seeds salary + starting debt for the first Box submit.
+    // The Year Controller (future) takes over after year 1.
     mergePlayerData({
       [PLAYER_KEYS.islandRunDifficulty]: selected,
       [PLAYER_KEYS.islandRunHasSave]: false,
+      [BOX_PLAYER_DATA_KEYS.annualSalary]: DIFFICULTY_INCOME_USD[selected],
+      [BOX_PLAYER_DATA_KEYS.highInterestDebtBalance]: DIFFICULTY_DEBT_USD[selected],
+      [BOX_PLAYER_DATA_KEYS.currentYear]: 1,
+      // Reset campaign progress for the new save.
+      [CAMPAIGN_KEYS.year]: 1,
+      [CAMPAIGN_KEYS.boxReadyForYear]: 0,
+      [CAMPAIGN_KEYS.islandTotalHops]: 0,
     });
+    // The campaign path always goes through The Box first. Soft gate
+    // (`canEnterMapForCampaign`) guards Island entry afterwards.
     eventBus.emit('navigate:request', {
-      to: 'game',
-      module: GAME_IDS.islandRun,
+      to: 'budget',
+      module: null,
     });
   };
 

@@ -1,8 +1,9 @@
-import { Trophy, Sun } from 'lucide-react';
+import { Trophy, Sun, ArrowRight } from 'lucide-react';
 import { eventBus } from '@/core/events';
 import type { UIProps } from '@/core/types';
 import { Button } from '../components/Button';
 import { getStoredLastRun } from '@/core/runner/RunnerResultRouter';
+import { advanceCampaignYear } from '@/core/campaign/yearAdvance';
 
 export default function WinScreen(props: UIProps<Record<string, unknown>>) {
   const lastRun = getStoredLastRun(props.data);
@@ -32,20 +33,27 @@ export default function WinScreen(props: UIProps<Record<string, unknown>>) {
             You survived the run
             {lastRun?.stats?.timeSurvivedSeconds != null
               ? ` (${Math.round(lastRun.stats.timeSurvivedSeconds)}s)`
-              : ''}
-            . The Debt Collector is back at the pier — for now.
+              : ''}.{' '}
+            The Debt Collector is back at the pier — for now.
           </p>
 
           <div className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <Button
               variant="coral"
+              leadingIcon={<ArrowRight className="size-4" />}
+              onClick={() => advanceCampaignYear('win')}
+            >
+              Continue to next year
+            </Button>
+            <Button
+              variant="turquoise"
               leadingIcon={<Sun className="size-4" />}
               onClick={() => eventBus.emit('navigate:request', { to: 'summary', module: null })}
             >
               See what your budget caused
             </Button>
             <Button
-              variant="turquoise"
+              variant="ghost"
               onClick={() => eventBus.emit('navigate:request', { to: 'menu', module: null })}
             >
               Back to menu

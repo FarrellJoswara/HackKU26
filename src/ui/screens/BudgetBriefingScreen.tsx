@@ -1,4 +1,4 @@
-import { AlertTriangle, Play } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Play, Sparkles } from 'lucide-react';
 import { Button } from '../components/Button';
 import { eventBus } from '@/core/events';
 import { useAppStore } from '@/core/store';
@@ -16,6 +16,19 @@ const ORDER: BudgetCategoryId[] = [
   'debtRepayment',
   'miscFun',
 ];
+
+// Notes from the resolver currently look like:
+//   "Rent / Housing: Rent was AVERAGE: route difficulty stays near baseline."
+// The category label and rating are both already shown on the card / chip,
+// so we strip those two redundant prefixes and just render the consequence.
+function stripNotePrefix(text: string): string {
+  // Strip the prepended "<Category Label>: "
+  const firstColon = text.indexOf(': ');
+  let body = firstColon >= 0 ? text.slice(firstColon + 2) : text;
+  // Strip the inline "<Category> was <RATING>: "
+  body = body.replace(/^[^:]+\swas\s[A-Z]+:\s*/, '');
+  return body.charAt(0).toUpperCase() + body.slice(1);
+}
 
 export default function BudgetBriefingScreen(_props: UIProps<Record<string, unknown>>) {
   const data = useAppStore((s) => s.playerData);
@@ -47,75 +60,115 @@ export default function BudgetBriefingScreen(_props: UIProps<Record<string, unkn
   const strengths = session.notes.filter((item) => item.rating === 'good');
 
   return (
-    <div className="absolute inset-0 overflow-auto bg-gradient-to-b from-sky-700 via-cyan-900 to-slate-950 text-white">
-      <div className="mx-auto w-full max-w-4xl px-4 py-8">
-        <h1 className="text-3xl font-semibold tracking-tight">Budget Consequence Briefing</h1>
-        <p className="mt-2 max-w-2xl text-sm text-white/80">
-          Profile received from backend. These ratings directly control hazards, stamina, lives, injuries,
-          Debt Collector pressure, and burnout during the run.
+    <div className="absolute inset-0 overflow-auto bg-gradient-to-b from-[#0d2438] via-[#103a4f] to-[#1c1431] text-white">
+      <div className="mx-auto w-full max-w-4xl px-4 py-8 pb-32">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-200/85">
+          Year-end · Debt Runner briefing
+        </p>
+        <h1 className="mt-2 font-serif text-3xl font-semibold tracking-tight">
+          Your budget just turned into a route.
+        </h1>
+        <p className="mt-3 max-w-2xl text-sm leading-relaxed text-white/80">
+          Each category below sets one knob on the run — hazards, stamina, lives, healing,
+          Debt Collector pressure, and morale. Keep an eye on anything flagged as high risk.
         </p>
 
         <div className="mt-6 grid gap-4 md:grid-cols-2">
-          {ORDER.map((id) => (
-            <div key={id} className="rounded-xl border border-white/10 bg-black/30 p-4 backdrop-blur">
-              <p className="text-sm text-white/65">{CATEGORY_LABELS[id]}</p>
-              <div className="mt-1 flex items-center justify-between">
-                <p className="text-lg font-semibold uppercase">{profile[id]}</p>
-                <span
-                  className={
-                    profile[id] === 'bad'
-                      ? 'rounded-full bg-rose-500/20 px-2 py-1 text-xs text-rose-200'
-                      : profile[id] === 'average'
-                        ? 'rounded-full bg-amber-500/20 px-2 py-1 text-xs text-amber-200'
-                        : 'rounded-full bg-emerald-500/20 px-2 py-1 text-xs text-emerald-200'
-                  }
-                >
-                  {profile[id] === 'bad' ? 'High Risk' : profile[id] === 'average' ? 'Baseline' : 'Strength'}
-                </span>
+          {ORDER.map((id) => {
+            const rating = profile[id];
+            const note = session.notes.find((entry) => entry.categoryId === id);
+            const consequence = note ? stripNotePrefix(note.text) : null;
+            const chipLabel =
+              rating === 'bad' ? 'High risk' : rating === 'average' ? 'Baseline' : 'Strength';
+            const chipClass =
+              rating === 'bad'
+                ? 'bg-rose-500/20 text-rose-200 ring-1 ring-rose-300/30'
+                : rating === 'average'
+                  ? 'bg-amber-500/20 text-amber-200 ring-1 ring-amber-300/30'
+                  : 'bg-emerald-500/20 text-emerald-200 ring-1 ring-emerald-300/30';
+            return (
+              <div
+                key={id}
+                className="rounded-xl border border-white/10 bg-black/30 p-4 backdrop-blur"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm font-semibold text-white/90">{CATEGORY_LABELS[id]}</p>
+                  <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide ${chipClass}`}>
+                    {chipLabel}
+                  </span>
+                </div>
+                {consequence ? (
+                  <p className="mt-2 text-sm leading-relaxed text-white/80">{consequence}</p>
+                ) : null}
               </div>
-              <p className="mt-2 text-sm text-white/75">
-                {session.notes.find((entry) => entry.categoryId === id)?.text}
-              </p>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         <div className="mt-6 grid gap-4 md:grid-cols-2">
-          <div className="rounded-xl border border-white/10 bg-black/30 p-4">
-            <p className="text-sm font-semibold text-white/90">Risk warnings</p>
-            <ul className="mt-3 space-y-2 text-sm text-white/75">
-              {warnings.map((item) => (
-                <li key={`${item.categoryId}-${item.text}`} className="flex gap-2">
-                  <AlertTriangle className="mt-0.5 size-4 text-rose-200" />
-                  <span>{item.text}</span>
-                </li>
-              ))}
-            </ul>
+          <div className="rounded-xl border border-rose-300/15 bg-rose-950/30 p-4">
+            <p className="flex items-center gap-2 text-sm font-semibold text-rose-100">
+              <AlertTriangle className="size-4 text-rose-200" aria-hidden /> Risk warnings
+            </p>
+            {warnings.length === 0 ? (
+              <p className="mt-3 flex items-center gap-2 text-sm text-emerald-200/90">
+                <CheckCircle2 className="size-4" aria-hidden />
+                No red flags this run — nice work.
+              </p>
+            ) : (
+              <ul className="mt-3 space-y-2 text-sm text-white/80">
+                {warnings.map((item) => (
+                  <li key={`${item.categoryId}-${item.text}`} className="flex gap-2">
+                    <AlertTriangle className="mt-0.5 size-4 shrink-0 text-rose-200" aria-hidden />
+                    <span>
+                      <span className="font-semibold">{CATEGORY_LABELS[item.categoryId]}</span>
+                      {' — '}
+                      {stripNotePrefix(item.text)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
-          <div className="rounded-xl border border-white/10 bg-black/30 p-4">
-            <p className="text-sm font-semibold text-white/90">Strengths</p>
-            <ul className="mt-3 space-y-2 text-sm text-white/75">
-              {strengths.map((item) => (
-                <li key={`${item.categoryId}-${item.text}`}>{item.text}</li>
-              ))}
-            </ul>
+          <div className="rounded-xl border border-emerald-300/15 bg-emerald-950/25 p-4">
+            <p className="flex items-center gap-2 text-sm font-semibold text-emerald-100">
+              <Sparkles className="size-4 text-emerald-200" aria-hidden /> Strengths
+            </p>
+            {strengths.length === 0 ? (
+              <p className="mt-3 text-sm text-white/70">
+                No strengths flagged yet — fund a category fully next year for a kinder run.
+              </p>
+            ) : (
+              <ul className="mt-3 space-y-2 text-sm text-white/85">
+                {strengths.map((item) => (
+                  <li key={`${item.categoryId}-${item.text}`} className="flex gap-2">
+                    <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-200" aria-hidden />
+                    <span>
+                      <span className="font-semibold">{CATEGORY_LABELS[item.categoryId]}</span>
+                      {' — '}
+                      {stripNotePrefix(item.text)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </div>
 
-        <div className="mt-8 flex gap-3">
+        <div className="mt-8 flex flex-wrap gap-3">
           <Button
             leadingIcon={<Play className="size-4" />}
             onClick={() =>
               eventBus.emit('navigate:request', { to: 'game', module: GAME_IDS.debtRunner })
             }
           >
-            Start Run
+            Start the run
           </Button>
           <Button
             variant="ghost"
             onClick={() => eventBus.emit('navigate:request', { to: 'menu', module: null })}
           >
-            Back
+            Back to menu
           </Button>
         </div>
       </div>

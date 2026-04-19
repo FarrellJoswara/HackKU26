@@ -23,10 +23,14 @@ export type AppState =
   | 'menu'
   /** Settings hub — audio, controls, etc. */
   | 'settings'
+  /** One-shot global onboarding shown before the first New Game flow. */
+  | 'onboarding'
   /** Difficulty picker shown when starting a new game. */
   | 'newGameDifficulty'
   /** Financial Freedom — "The Box" zero-based budgeting UI (GDD). */
   | 'budget'
+  /** DebtRunner — one-time controls/goal tutorial before first run. */
+  | 'debtRunnerTutorial'
   /** DebtRunner — pre-run consequence briefing screen. */
   | 'briefing'
   | 'game'
@@ -35,6 +39,21 @@ export type AppState =
   | 'win'
   | 'loss'
   | 'summary';
+
+/**
+ * Exhaustiveness helper — call from a `default` case in a `switch` over a
+ * discriminated union so adding a new variant is a compile error instead
+ * of silently routing to a blank screen.
+ *
+ *   switch (state) {
+ *     case 'a': ...
+ *     case 'b': ...
+ *     default: assertNever(state);
+ *   }
+ */
+export function assertNever(value: never, context = 'assertNever'): never {
+  throw new Error(`${context}: unexpected value ${String(value)}`);
+}
 
 /**
  * Branded string used as a registry key. Modules (games & UI screens)
@@ -139,6 +158,14 @@ export interface EventMap {
    * to the win/loss screens.
    */
   'runner:finished': import('./runner/runnerTypes').RunnerFinishedPayload;
+
+  /**
+   * Island Run — player completed a full circuit of the 12-square board
+   * (one in-game year). Fires exactly once per lap by the `lapCounter`
+   * rule (see `src/core/campaign/lapCounter.ts` and `IslandRun/main.ts`).
+   * Campaign router subscribes and dispatches the year-end mini-game.
+   */
+  'island:yearComplete': { year: number; totalHops: number };
 }
 
 export type EventKey = keyof EventMap;

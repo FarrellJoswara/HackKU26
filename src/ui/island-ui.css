@@ -162,6 +162,51 @@
   backdrop-filter: blur(6px);
 }
 
+/*
+ * Panel-only scrim variant (Box overlay over IslandRun map).
+ * Per the locked Box-UI spec: the WebGL map must remain visible. We dim
+ * only the right side of the viewport, fading to fully transparent across
+ * the left/center where the map lives. Width tracks the overlay panel
+ * (`min(560px, calc(100% - 2rem))`) plus a small feather on the left
+ * edge so the scrim does not look pasted-on.
+ */
+.island-overlayScrim--panel {
+  inset: 0;
+  background: linear-gradient(
+    270deg,
+    rgba(5, 15, 28, 0.42) 0%,
+    rgba(8, 25, 40, 0.32) min(620px, calc(100% - 1rem)),
+    rgba(8, 25, 40, 0.06) min(720px, calc(100% - 0.5rem)),
+    transparent calc(min(720px, 100%) + 80px)
+  );
+  /* Soft blur only inside the panel column; left/center stays crisp. */
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+@supports ((-webkit-mask: linear-gradient(black, black)) or (mask: linear-gradient(black, black))) {
+  .island-overlayScrim--panel {
+    background: rgba(5, 15, 28, 0.38);
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+    /* Mask the scrim so it dims only the right column near the panel. */
+    -webkit-mask-image: linear-gradient(
+      270deg,
+      black 0%,
+      black min(560px, calc(100% - 2rem)),
+      rgba(0, 0, 0, 0.55) min(640px, calc(100% - 1rem)),
+      transparent calc(min(640px, 100%) + 80px)
+    );
+    mask-image: linear-gradient(
+      270deg,
+      black 0%,
+      black min(560px, calc(100% - 2rem)),
+      rgba(0, 0, 0, 0.55) min(640px, calc(100% - 1rem)),
+      transparent calc(min(640px, 100%) + 80px)
+    );
+  }
+}
+
 @media (max-width: 640px) {
   .island-boxLauncher {
     min-height: 36px;
@@ -526,4 +571,81 @@
 
 .tropic-chase-stage-toast {
   animation: tropic-chase-stage-flash 2.2s ease-out forwards;
+}
+
+/*
+ * Open The Box launcher anchored to the bottom-left of the IslandRun map.
+ * Replaces the older mid-edge floating tab so it no longer collides with
+ * the HUD card or appears to hover over the map without context.
+ */
+.island-openBoxBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.65rem 1.05rem 0.65rem 0.85rem;
+  border-radius: 14px;
+  border: 2px solid color-mix(in srgb, var(--tropic-turquoise-deep, #0a3d45) 55%, #0a3d45);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 248, 235, 0.96) 0%,
+    rgba(255, 230, 200, 0.92) 60%,
+    rgba(240, 210, 175, 0.94) 100%
+  );
+  color: #2a1a08;
+  font-family: var(--island-font-body, inherit);
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow:
+    0 2px 0 color-mix(in srgb, var(--tropic-turquoise-deep, #0a3d45) 78%, #021820),
+    0 14px 28px rgba(8, 30, 38, 0.32);
+  transition: transform 120ms ease, box-shadow 120ms ease, filter 120ms ease;
+}
+
+.island-openBoxBtn:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.04);
+}
+
+.island-openBoxBtn:active {
+  transform: translateY(1px);
+  box-shadow:
+    0 1px 0 color-mix(in srgb, var(--tropic-turquoise-deep, #0a3d45) 78%, #021820),
+    0 6px 14px rgba(8, 30, 38, 0.28);
+}
+
+.island-openBoxBtn:focus-visible {
+  outline: none;
+  box-shadow:
+    var(--island-focus-ring, 0 0 0 3px rgba(46, 180, 220, 0.55)),
+    0 14px 28px rgba(8, 30, 38, 0.32);
+}
+
+.island-openBoxBtn__label {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.05;
+}
+
+.island-openBoxBtn__title {
+  font-size: 0.98rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.island-openBoxBtn__sub {
+  font-size: 0.72rem;
+  font-weight: 500;
+  opacity: 0.72;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .island-openBoxBtn,
+  .island-openBoxBtn:hover,
+  .island-openBoxBtn:active {
+    transform: none;
+    transition: none;
+  }
 }

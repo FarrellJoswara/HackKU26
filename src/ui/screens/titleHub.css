@@ -719,6 +719,26 @@
   max-width: min(56rem, 100%);
 }
 
+/*
+ * The Box screen content is much taller than the viewport. The default
+ * `.th-titleHub` rules vertically center the card and clip overflow,
+ * which left the header invisible above the fold. Switch the box route
+ * to a top-aligned, vertically-scrollable column.
+ */
+.th-titleHub.th-boxRoute {
+  justify-content: flex-start;
+  align-items: stretch;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-top: max(1.25rem, env(safe-area-inset-top));
+  padding-bottom: max(2.5rem, env(safe-area-inset-bottom));
+}
+
+.th-titleHub.th-boxRoute > .th-content {
+  align-self: center;
+  width: 100%;
+}
+
 @media (min-width: 480px) {
   .th-menuScreen .th-menuActions {
     flex-direction: row;

@@ -19,29 +19,57 @@ import {
 } from 'react';
 import { useAppStore } from '@/core/store';
 import type { AppState, ModuleId, UIProps } from '@/core/types';
+import { assertNever } from '@/core/types';
 import { GAME_IDS } from '@/games/registry';
 import { HUD } from './hud/HUD';
 
 type ScreenComp = LazyExoticComponent<ComponentType<UIProps<any>>>;
 
-/** Default screen for each top-level `AppState`. */
-const SCREENS: Partial<Record<AppState, ScreenComp>> = {
+/**
+ * Default screen for each top-level `AppState`. Compile-safety: this is a
+ * **complete** mapping (every `AppState` has an entry, even if `null` for
+ * the few states that have no DOM screen). The `pickScreen` switch below
+ * uses `assertNever` so a new `AppState` shows up as a TypeScript error
+ * here instead of as a blank screen at runtime.
+ */
+const SCREENS: Record<AppState, ScreenComp | null> = {
   boot: lazy(() => import('./screens/BootScreen')),
-  /** Title hub — Play / Settings. */
   menu: lazy(() => import('./screens/TitleHubScreen')),
-  /** Settings hub — audio, controls. */
   settings: lazy(() => import('./screens/SettingsScreen')),
-  /** Difficulty picker for "New Game". */
+  onboarding: lazy(() => import('./screens/OnboardingScreen')),
   newGameDifficulty: lazy(() => import('./screens/NewGameDifficultyScreen')),
-  /** Financial Freedom — zero-based budgeting (GAME_DESIGN.md). */
   budget: lazy(() => import('./screens/TheBoxScreen')),
-  /** DebtRunner — pre-run consequences briefing. */
+  debtRunnerTutorial: lazy(() => import('./screens/DebtRunnerTutorialScreen')),
   briefing: lazy(() => import('./screens/BudgetBriefingScreen')),
-  /** DebtRunner — endgame screens. */
   win: lazy(() => import('./screens/WinScreen')),
   loss: lazy(() => import('./screens/LossScreen')),
   summary: lazy(() => import('./screens/PostRunSummaryScreen')),
+  // Active game module is rendered via MODULE_SCREENS / GameRegistry.
+  game: null,
+  // Transition is owned by `TransitionManager`, which masks the screen.
+  transition: null,
 };
+
+function pickScreen(state: AppState): ScreenComp | null {
+  switch (state) {
+    case 'boot':
+    case 'menu':
+    case 'settings':
+    case 'onboarding':
+    case 'newGameDifficulty':
+    case 'budget':
+    case 'debtRunnerTutorial':
+    case 'briefing':
+    case 'win':
+    case 'loss':
+    case 'summary':
+    case 'game':
+    case 'transition':
+      return SCREENS[state];
+    default:
+      return assertNever(state, 'UIRegistry.pickScreen');
+  }
+}
 
 /**
  * Optional per-module overrides that take precedence over `SCREENS`
@@ -79,7 +107,7 @@ export function UIRegistry() {
     );
   }
 
-  const Screen = SCREENS[appState];
+  const Screen = pickScreen(appState);
   if (!Screen) return null;
 
   return (

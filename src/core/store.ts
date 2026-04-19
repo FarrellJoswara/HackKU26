@@ -14,6 +14,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { AppState, ModuleId } from './types';
+import { CAMPAIGN_KEYS, DEBT_RUNNER_KEYS } from './campaign/campaignKeys';
 
 export interface AppStoreState {
   /** Current top-level lifecycle stage. */
@@ -48,10 +49,40 @@ export const useAppStore = create<AppStoreState>()(
     {
       name: 'hackku26:app',
       storage: createJSONStorage(() => localStorage),
-      version: 1,
+      // v2: introduces campaign.* and debtRunner.* defaults so older saves
+      // without these keys do not get permanently locked out by the soft
+      // map gate or the one-time DebtRunner tutorial.
+      version: 2,
       // Only persist things that should survive a refresh. Transient UI
       // state (`appState`, `activeModule`) is rebuilt on boot.
       partialize: (state) => ({ playerData: state.playerData }),
+      migrate: (persisted, fromVersion) => {
+        const safe =
+          persisted && typeof persisted === 'object'
+            ? (persisted as { playerData?: Record<string, unknown> })
+            : {};
+        const playerData = { ...(safe.playerData ?? {}) };
+        if (fromVersion < 2) {
+          if (playerData[CAMPAIGN_KEYS.onboardingComplete] === undefined) {
+            // Old saves predate onboarding entirely — assume the player has
+            // already played, so we don't shove the tutorial in their face.
+            playerData[CAMPAIGN_KEYS.onboardingComplete] = true;
+          }
+          if (playerData[CAMPAIGN_KEYS.boxReadyForYear] === undefined) {
+            playerData[CAMPAIGN_KEYS.boxReadyForYear] = 0;
+          }
+          if (playerData[CAMPAIGN_KEYS.islandTotalHops] === undefined) {
+            playerData[CAMPAIGN_KEYS.islandTotalHops] = 0;
+          }
+          if (playerData[CAMPAIGN_KEYS.year] === undefined) {
+            playerData[CAMPAIGN_KEYS.year] = 1;
+          }
+          if (playerData[DEBT_RUNNER_KEYS.tutorialSeen] === undefined) {
+            playerData[DEBT_RUNNER_KEYS.tutorialSeen] = false;
+          }
+        }
+        return { playerData };
+      },
     },
   ),
 );

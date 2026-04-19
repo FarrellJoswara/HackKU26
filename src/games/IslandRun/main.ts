@@ -217,7 +217,28 @@ function easeInOutCubic(t: number): number {
  *   3. A `disposed` flag guards async IIFEs so late model loads don't touch
  *      a torn-down scene.
  */
-export function bootstrap(): () => void {
+export interface IslandRunBootstrapOptions {
+  /**
+   * Called every time a landing dialog is about to open so funding ratios
+   * passed to `getLandingPayload` reflect the **current** Box allocations,
+   * not a value captured at bootstrap time. Returning `null` falls back to
+   * the seeded demo ratios in `getBoardLandingScenarioBody`.
+   *
+   * Pure read — must not mutate the store.
+   */
+  getPlayerSnapshot?: () => {
+    annualSalary: number;
+    fundingRatioByCategory: Partial<Record<string, number>>;
+  } | null;
+  /**
+   * Called once per lap (`totalHops % NUM_SQUARES === 0` after a roll).
+   * The shell forwards this to the campaign router via the typed Event
+   * Bus so `core` never imports games. Receives `{ totalHops, laps }`.
+   */
+  onLapComplete?: (info: { totalHops: number; laps: number }) => void;
+}
+
+export function bootstrap(opts: IslandRunBootstrapOptions = {}): () => void {
   const rootEl = document.getElementById('canvas-root');
   const errEl = document.getElementById('webgl-error');
   if (!rootEl) return () => {};
@@ -964,7 +985,7 @@ export function bootstrap(): () => void {
   const diceWrap = document.getElementById('dice-chip-wrap');
   const landing = document.getElementById('landing-overlay');
   const landingText = document.getElementById('landing-text');
-  const landingSub = document.getElementById('landing-subtitle');
+  const landingTitle = document.getElementById('landing-title');
   const landingClose = document.getElementById('landing-close');
   const landingDismiss = document.getElementById('landing-dismiss');
   const landingChoices = document.getElementById('landing-choices');
@@ -1008,8 +1029,12 @@ export function bootstrap(): () => void {
   let activeBeat: IslandScenarioBeat | null = null;
 
   function openLanding(square: number) {
-    const payload = getLandingPayload(square);
-    if (landingSub) landingSub.textContent = SQUARE_LABELS[square] ?? 'Finance tip';
+    // Always re-read player snapshot so a Box edit between rolls is
+    // reflected on the *next* landing without remounting the game.
+    const snap = opts.getPlayerSnapshot?.() ?? null;
+    const ratios = snap?.fundingRatioByCategory;
+    const payload = getLandingPayload(square, ratios as never);
+    if (landingTitle) landingTitle.textContent = SQUARE_LABELS[square] ?? 'Finance tip';
     if (payload.kind === 'choice') {
       activeBeat = payload.beat;
       if (landingText) landingText.textContent = payload.beat.setup;
@@ -1043,6 +1068,12 @@ export function bootstrap(): () => void {
   choiceBtnB?.addEventListener('click', onChoiceClick);
 
   let rolling = false;
+  // Single-source lap counter — the rule
+  // (`totalHops > 0 && totalHops % NUM_SQUARES === 0`) is implemented in
+  // `src/core/campaign/lapCounter.ts` and referenced in GAME_DESIGN.md.
+  // We increment in exactly ONE place (after the dice settles) so a lap
+  // can never fire twice or get lost across re-mounts of the React shell.
+  let totalHops = 0;
   function finishRollAfterAnimation(roll: number) {
     diceWrap?.classList.remove('dice-rolling');
     diceWrap?.classList.add('dice-roll-pop');
@@ -1051,6 +1082,18 @@ export function bootstrap(): () => void {
     playerIndex = (playerIndex + roll) % NUM_SQUARES;
     if (prevIndex !== playerIndex) {
       bananaTravel = { startI: prevIndex, roll, hopIndex: 0, t: 0 };
+    }
+    const prevTotalHops = totalHops;
+    totalHops = prevTotalHops + roll;
+    const prevLaps = Math.floor(prevTotalHops / NUM_SQUARES);
+    const laps = Math.floor(totalHops / NUM_SQUARES);
+    if (laps > prevLaps) {
+      // Fire once — the React shell forwards to `island:yearComplete`.
+      try {
+        opts.onLapComplete?.({ totalHops, laps });
+      } catch (e) {
+        console.error('[IslandRun] onLapComplete handler threw', e);
+      }
     }
     statusEl!.textContent = `You rolled ${roll}. Landed on ${SQUARE_LABELS[playerIndex]}.`;
     statusEl?.classList.remove('is-rolling');

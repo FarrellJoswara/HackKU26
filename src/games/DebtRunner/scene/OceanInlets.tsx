@@ -46,6 +46,17 @@
 
 import { useMemo } from 'react';
 
+import type { TrackTile } from '../types';
+
+/**
+ * Reject any inlet whose bounding sphere comes within this distance of
+ * any path tile. The inlet "footprint" can be ~6m across (baseSize ×
+ * scale ≈ up to 4m radius), and the boardwalk is ~3m wide, so 8m of
+ * clearance keeps water visibly off the planks even when the path
+ * snakes past the spawn point.
+ */
+const INLET_PATH_CLEARANCE_M = 9;
+
 interface InletBlob {
   dx: number; // offset from inlet centre
   dz: number;
@@ -72,7 +83,19 @@ function mulberry32(seed: number) {
   };
 }
 
-function generateInlets(): Inlet[] {
+function isOnPath(x: number, z: number, tiles: ReadonlyArray<TrackTile>): boolean {
+  const r = INLET_PATH_CLEARANCE_M;
+  for (const tile of tiles) {
+    const dx = tile.x - x;
+    if (dx > r || dx < -r) continue;
+    const dz = tile.z - z;
+    if (dz > r || dz < -r) continue;
+    if (dx * dx + dz * dz <= r * r) return true;
+  }
+  return false;
+}
+
+function generateInlets(tiles: ReadonlyArray<TrackTile>): Inlet[] {
   // Distinct seed from BeachDecor (0xbeac21) and BeachLagoons (0x1a900)
   // so the three scatters don't collapse into the same angular pattern.
   const rand = mulberry32(0x0c3a47);
@@ -101,6 +124,12 @@ function generateInlets(): Inlet[] {
       const radius = band.inner + rand() * (band.outer - band.inner);
       const x = Math.cos(angle) * radius;
       const z = Math.sin(angle) * radius;
+
+      // Reject inlets whose centre is too close to any path tile.
+      // Without this, the radial scatter would still allow water to
+      // appear under the boardwalk wherever the path winds past the
+      // inlet centre — see file header for the rationale.
+      if (isOnPath(x, z, tiles)) continue;
 
       // Compose the inlet from 3-5 overlapping ellipses so its silhouette
       // is organic. Each component blob's offset is small (≤ base size)
@@ -187,8 +216,8 @@ function BlobLayer({
   );
 }
 
-export default function OceanInlets() {
-  const inlets = useMemo(generateInlets, []);
+export default function OceanInlets({ tiles }: { tiles: ReadonlyArray<TrackTile> }) {
+  const inlets = useMemo(() => generateInlets(tiles), [tiles]);
 
   return (
     <group renderOrder={-1}>

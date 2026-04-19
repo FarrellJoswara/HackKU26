@@ -86,7 +86,9 @@ const _cornerBis = new Vector3();
 
 /** Plank segment length past chord — larger at turns to close outer-corner gaps. */
 const PLANK_OVERLAP_STRAIGHT = 0.42;
-const PLANK_OVERLAP_TURN = 1.12;
+// Turn segments used to overlap too aggressively, causing visible clipping
+// where consecutive meshes interpenetrated at bends.
+const PLANK_OVERLAP_TURN = 0.68;
 /** Debt Collector mesh only during intro and when chase is critical. */
 // "Only at the very beginning" — small window after the run starts. After that,
 // the collector is hidden until the player is decisively about to die.
@@ -744,8 +746,8 @@ export default function DebtRunnerGame(_props: GameProps) {
       <Ocean />
       <ShorelineDecor />
       <BeachSand />
-      <OceanInlets />
-      <BeachDecor />
+      <OceanInlets tiles={tiles} />
+      <BeachDecor tiles={tiles} />
 
       {/* Distant island silhouettes — a small archipelago at varied bearings
           so the horizon stays interesting no matter which way the path
@@ -794,6 +796,9 @@ export default function DebtRunnerGame(_props: GameProps) {
         // Side rails removed entirely (see prior commit) — they could not be
         // trimmed enough to stop intruding into perpendicular tiles at corners.
         const width = tile.narrow ? 5.8 : 6.6;
+        // Turn cap scales with board width so narrow and normal lanes both
+        // seal the inside corner instead of leaving a bugged wedge/gap.
+        const cornerCapSize = width * 0.68;
         // Slightly weathered driftwood color. Slippery tiles are still cooler
         // (wet plank look) but biased less aqua so the boardwalk reads as wood.
         const plankColor = tile.slippery ? '#a89a76' : '#c79b62';
@@ -874,14 +879,18 @@ export default function DebtRunnerGame(_props: GameProps) {
               })}
               {/* Edge beams running the length of the boards — the long
                   stringers a real dock would have along each side. */}
-              <mesh position={[-width / 2 + 0.08, 0.005, 0]}>
-                <boxGeometry args={[0.16, 0.36, depthLen]} />
-                <meshStandardMaterial color={plankShadowColor} roughness={0.95} />
-              </mesh>
-              <mesh position={[width / 2 - 0.08, 0.005, 0]}>
-                <boxGeometry args={[0.16, 0.36, depthLen]} />
-                <meshStandardMaterial color={plankShadowColor} roughness={0.95} />
-              </mesh>
+              {!isTurn ? (
+                <>
+                  <mesh position={[-width / 2 + 0.08, 0.005, 0]}>
+                    <boxGeometry args={[0.16, 0.36, depthLen]} />
+                    <meshStandardMaterial color={plankShadowColor} roughness={0.95} />
+                  </mesh>
+                  <mesh position={[width / 2 - 0.08, 0.005, 0]}>
+                    <boxGeometry args={[0.16, 0.36, depthLen]} />
+                    <meshStandardMaterial color={plankShadowColor} roughness={0.95} />
+                  </mesh>
+                </>
+              ) : null}
               {/* Cross-beam under the deck near the front of the tile — visible
                   from the side as a structural support. Rendered only on
                   straight tiles so corners stay visually clean. */}
@@ -929,7 +938,7 @@ export default function DebtRunnerGame(_props: GameProps) {
               <group position={[nextTile.x, 0, nextTile.z]} rotation={[0, bisYaw, 0]}>
                 {/* Corner deck cap — same warm dock tone as the planks. */}
                 <mesh position={[0, 0.145, 0]} receiveShadow>
-                  <boxGeometry args={[2.65, 0.07, 2.65]} />
+                  <boxGeometry args={[cornerCapSize, 0.07, cornerCapSize]} />
                   <meshStandardMaterial
                     color={plankColor}
                     roughness={0.88}
